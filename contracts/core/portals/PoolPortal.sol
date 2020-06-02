@@ -115,6 +115,59 @@ contract PoolPortal {
     emit BuyPool(address(_poolToken), _amount, msg.sender);
   }
 
+  /**
+  * @dev this function provide necessary data for buy a pool token by a certain amount
+  *
+  * @param _amount     amount of pool token (or ETH for Uniswap)
+  * @param _type       pool type
+  * @param _poolToken  pool token address
+  */
+  function getDataForBuyingPool(IERC20 _poolToken, uint256 _amount, uint8 _type)
+    external
+    view
+    returns(
+      address firstConnectorAddress,
+      address secondConnectorAddress,
+      uint256 firstConnectorAmountSent,
+      uint256 secondConnectorAmountSent
+    )
+  {
+    if(_type == uint(PortalType.Bancor)){
+      // get Bancor converter
+      address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+      // calculate connectors amount for buy certain pool amount
+      (uint256 bancorAmount,
+       uint256 connectorAmount) = getBancorConnectorsAmountByRelayAmount(_amount, _poolToken);
+      // get converter as contract
+      BancorConverterInterface converter = BancorConverterInterface(converterAddress);
+      // approve bancor and coonector amount to converter
+      // get connectors
+      (IERC20 bancorConnector,
+      IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
+
+      // return data
+      firstConnectorAddress = address(bancorConnector);
+      secondConnectorAddress = address(ercConnector);
+      firstConnectorAmountSent = bancorAmount;
+      secondConnectorAmountSent = connectorAmount;
+    }
+    else if(_type == uint(PortalType.Uniswap)){
+      // get token address
+      address tokenAddress = uniswapFactory.getToken(address(_poolToken));
+      // get tokens amd approve to exchange
+      uint256 erc20Amount = getUniswapTokenAmountByETH(tokenAddress, _amount);
+
+      // return data
+      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+      secondConnectorAddress = tokenAddress;
+      firstConnectorAmountSent = _amount;
+      secondConnectorAmountSent = erc20Amount;
+    }
+    else {
+      revert("Unknown pool type");
+    }
+  }
+
 
   /**
   * @dev helper for buy pool in Bancor network
