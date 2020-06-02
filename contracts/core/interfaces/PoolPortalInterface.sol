@@ -10,6 +10,8 @@ interface PoolPortalInterface {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountSent,
     uint256 secondConnectorAmountSent,
     uint256 poolAmountReceive
@@ -24,6 +26,8 @@ interface PoolPortalInterface {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountReceive,
     uint256 secondConnectorAmountReceive,
     uint256 poolAmountSent

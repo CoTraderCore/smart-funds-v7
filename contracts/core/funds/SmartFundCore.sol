@@ -523,92 +523,39 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @dev sell pool via pool portal
   *
   * @param _amount        amount of Bancor relay or Uniswap exchange to sell
-  * @param _type          type of pool (0 - Bancor, 1 - Uniswap)
   * @param _poolToken     address of Bancor relay or Uniswap exchange
   */
   function sellPool(
     uint256 _amount,
-    uint _type,
     IERC20 _poolToken
   )
   external onlyOwner {
-    // sell via Bancor
-    if(_type == uint(PortalType.Bancor)){
-      _sellBancorPool(_poolToken, _amount);
-    }
-    // sell via Uniswap
-    else if(_type == uint(PortalType.Uniswap)){
-      _sellUniswapPool(_poolToken, _amount);
-    }
-    else{
-       revert("Unknown pool type");
-    }
-  }
-
-  // Helper for sell Bancor pool
-  function _sellBancorPool(IERC20 _poolToken, uint256 _amount)
-   private
-  {
-    // get bancor connectors addresses
-    (IERC20 bancorConnector,
-      IERC20 ercConnector) = poolPortal.getBancorConnectorsByRelay(
-        address(_poolToken));
-
-     // approve
-     _poolToken.approve(address(poolPortal), _amount);
-
-     // sell
-     (uint256 firstConnectorAmountReceive,
-      uint256 secondConnectorAmountReceive,) = poolPortal.sellPool(
-       _amount,
-       uint(PortalType.Bancor),
-      _poolToken
-     );
-
-    // add returned assets in fund as tokens (for case if manager removed this assets)
-    _addToken(address(bancorConnector));
-    _addToken(address(ercConnector));
-
-    // event
-    emit SellPool(
-      address(_poolToken),
-      _amount,
-      address(bancorConnector),
-      address(ercConnector),
-      firstConnectorAmountReceive,
-      secondConnectorAmountReceive);
-  }
-
-  // Helper sell Uniswap pool
-  function _sellUniswapPool(IERC20 _poolToken, uint256 _amount)
-   private
-  {
-    // extract Uniswap ERC20 connector
-    address tokenAddress = poolPortal.getTokenByUniswapExchange(address(_poolToken));
-
     // approve
     _poolToken.approve(address(poolPortal), _amount);
 
     // sell
-    (uint256 firstConnectorAmountReceive,
-     uint256 secondConnectorAmountReceive,) = poolPortal.sellPool(
+    (address firstConnectorAddress,
+     address secondConnectorAddress,
+     uint256 firstConnectorAmountReceive,
+     uint256 secondConnectorAmountReceive, ) = poolPortal.sellPool(
       _amount,
-      uint(PortalType.Uniswap),
+      uint(PortalType.Bancor),
      _poolToken
     );
 
-    // add returned asset to fund(for case if manager removed this asset)
-    _addToken(tokenAddress);
+    _addToken(firstConnectorAddress);
+    _addToken(secondConnectorAddress);
 
     // event
     emit SellPool(
       address(_poolToken),
       _amount,
-      address(ETH_TOKEN_ADDRESS),
-      tokenAddress,
+      firstConnectorAddress,
+      secondConnectorAddress,
       firstConnectorAmountReceive,
       secondConnectorAmountReceive);
   }
+
 
   // return all tokens addresses from fund
   function getAllTokenAddresses() external view returns (address[] memory) {
