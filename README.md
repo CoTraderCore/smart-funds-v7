@@ -13,3 +13,10 @@ NOTE: in separate console
 1) npm run ganache  
 2) truffle test
 ```
+
+
+# Deploy note
+
+```
+Don't forget set new pool portal to permited type storage 
+```

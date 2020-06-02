@@ -85,19 +85,25 @@ contract PoolPortal {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountSent,
     uint256 secondConnectorAmountSent,
     uint256 poolAmountReceive
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (firstConnectorAmountSent,
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorAmountSent,
        secondConnectorAmountSent,
        poolAmountReceive) = buyBancorPool(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-       (firstConnectorAmountSent,
+       (firstConnectorAddress,
+        secondConnectorAddress,
+        firstConnectorAmountSent,
         secondConnectorAmountSent,
         poolAmountReceive) = buyUniswapPool(address(_poolToken), _amount);
     }
@@ -119,6 +125,8 @@ contract PoolPortal {
   function buyBancorPool(IERC20 _poolToken, uint256 _amount)
    private
    returns(
+     address firstConnectorAddress,
+     address secondConnectorAddress,
      uint256 firstConnectorAmountSent,
      uint256 secondConnectorAmountSent,
      uint256 poolAmountReceive
@@ -150,6 +158,8 @@ contract PoolPortal {
     _poolToken.transfer(msg.sender, _amount);
 
     // return data
+    firstConnectorAddress = address(bancorConnector);
+    secondConnectorAddress = address(ercConnector);
     firstConnectorAmountSent = bancorAmount;
     secondConnectorAmountSent = connectorAmount;
     poolAmountReceive = _amount;
@@ -176,6 +186,8 @@ contract PoolPortal {
   function buyUniswapPool(address _poolToken, uint256 _ethAmount)
    private
    returns(
+     address firstConnectorAddress,
+     address secondConnectorAddress,
      uint256 firstConnectorAmountSent,
      uint256 secondConnectorAmountSent,
      uint256 poolAmountReceive
@@ -203,6 +215,8 @@ contract PoolPortal {
       require(poolAmount > 0, "UNI pool received amount can not be zerro");
 
       // return data
+      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+      secondConnectorAddress = tokenAddress;
       firstConnectorAmountSent = _ethAmount;
       secondConnectorAmountSent = erc20Amount;
       poolAmountReceive = poolAmount;
@@ -217,7 +231,7 @@ contract PoolPortal {
       setTokenType(_poolToken, "UNISWAP_POOL");
     }else{
       // throw if such pool not Exist in Uniswap network
-      revert();
+      revert("Unknown UNI pool address");
     }
   }
 
@@ -254,20 +268,26 @@ contract PoolPortal {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountReceive,
     uint256 secondConnectorAmountReceive,
     uint256 poolAmountSent
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (firstConnectorAmountReceive,
-      secondConnectorAmountReceive,
-      poolAmountSent) = sellPoolViaBancor(_poolToken, _amount);
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorAmountReceive,
+       secondConnectorAmountReceive,
+       poolAmountSent) = sellPoolViaBancor(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
-      (firstConnectorAmountReceive,
-      secondConnectorAmountReceive,
-      poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorAmountReceive,
+       secondConnectorAmountReceive,
+       poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
       // unknown portal type
@@ -286,6 +306,8 @@ contract PoolPortal {
   function sellPoolViaBancor(IERC20 _poolToken, uint256 _amount)
    private
    returns(
+     address firstConnectorAddress,
+     address secondConnectorAddress,
      uint256 firstConnectorAmountReceive,
      uint256 secondConnectorAmountReceive,
      uint256 poolAmountSent
@@ -302,6 +324,8 @@ contract PoolPortal {
     IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
 
     // return data
+    firstConnectorAddress = address(bancorConnector);
+    secondConnectorAddress = address(ercConnector);
     firstConnectorAmountReceive = bancorConnector.balanceOf(address(this));
     secondConnectorAmountReceive = ercConnector.balanceOf(address(this));
     poolAmountSent = _amount;
@@ -321,6 +345,8 @@ contract PoolPortal {
   function sellPoolViaUniswap(IERC20 _poolToken, uint256 _amount)
    private
    returns(
+     address firstConnectorAddress,
+     address secondConnectorAddress,
      uint256 firstConnectorAmountReceive,
      uint256 secondConnectorAmountReceive,
      uint256 poolAmountSent
@@ -348,6 +374,8 @@ contract PoolPortal {
          deadline);
 
       // return data
+      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+      secondConnectorAddress = tokenAddress;
       firstConnectorAmountReceive = eth_amount;
       secondConnectorAmountReceive = token_amount;
       poolAmountSent = _amount;
