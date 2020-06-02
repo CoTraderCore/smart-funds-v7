@@ -131,7 +131,13 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 firstConnectorBalance,
     uint256 secondConnectorBalance);
 
-  event SellPool(address poolToken, uint256 amount);
+  event SellPool(
+    address poolToken,
+    uint256 amount,
+    address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance);
 
   event Deposit(address indexed user, uint256 amount, uint256 sharesReceived, uint256 totalShares);
   event Withdraw(address indexed user, uint256 sharesRemoved, uint256 totalShares);
@@ -560,6 +566,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
   external onlyOwner {
+    address firstConnectorAddress;
+    address secondConnectorAddress;
+    uint256 firstConnectorBalance;
+    uint256 secondConnectorBalance;
+
     // approve
     _poolToken.approve(address(poolPortal), _amount);
 
@@ -578,7 +589,13 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      _addUniswapReserve(address(_poolToken));
 
     // event
-    emit SellPool(address(_poolToken), _amount);
+    emit SellPool(
+      address(_poolToken),
+      _amount,
+      firstConnectorAddress,
+      secondConnectorAddress,
+      firstConnectorBalance,
+      secondConnectorBalance);
   }
 
   // Helper for exctract Bancor pool connectos and add this connectors to fund

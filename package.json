@@ -13,7 +13,7 @@
     "ganache": {
       "networkId": 3431,
       "gasPrice": 1000000000,
-      "gasLimit": 59500000,
+      "gasLimit": 79500000,
       "gas": 69500000
     }
   },
