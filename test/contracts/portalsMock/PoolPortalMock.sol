@@ -69,6 +69,11 @@ contract PoolPortalMock {
   )
   external
   payable
+  returns(
+    uint256 firstConnectorAmountSent,
+    uint256 secondConnectorAmountSent,
+    uint256 poolAmountReceive
+  )
   {
     if(_type == uint(PortalType.Bancor)){
       buyBancorPool(_poolToken, _amount);
@@ -81,6 +86,10 @@ contract PoolPortalMock {
       // unknown portal type
       revert();
     }
+
+    firstConnectorAmountSent = _amount.div(2);
+    secondConnectorAmountSent = _amount.div(2);
+    poolAmountReceive = _amount;
   }
 
   function getBancorConnectorsByRelay(address relay)
@@ -123,6 +132,11 @@ contract PoolPortalMock {
   )
   external
   payable
+  returns(
+    uint256 firstConnectorAmountReceive,
+    uint256 secondConnectorAmountReceive,
+    uint256 poolAmountSent
+  )
   {
     if(_type == uint(PortalType.Bancor)){
       sellPoolViaBancor(_poolToken, _amount);
@@ -134,6 +148,12 @@ contract PoolPortalMock {
       // unknown portal type
       revert();
     }
+
+    // return mock data
+
+    firstConnectorAmountReceive = _amount.div(2);
+    secondConnectorAmountReceive = _amount.div(2);
+    poolAmountSent = _amount;
   }
 
 
