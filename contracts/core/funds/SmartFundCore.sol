@@ -123,7 +123,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   event Loan(address token, uint256 amount);
   event Redeem(address token, uint256 amount);
 
-  event BuyPool(address poolToken, uint256 amount);
+  event BuyPool(
+    address poolAddress,
+    uint256 poolAmount,
+    address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance);
+
   event SellPool(address poolToken, uint256 amount);
 
   event Deposit(address indexed user, uint256 amount, uint256 sharesReceived, uint256 totalShares);
@@ -415,11 +422,24 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    IERC20 _poolToken
   )
   external onlyOwner {
-   // buy Bancor or Uniswap pool
+   address firstConnectorAddress;
+   address secondConnectorAddress;
+   uint256 firstConnectorBalance;
+   uint256 secondConnectorBalance;
+
+   // buy Bancor pool
    if(_type == uint(PortalType.Bancor))
-    _buyBancorPool(_amount, _type, _poolToken);
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorBalance,
+       secondConnectorBalance) = _buyBancorPool(_amount, _type, _poolToken);
+
+   // buy Uniswap pool
    if(_type == uint(PortalType.Uniswap))
-    _buyUniswapPool(_amount, _type, _poolToken);
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorBalance,
+       secondConnectorBalance) = _buyUniswapPool(_amount, _type, _poolToken);
 
    // add new pool in fund
    uint256 poolBalance = _poolToken.balanceOf(address(this));
@@ -431,7 +451,12 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    }
 
    // emit event
-   emit BuyPool(address(_poolToken), _amount);
+   emit BuyPool(
+     address(_poolToken),
+     _amount, firstConnectorAddress,
+     secondConnectorAddress,
+     firstConnectorBalance,
+     secondConnectorBalance);
   }
 
   // Helper for buy Uniswap pool
@@ -441,10 +466,20 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
   private
+  returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance
+  )
   {
     // approve connector
     IERC20 token = IERC20(poolPortal.getTokenByUniswapExchange(address(_poolToken)));
     token.approve(address(poolPortal), token.balanceOf(address(this)));
+
+    // calculate balance before
+    firstConnectorBalance = address(this).balance;
+    secondConnectorBalance = token.balanceOf(address(this));
 
     // buy pool via ETH amount payable
     poolPortal.buyPool.value(_amount)(
@@ -453,8 +488,16 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     _poolToken
     );
 
-    //reset approve
+    // reset approve
     token.approve(address(poolPortal), 0);
+
+    // return how much we spend for buying pool
+    firstConnectorBalance = firstConnectorBalance.sub(address(this).balance);
+    secondConnectorBalance = secondConnectorBalance.sub(token.balanceOf(address(this)));
+
+    // return addresses of pool connectors
+    firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+    secondConnectorAddress = address(token);
   }
 
   // Helper for buy Bancor pool
@@ -462,7 +505,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 _amount,
     uint _type,
     IERC20 _poolToken
-  ) private
+  )
+   private
+   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance
+  )
   {
     // get connectors
     (IERC20 bancorConnector,
@@ -471,6 +521,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     // Approve all connectors to pool portal (pool calculates the required amount dynamicly)
     bancorConnector.approve(address(poolPortal), bancorConnector.balanceOf(address(this)));
     ercConnector.approve(address(poolPortal), ercConnector.balanceOf(address(this)));
+
+    // get connectors balance
+    firstConnectorBalance = bancorConnector.balanceOf(address(this));
+    secondConnectorBalance = ercConnector.balanceOf(address(this));
 
     // buy pool(relay) via relay amount not payable
     poolPortal.buyPool(
@@ -482,6 +536,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     // reset approve
     bancorConnector.approve(address(poolPortal), 0);
     ercConnector.approve(address(poolPortal), 0);
+
+    // return how much we spend for buying pool
+    firstConnectorBalance = firstConnectorBalance.sub(bancorConnector.balanceOf(address(this)));
+    secondConnectorBalance = secondConnectorBalance.sub(ercConnector.balanceOf(address(this)));
+
+    // return addresses of pool connectors
+    firstConnectorAddress = address(bancorConnector);
+    secondConnectorAddress = address(ercConnector);
   }
 
 
