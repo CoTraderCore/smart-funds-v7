@@ -571,22 +571,19 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 firstConnectorBalance;
     uint256 secondConnectorBalance;
 
-    // approve
-    _poolToken.approve(address(poolPortal), _amount);
-
-    // sell
-    poolPortal.sellPool(
-      _amount,
-      _type,
-     _poolToken
-    );
-
-    // add to fund pool connectors
+    // sell via Bancor
     if(_type == uint(PortalType.Bancor))
-     _addBancorResereve(address(_poolToken));
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorBalance,
+       secondConnectorBalance) = _sellBancorPool(_poolToken, _amount);
 
+    // sell via Uniswap
     if(_type == uint(PortalType.Uniswap))
-     _addUniswapReserve(address(_poolToken));
+      (firstConnectorAddress,
+       secondConnectorAddress,
+       firstConnectorBalance,
+       secondConnectorBalance) = _sellUniswapPool(_poolToken, _amount);
 
     // event
     emit SellPool(
@@ -599,29 +596,85 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   }
 
   // Helper for exctract Bancor pool connectos and add this connectors to fund
-  function _addBancorResereve(address _poolToken)
-  private
+  function _sellBancorPool(IERC20 _poolToken, uint256 _amount)
+   private
+   returns
+   (address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance)
   {
     // get bancor connectors addresses
     (IERC20 bancorConnector,
       IERC20 ercConnector) = poolPortal.getBancorConnectorsByRelay(
         address(_poolToken));
 
+     // get connectors balance
+     firstConnectorBalance = bancorConnector.balanceOf(address(this));
+     secondConnectorBalance = ercConnector.balanceOf(address(this));
+
+     // approve
+     _poolToken.approve(address(poolPortal), _amount);
+
+     // sell
+     poolPortal.sellPool(
+       _amount,
+       uint(PortalType.Bancor),
+      _poolToken
+     );
+
     // add returned assets in fund as tokens (for case if manager removed this assets)
     _addToken(address(bancorConnector));
     _addToken(address(ercConnector));
+
+    // return how much we get from sell pool
+    firstConnectorBalance = bancorConnector.balanceOf(address(this)).sub(firstConnectorBalance);
+    secondConnectorBalance = ercConnector.balanceOf(address(this)).sub(secondConnectorBalance);
+
+    // return addresses of pool connectors
+    firstConnectorAddress = address(bancorConnector);
+    secondConnectorAddress = address(ercConnector);
   }
 
   // Helper for exctract Uniswap pool connector and add this connector to fund
-  function _addUniswapReserve(address _poolToken)
-  private
+  function _sellUniswapPool(IERC20 _poolToken, uint256 _amount)
+   private
+   returns
+   (address firstConnectorAddress,
+    address secondConnectorAddress,
+    uint256 firstConnectorBalance,
+    uint256 secondConnectorBalance)
   {
     // extract Uniswap connector
-    address tokenAddress = poolPortal.getTokenByUniswapExchange(_poolToken);
+    address tokenAddress = poolPortal.getTokenByUniswapExchange(address(_poolToken));
+
+    // get connectors balance
+    firstConnectorBalance = address(this).balance;
+    secondConnectorBalance = IERC20(tokenAddress).balanceOf(address(this));
+
+    // approve
+    _poolToken.approve(address(poolPortal), _amount);
+
+    // sell
+    poolPortal.sellPool(
+      _amount,
+      uint(PortalType.Uniswap),
+     _poolToken
+    );
+
     // add returned asset to fund(for case if manager removed this asset)
     _addToken(tokenAddress);
+
+    // return how much we get from sell pool
+    firstConnectorBalance = address(this).balance.sub(firstConnectorBalance);
+    secondConnectorBalance = IERC20(tokenAddress).balanceOf(address(this)).sub(secondConnectorBalance);
+
+    // return addresses of pool connectors
+    firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+    secondConnectorAddress = tokenAddress;
   }
 
+  // return all tokens addresses from fund 
   function getAllTokenAddresses() external view returns (address[] memory) {
     return tokenAddresses;
   }
