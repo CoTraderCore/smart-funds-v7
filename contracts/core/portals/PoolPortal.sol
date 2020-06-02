@@ -84,13 +84,22 @@ contract PoolPortal {
   )
   external
   payable
+  returns(
+    uint256 firstConnectorAmountSent,
+    uint256 secondConnectorAmountSent,
+    uint256 poolAmountReceive
+  )
   {
     if(_type == uint(PortalType.Bancor)){
-      buyBancorPool(_poolToken, _amount);
+      (firstConnectorAmountSent,
+       secondConnectorAmountSent,
+       poolAmountReceive) = buyBancorPool(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-      buyUniswapPool(address(_poolToken), _amount);
+       (firstConnectorAmountSent,
+        secondConnectorAmountSent,
+        poolAmountReceive) = buyUniswapPool(address(_poolToken), _amount);
     }
     else{
       // unknown portal type
@@ -107,7 +116,14 @@ contract PoolPortal {
   * @param _poolToken        address of bancor converter
   * @param _amount           amount of bancor relay
   */
-  function buyBancorPool(IERC20 _poolToken, uint256 _amount) private {
+  function buyBancorPool(IERC20 _poolToken, uint256 _amount)
+   private
+   returns(
+     uint256 firstConnectorAmountSent,
+     uint256 secondConnectorAmountSent,
+     uint256 poolAmountReceive
+   )
+  {
     // get Bancor converter
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // calculate connectors amount for buy certain pool amount
@@ -133,6 +149,11 @@ contract PoolPortal {
     // transfer relay back to smart fund
     _poolToken.transfer(msg.sender, _amount);
 
+    // return data
+    firstConnectorAmountSent = bancorAmount;
+    secondConnectorAmountSent = connectorAmount;
+    poolAmountReceive = _amount;
+
     // transfer connectors back if a small amount remains
     uint256 bancorRemains = bancorConnector.balanceOf(address(this));
     if(bancorRemains > 0)
@@ -153,8 +174,12 @@ contract PoolPortal {
   * @param _ethAmount        ETH amount (in wei)
   */
   function buyUniswapPool(address _poolToken, uint256 _ethAmount)
-  private
-  returns(uint256 poolAmount)
+   private
+   returns(
+     uint256 firstConnectorAmountSent,
+     uint256 secondConnectorAmountSent,
+     uint256 poolAmountReceive
+   )
   {
     // get token address
     address tokenAddress = uniswapFactory.getToken(_poolToken);
@@ -168,14 +193,19 @@ contract PoolPortal {
       // set deadline
       uint256 deadline = now + 15 minutes;
       // buy pool
-      poolAmount = exchange.addLiquidity.value(_ethAmount)(
+      uint256 poolAmount = exchange.addLiquidity.value(_ethAmount)(
         1,
         erc20Amount,
         deadline);
       // reset approve (some ERC20 not allow do new approve if already approved)
       IERC20(tokenAddress).approve(_poolToken, 0);
 
-      require(poolAmount > 0, "UNI pool recieved amount can not be zerro");
+      require(poolAmount > 0, "UNI pool received amount can not be zerro");
+
+      // return data
+      firstConnectorAmountSent = _ethAmount;
+      secondConnectorAmountSent = erc20Amount;
+      poolAmountReceive = poolAmount;
 
       // transfer pool token back to smart fund
       IERC20(_poolToken).transfer(msg.sender, poolAmount);
@@ -223,12 +253,21 @@ contract PoolPortal {
   )
   external
   payable
+  returns(
+    uint256 firstConnectorAmountReceive,
+    uint256 secondConnectorAmountReceive,
+    uint256 poolAmountSent
+  )
   {
     if(_type == uint(PortalType.Bancor)){
-      sellPoolViaBancor(_poolToken, _amount);
+      (firstConnectorAmountReceive,
+      secondConnectorAmountReceive,
+      poolAmountSent) = sellPoolViaBancor(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
-      sellPoolViaUniswap(_poolToken, _amount);
+      (firstConnectorAmountReceive,
+      secondConnectorAmountReceive,
+      poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
       // unknown portal type
@@ -244,7 +283,14 @@ contract PoolPortal {
   * @param _poolToken        address of bancor relay
   * @param _amount           amount of bancor relay
   */
-  function sellPoolViaBancor(IERC20 _poolToken, uint256 _amount) private {
+  function sellPoolViaBancor(IERC20 _poolToken, uint256 _amount)
+   private
+   returns(
+     uint256 firstConnectorAmountReceive,
+     uint256 secondConnectorAmountReceive,
+     uint256 poolAmountSent
+   )
+  {
     // transfer pool from fund
     _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
@@ -254,9 +300,15 @@ contract PoolPortal {
     // get connectors
     (IERC20 bancorConnector,
     IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
+
+    // return data
+    firstConnectorAmountReceive = bancorConnector.balanceOf(address(this));
+    secondConnectorAmountReceive = ercConnector.balanceOf(address(this));
+    poolAmountSent = _amount;
+
     // transfer connectors back to fund
-    bancorConnector.transfer(msg.sender, bancorConnector.balanceOf(address(this)));
-    ercConnector.transfer(msg.sender, ercConnector.balanceOf(address(this)));
+    bancorConnector.transfer(msg.sender, firstConnectorAmountReceive);
+    ercConnector.transfer(msg.sender, secondConnectorAmountReceive);
   }
 
 
@@ -266,7 +318,14 @@ contract PoolPortal {
   * @param _poolToken        address of uniswap exchane
   * @param _amount           amount of uniswap pool
   */
-  function sellPoolViaUniswap(IERC20 _poolToken, uint256 _amount) private {
+  function sellPoolViaUniswap(IERC20 _poolToken, uint256 _amount)
+   private
+   returns(
+     uint256 firstConnectorAmountReceive,
+     uint256 secondConnectorAmountReceive,
+     uint256 poolAmountSent
+  )
+  {
     address tokenAddress = uniswapFactory.getToken(address(_poolToken));
     // check if such a pool exist
     if(tokenAddress != address(0x0000000000000000000000000000000000000000)){
@@ -287,6 +346,12 @@ contract PoolPortal {
          minEthAmount,
          minErcAmount,
          deadline);
+
+      // return data
+      firstConnectorAmountReceive = eth_amount;
+      secondConnectorAmountReceive = token_amount;
+      poolAmountSent = _amount;
+
       // transfer assets back to smart fund
       msg.sender.transfer(eth_amount);
       IERC20(tokenAddress).transfer(msg.sender, token_amount);

@@ -80,9 +80,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // An array of all the erc20 token addresses the smart fund holds
   address[] public tokenAddresses;
 
-  // mapping for check certain token is relay or not
-  mapping(address => bool) public isRelay;
-
   // Boolean value that determines whether the fund accepts deposits from anyone or
   // only specific addresses approved by the manager
   bool public onlyWhitelist = false;
@@ -91,7 +88,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // addresses to be able to invest in their fund
   mapping (address => bool) public whitelist;
 
-  uint public version = 6;
+  uint public version = 7;
 
   // the total number of shares in the fund
   uint256 public totalShares = 0;
@@ -437,41 +434,16 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    IERC20 _poolToken
   )
   external onlyOwner {
-   address firstConnectorAddress;
-   address secondConnectorAddress;
-   uint256 firstConnectorBalance;
-   uint256 secondConnectorBalance;
-
    // buy Bancor pool
    if(_type == uint(PortalType.Bancor))
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorBalance,
-       secondConnectorBalance) = _buyBancorPool(_amount, _type, _poolToken);
+    _buyBancorPool(_amount, _type, _poolToken);
 
    // buy Uniswap pool
    if(_type == uint(PortalType.Uniswap))
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorBalance,
-       secondConnectorBalance) = _buyUniswapPool(_amount, _type, _poolToken);
+    _buyUniswapPool(_amount, _type, _poolToken);
 
-   // add new pool in fund
-   uint256 poolBalance = _poolToken.balanceOf(address(this));
-   if(poolBalance > 0){
-     // Add relay as ERC20 for withdraw assets
-     _addToken(address(_poolToken));
-     // Mark this token as relay
-     _markAsRelay(address(_poolToken));
-   }
-
-   // emit event
-   emit BuyPool(
-     address(_poolToken),
-     _amount, firstConnectorAddress,
-     secondConnectorAddress,
-     firstConnectorBalance,
-     secondConnectorBalance);
+    // Add pool as ERC20 for withdraw
+    _addToken(address(_poolToken));
   }
 
   // Helper for buy Uniswap pool
@@ -481,23 +453,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
   private
-  returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance
-  )
   {
     // approve connector
     IERC20 token = IERC20(poolPortal.getTokenByUniswapExchange(address(_poolToken)));
     token.approve(address(poolPortal), token.balanceOf(address(this)));
 
-    // calculate balance before
-    firstConnectorBalance = address(this).balance;
-    secondConnectorBalance = token.balanceOf(address(this));
-
     // buy pool via ETH amount payable
-    poolPortal.buyPool.value(_amount)(
+    (uint256 firstConnectorAmountSent,
+    uint256 secondConnectorAmountSent,) = poolPortal.buyPool.value(_amount)(
      _amount,
      _type,
     _poolToken
@@ -506,13 +469,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     // reset approve
     token.approve(address(poolPortal), 0);
 
-    // return how much we spend for buying pool
-    firstConnectorBalance = firstConnectorBalance.sub(address(this).balance);
-    secondConnectorBalance = secondConnectorBalance.sub(token.balanceOf(address(this)));
-
-    // return addresses of pool connectors
-    firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-    secondConnectorAddress = address(token);
+    // emit event
+    emit BuyPool(
+      address(_poolToken),
+      _amount,
+      address(ETH_TOKEN_ADDRESS),
+      address(token),
+      firstConnectorAmountSent,
+      secondConnectorAmountSent);
   }
 
   // Helper for buy Bancor pool
@@ -522,12 +486,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
    private
-   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance
-  )
   {
     // get connectors
     (IERC20 bancorConnector,
@@ -537,12 +495,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     bancorConnector.approve(address(poolPortal), bancorConnector.balanceOf(address(this)));
     ercConnector.approve(address(poolPortal), ercConnector.balanceOf(address(this)));
 
-    // get connectors balance
-    firstConnectorBalance = bancorConnector.balanceOf(address(this));
-    secondConnectorBalance = ercConnector.balanceOf(address(this));
-
     // buy pool(relay) via relay amount not payable
-    poolPortal.buyPool(
+    // buy pool via ETH amount payable
+    (uint256 firstConnectorAmountSent,
+    uint256 secondConnectorAmountSent,) = poolPortal.buyPool(
      _amount,
      _type,
     _poolToken
@@ -552,13 +508,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     bancorConnector.approve(address(poolPortal), 0);
     ercConnector.approve(address(poolPortal), 0);
 
-    // return how much we spend for buying pool
-    firstConnectorBalance = firstConnectorBalance.sub(bancorConnector.balanceOf(address(this)));
-    secondConnectorBalance = secondConnectorBalance.sub(ercConnector.balanceOf(address(this)));
-
-    // return addresses of pool connectors
-    firstConnectorAddress = address(bancorConnector);
-    secondConnectorAddress = address(ercConnector);
+    // emit event
+    emit BuyPool(
+      address(_poolToken),
+      _amount,
+      address(bancorConnector),
+      address(ercConnector),
+      firstConnectorAmountSent,
+      secondConnectorAmountSent);
   }
 
 
@@ -575,58 +532,34 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
   external onlyOwner {
-    address firstConnectorAddress;
-    address secondConnectorAddress;
-    uint256 firstConnectorBalance;
-    uint256 secondConnectorBalance;
-
     // sell via Bancor
-    if(_type == uint(PortalType.Bancor))
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorBalance,
-       secondConnectorBalance) = _sellBancorPool(_poolToken, _amount);
-
+    if(_type == uint(PortalType.Bancor)){
+      _sellBancorPool(_poolToken, _amount);
+    }
     // sell via Uniswap
-    if(_type == uint(PortalType.Uniswap))
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorBalance,
-       secondConnectorBalance) = _sellUniswapPool(_poolToken, _amount);
-
-    // event
-    emit SellPool(
-      address(_poolToken),
-      _amount,
-      firstConnectorAddress,
-      secondConnectorAddress,
-      firstConnectorBalance,
-      secondConnectorBalance);
+    else if(_type == uint(PortalType.Uniswap)){
+      _sellUniswapPool(_poolToken, _amount);
+    }
+    else{
+       revert("Unknown pool type");
+    }
   }
 
-  // Helper for exctract Bancor pool connectos and add this connectors to fund
+  // Helper for sell Bancor pool
   function _sellBancorPool(IERC20 _poolToken, uint256 _amount)
    private
-   returns
-   (address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance)
   {
     // get bancor connectors addresses
     (IERC20 bancorConnector,
       IERC20 ercConnector) = poolPortal.getBancorConnectorsByRelay(
         address(_poolToken));
 
-     // get connectors balance
-     firstConnectorBalance = bancorConnector.balanceOf(address(this));
-     secondConnectorBalance = ercConnector.balanceOf(address(this));
-
      // approve
      _poolToken.approve(address(poolPortal), _amount);
 
      // sell
-     poolPortal.sellPool(
+     (uint256 firstConnectorAmountReceive,
+      uint256 secondConnectorAmountReceive,) = poolPortal.sellPool(
        _amount,
        uint(PortalType.Bancor),
       _poolToken
@@ -636,36 +569,29 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     _addToken(address(bancorConnector));
     _addToken(address(ercConnector));
 
-    // return how much we get from sell pool
-    firstConnectorBalance = bancorConnector.balanceOf(address(this)).sub(firstConnectorBalance);
-    secondConnectorBalance = ercConnector.balanceOf(address(this)).sub(secondConnectorBalance);
-
-    // return addresses of pool connectors
-    firstConnectorAddress = address(bancorConnector);
-    secondConnectorAddress = address(ercConnector);
+    // event
+    emit SellPool(
+      address(_poolToken),
+      _amount,
+      address(bancorConnector),
+      address(ercConnector),
+      firstConnectorAmountReceive,
+      secondConnectorAmountReceive);
   }
 
-  // Helper for exctract Uniswap pool connector and add this connector to fund
+  // Helper sell Uniswap pool
   function _sellUniswapPool(IERC20 _poolToken, uint256 _amount)
    private
-   returns
-   (address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance)
   {
-    // extract Uniswap connector
+    // extract Uniswap ERC20 connector
     address tokenAddress = poolPortal.getTokenByUniswapExchange(address(_poolToken));
-
-    // get connectors balance
-    firstConnectorBalance = address(this).balance;
-    secondConnectorBalance = IERC20(tokenAddress).balanceOf(address(this));
 
     // approve
     _poolToken.approve(address(poolPortal), _amount);
 
     // sell
-    poolPortal.sellPool(
+    (uint256 firstConnectorAmountReceive,
+     uint256 secondConnectorAmountReceive,) = poolPortal.sellPool(
       _amount,
       uint(PortalType.Uniswap),
      _poolToken
@@ -674,13 +600,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     // add returned asset to fund(for case if manager removed this asset)
     _addToken(tokenAddress);
 
-    // return how much we get from sell pool
-    firstConnectorBalance = address(this).balance.sub(firstConnectorBalance);
-    secondConnectorBalance = IERC20(tokenAddress).balanceOf(address(this)).sub(secondConnectorBalance);
-
-    // return addresses of pool connectors
-    firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-    secondConnectorAddress = tokenAddress;
+    // event
+    emit SellPool(
+      address(_poolToken),
+      _amount,
+      address(ETH_TOKEN_ADDRESS),
+      tokenAddress,
+      firstConnectorAmountReceive,
+      secondConnectorAmountReceive);
   }
 
   // return all tokens addresses from fund
@@ -752,8 +679,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       );
     }
 
-    if(receivedAmount > 0)
-       _addToken(_cToken);
+    _addToken(_cToken);
 
     emit Loan(_cToken, receivedAmount, underlying, _amount);
   }
@@ -765,9 +691,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _cToken       cToken address
   */
   function compoundRedeemByPercent(uint256 _percent, address _cToken) external onlyOwner {
-    address underlying;
-    uint256 underlyingReceivedAmount;
-
     // get cToken amount by percent
     uint256 amount = exchangePortal.getPercentFromCTokenBalance(
       _percent,
@@ -776,14 +699,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     );
 
     // get underlying address
-    underlying = (_cToken == cEther)
+    address underlying = (_cToken == cEther)
     ? address(ETH_TOKEN_ADDRESS)
     : exchangePortal.getCTokenUnderlying(_cToken);
-
-    // get current underlying amount
-    underlyingReceivedAmount = (underlying == address(ETH_TOKEN_ADDRESS))
-    ? address(this).balance
-    : IERC20(underlying).balanceOf(address(this));
 
     // Approve
     IERC20(_cToken).approve(address(exchangePortal), amount);
@@ -797,23 +715,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     // Add token
     _addToken(underlying);
 
-    // calculate underlyingReceivedAmount
-    // after - before
-    underlyingReceivedAmount = (underlying == address(ETH_TOKEN_ADDRESS))
-    ? address(this).balance.sub(underlyingReceivedAmount)
-    : IERC20(underlying).balanceOf(address(this)).sub(underlyingReceivedAmount);
-
     // emit event
-    emit Redeem(_cToken, receivedAmount, underlying, underlyingReceivedAmount);
+    emit Redeem(_cToken, amount, underlying, receivedAmount);
   }
 
-  /**
-  * @dev mark ERC20 as relay
-  * @param _token   The token address to mark as relay
-  */
-  function _markAsRelay(address _token) internal {
-    isRelay[_token] = true;
-  }
 
   // get all fund data in one call
   function getSmartFundData() external view returns (

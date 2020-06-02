@@ -8,7 +8,12 @@ interface PoolPortalInterface {
     IERC20 _poolToken
   )
   external
-  payable;
+  payable
+  returns(
+    uint256 firstConnectorAmountSent,
+    uint256 secondConnectorAmountSent,
+    uint256 poolAmountReceive
+  );
 
   function sellPool
   (
@@ -17,7 +22,12 @@ interface PoolPortalInterface {
     IERC20 _poolToken
   )
   external
-  payable;
+  payable
+  returns(
+    uint256 firstConnectorAmountReceive,
+    uint256 secondConnectorAmountReceive,
+    uint256 poolAmountSent
+  );
 
   function getBacorConverterAddressByRelay(address relay)
   external
