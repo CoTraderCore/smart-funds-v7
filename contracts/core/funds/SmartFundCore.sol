@@ -120,8 +120,17 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   mapping (address => int256) public addressesNetDeposit;
 
   // Events
-  event Loan(address token, uint256 amount);
-  event Redeem(address token, uint256 amount);
+  event Loan(
+    address tokenAddress,
+    uint256 tokenAmount,
+    address underlyingAddress,
+    uint256 underlyingAmount);
+
+  event Redeem(
+    address tokenAddress,
+    uint256 tokenAmount,
+    address underlyingAddress,
+    uint256 underlyingAmount);
 
   event BuyPool(
     address poolAddress,
@@ -674,7 +683,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     secondConnectorAddress = tokenAddress;
   }
 
-  // return all tokens addresses from fund 
+  // return all tokens addresses from fund
   function getAllTokenAddresses() external view returns (address[] memory) {
     return tokenAddresses;
   }
@@ -725,15 +734,17 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _cToken       cToken address
   */
   function compoundMint(uint256 _amount, address _cToken) external onlyOwner{
-    uint256 receivedAmount = 0;
+    uint256 receivedAmount;
+    address underlying;
 
     if(_cToken == address(cEther)){
+      underlying = address(ETH_TOKEN_ADDRESS);
       receivedAmount = exchangePortal.compoundMint.value(_amount)(
         _amount,
         _cToken
       );
     }else{
-      address underlying = exchangePortal.getCTokenUnderlying(_cToken);
+      underlying = exchangePortal.getCTokenUnderlying(_cToken);
       IERC20(underlying).approve(address(exchangePortal), _amount);
       receivedAmount = exchangePortal.compoundMint(
         _amount,
@@ -744,7 +755,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     if(receivedAmount > 0)
        _addToken(_cToken);
 
-    emit Loan(_cToken, _amount);
+    emit Loan(_cToken, receivedAmount, underlying, _amount);
   }
 
   /**
@@ -754,28 +765,46 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _cToken       cToken address
   */
   function compoundRedeemByPercent(uint256 _percent, address _cToken) external onlyOwner {
+    address underlying;
+    uint256 underlyingReceivedAmount;
+
+    // get cToken amount by percent
     uint256 amount = exchangePortal.getPercentFromCTokenBalance(
       _percent,
       _cToken,
       address(this)
     );
 
+    // get underlying address
+    underlying = (_cToken == cEther)
+    ? address(ETH_TOKEN_ADDRESS)
+    : exchangePortal.getCTokenUnderlying(_cToken);
+
+    // get current underlying amount
+    underlyingReceivedAmount = (underlying == address(ETH_TOKEN_ADDRESS))
+    ? address(this).balance
+    : IERC20(underlying).balanceOf(address(this));
+
+    // Approve
     IERC20(_cToken).approve(address(exchangePortal), amount);
 
+    // Redeem
     uint256 receivedAmount = exchangePortal.compoundRedeemByPercent(
       _percent,
       _cToken
     );
 
-    if(receivedAmount > 0){
-      address underlying = (_cToken == cEther)
-      ? address(ETH_TOKEN_ADDRESS)
-      : exchangePortal.getCTokenUnderlying(_cToken);
+    // Add token
+    _addToken(underlying);
 
-      _addToken(underlying);
-    }
+    // calculate underlyingReceivedAmount
+    // after - before
+    underlyingReceivedAmount = (underlying == address(ETH_TOKEN_ADDRESS))
+    ? address(this).balance.sub(underlyingReceivedAmount)
+    : IERC20(underlying).balanceOf(address(this)).sub(underlyingReceivedAmount);
 
-    emit Redeem(_cToken, receivedAmount);
+    // emit event
+    emit Redeem(_cToken, receivedAmount, underlying, underlyingReceivedAmount);
   }
 
   /**
