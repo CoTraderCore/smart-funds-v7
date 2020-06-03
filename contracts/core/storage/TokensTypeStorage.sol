@@ -52,7 +52,7 @@ contract TokensTypeStorage is Ownable {
 
   // allow update token type from owner wallet
   function setTokenTypeAsOwner(address _token, string calldata _type) external onlyOwner{
-    // convert string to bytes32 
+    // convert string to bytes32
     bytes32 typeToBytes = stringToBytes32(_type);
 
     // flag token with new type

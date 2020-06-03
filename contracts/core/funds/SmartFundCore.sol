@@ -427,7 +427,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function buyPool(
    uint256 _amount,
-   uint8 _type,
+   uint _type,
    IERC20 _poolToken
   )
   external onlyOwner {
@@ -451,7 +451,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    }else{
      // approve first connector
      IERC20(firstConnectorAddress).approve(address(poolPortal), firstConnectorAmountSent);
-     // buy pool via ERC20 not payable
+     // buy pool via ERC20 and pool token amount (not payable)
      poolPortal.buyPool(
       _amount,
       _type,
@@ -486,7 +486,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function sellPool(
     uint256 _amount,
-    uint8 _type,
+    uint _type,
     IERC20 _poolToken
   )
   external onlyOwner {

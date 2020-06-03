@@ -4,7 +4,7 @@ interface PoolPortalInterface {
   function buyPool
   (
     uint256 _amount,
-    uint8 _type,
+    uint _type,
     IERC20 _poolToken
   )
   external
@@ -20,7 +20,7 @@ interface PoolPortalInterface {
   function sellPool
   (
     uint256 _amount,
-    uint8 _type,
+    uint _type,
     IERC20 _poolToken
   )
   external
@@ -33,7 +33,7 @@ interface PoolPortalInterface {
     uint256 poolAmountSent
   );
 
-  function getDataForBuyingPool(IERC20 _poolToken, uint8 _type, uint256 _amount)
+  function getDataForBuyingPool(IERC20 _poolToken, uint _type, uint256 _amount)
     external
     view
     returns(

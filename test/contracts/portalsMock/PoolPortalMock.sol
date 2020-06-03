@@ -41,11 +41,12 @@ contract PoolPortalMock {
 
 
   // for mock 1 Relay BNT = 0.5 BNT and 0.5 ERC
+  // Note: calculate by pool amount
   function buyBancorPool(IERC20 _poolToken, uint256 _amount) private {
      uint256 relayAmount = _amount.div(2);
 
-     require(IERC20(BNT).transferFrom(msg.sender, address(this), relayAmount));
-     require(IERC20(DAI).transferFrom(msg.sender, address(this), relayAmount));
+     require(IERC20(BNT).transferFrom(msg.sender, address(this), relayAmount), "Can not transfer from");
+     require(IERC20(DAI).transferFrom(msg.sender, address(this), relayAmount), "Can not transfer from");
 
      IERC20(DAIBNTPoolToken).transfer(msg.sender, _amount);
 
@@ -53,8 +54,9 @@ contract PoolPortalMock {
   }
 
   // for mock 1 UNI = 0.5 ETH and 0.5 ERC
-  function buyUniswapPool(address _poolToken, uint256 _ethAmount) private {
-    require(IERC20(DAI).transferFrom(msg.sender, address(this), _ethAmount));
+  // Note: calculate by ETH amount
+  function buyUniswapPool(address _poolToken, uint256 _ethAmount) private{
+    require(IERC20(DAI).transferFrom(msg.sender, address(this), _ethAmount), "Can not transfer from");
     IERC20(DAIUNIPoolToken).transfer(msg.sender, _ethAmount.mul(2));
 
     setTokenType(_poolToken, "UNISWAP_POOL");
@@ -70,6 +72,8 @@ contract PoolPortalMock {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountSent,
     uint256 secondConnectorAmountSent,
     uint256 poolAmountReceive
@@ -162,7 +166,7 @@ contract PoolPortalMock {
   }
 
 
-  function getDataForBuyingPool(IERC20 _poolToken, uint8 _type, uint256 _amount)
+  function getDataForBuyingPool(IERC20 _poolToken, uint _type, uint256 _amount)
     external
     view
     returns(
@@ -170,7 +174,7 @@ contract PoolPortalMock {
       address secondConnectorAddress,
       uint256 firstConnectorAmountSent,
       uint256 secondConnectorAmountSent
-    )
+  )
   {
     if(_type == uint(PortalType.Bancor)){
 
@@ -185,8 +189,8 @@ contract PoolPortalMock {
       // return mock data
       firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
       secondConnectorAddress = DAI;
-      firstConnectorAmountSent = _amount.div(2);
-      secondConnectorAmountSent = _amount.div(2);
+      firstConnectorAmountSent = _amount;
+      secondConnectorAmountSent = _amount;
     }
     else {
       revert("Unknown pool type");
