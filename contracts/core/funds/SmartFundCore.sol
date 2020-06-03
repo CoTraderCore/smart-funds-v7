@@ -54,7 +54,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // The Smart Contract which stores the addresses of all the authorized Converts Portals
   PermittedConvertsInterface public permittedConverts;
 
-  // KyberExchange recognizes ETH by this address
+  // portals recognizes ETH by this address
   IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
   // For ERC20 compliance
@@ -87,6 +87,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // Mapping of addresses that are approved to deposit if the manager only want's specific
   // addresses to be able to invest in their fund
   mapping (address => bool) public whitelist;
+
+  // mapping for check certain token is relay or not
+  mapping(address => bool) public isRelay;
 
   uint public version = 7;
 
@@ -138,8 +141,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 secondConnectorBalance);
 
   event SellPool(
-    address poolToken,
-    uint256 amount,
+    address poolAddress,
+    uint256 poolAmount,
     address firstConnectorAddress,
     address secondConnectorAddress,
     uint256 firstConnectorBalance,
@@ -431,27 +434,28 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    IERC20 _poolToken
   )
   external onlyOwner {
+   // get buy data
    (address firstConnectorAddress,
    address secondConnectorAddress,
    uint256 firstConnectorAmountSent,
    uint256 secondConnectorAmountSent
    ) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
 
-   // approve second conenctor
+   // approve second connector
    IERC20(secondConnectorAddress).approve(address(poolPortal), secondConnectorAmountSent);
 
-   // buy pool
+   // buy pool via ETH amount payable
    if(firstConnectorAddress == address(ETH_TOKEN_ADDRESS)){
-     // buy pool via ETH amount payable
      poolPortal.buyPool.value(_amount)(
       _amount,
       _type,
      _poolToken
      );
-   }else{
+   }
+   // buy pool via ERC20 and pool token amount (not payable)
+   else{
      // approve first connector
      IERC20(firstConnectorAddress).approve(address(poolPortal), firstConnectorAmountSent);
-     // buy pool via ERC20 and pool token amount (not payable)
      poolPortal.buyPool(
       _amount,
       _type,
@@ -463,6 +467,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
    // Add pool as ERC20 for withdraw
    _addToken(address(_poolToken));
+   // Mark this pool token as relay
+   _markAsRelay(address(_poolToken));
 
    // emit event
    emit BuyPool(
@@ -490,10 +496,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     IERC20 _poolToken
   )
   external onlyOwner {
-    // approve
+    // approve pool
     _poolToken.approve(address(poolPortal), _amount);
 
-    // sell
+    // sell pool
     (address firstConnectorAddress,
      address secondConnectorAddress,
      uint256 firstConnectorAmountReceive,
@@ -503,6 +509,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      _poolToken
     );
 
+    // Add connectors to fund
     _addToken(firstConnectorAddress);
     _addToken(secondConnectorAddress);
 
@@ -514,6 +521,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       secondConnectorAddress,
       firstConnectorAmountReceive,
       secondConnectorAmountReceive);
+  }
+
+  /**
+  * @dev mark ERC20 as relay
+  * @param _token   The token address to mark as relay
+  */
+  function _markAsRelay(address _token) internal {
+    isRelay[_token] = true;
   }
 
 
@@ -570,14 +585,16 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   function compoundMint(uint256 _amount, address _cToken) external onlyOwner{
     uint256 receivedAmount;
     address underlying;
-
+    // Loan ETH
     if(_cToken == address(cEther)){
       underlying = address(ETH_TOKEN_ADDRESS);
       receivedAmount = exchangePortal.compoundMint.value(_amount)(
         _amount,
         _cToken
       );
-    }else{
+    }
+    // Loan ERC20
+    else{
       underlying = exchangePortal.getCTokenUnderlying(_cToken);
       IERC20(underlying).approve(address(exchangePortal), _amount);
       receivedAmount = exchangePortal.compoundMint(
