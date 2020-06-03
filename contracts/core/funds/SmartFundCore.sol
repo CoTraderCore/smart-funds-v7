@@ -148,11 +148,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   event Deposit(address indexed user, uint256 amount, uint256 sharesReceived, uint256 totalShares);
   event Withdraw(address indexed user, uint256 sharesRemoved, uint256 totalShares);
   event Trade(address src, uint256 srcAmount, address dest, uint256 destReceived);
-
   event SmartFundCreated(address indexed owner);
 
-  // enum
-  enum PortalType { Bancor, Uniswap }
 
   constructor(
     address _owner,
@@ -430,103 +427,66 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function buyPool(
    uint256 _amount,
-   uint _type,
+   uint8 _type,
    IERC20 _poolToken
   )
   external onlyOwner {
-   // buy Bancor pool
-   if(_type == uint(PortalType.Bancor))
-    _buyBancorPool(_amount, _type, _poolToken);
+   (address firstConnectorAddress,
+   address secondConnectorAddress,
+   uint256 firstConnectorAmountSent,
+   uint256 secondConnectorAmountSent
+   ) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
 
-   // buy Uniswap pool
-   if(_type == uint(PortalType.Uniswap))
-    _buyUniswapPool(_amount, _type, _poolToken);
+   // approve second conenctor
+   IERC20(secondConnectorAddress).approve(address(poolPortal), secondConnectorAmountSent);
 
-    // Add pool as ERC20 for withdraw
-    _addToken(address(_poolToken));
-  }
-
-  // Helper for buy Uniswap pool
-  function _buyUniswapPool(
-    uint256 _amount,
-    uint _type,
-    IERC20 _poolToken
-  )
-  private
-  {
-    // approve connector
-    IERC20 token = IERC20(poolPortal.getTokenByUniswapExchange(address(_poolToken)));
-    token.approve(address(poolPortal), token.balanceOf(address(this)));
-
-    // buy pool via ETH amount payable
-    (uint256 firstConnectorAmountSent,
-    uint256 secondConnectorAmountSent,) = poolPortal.buyPool.value(_amount)(
-     _amount,
-     _type,
-    _poolToken
-    );
-
-    // reset approve
-    token.approve(address(poolPortal), 0);
-
-    // emit event
-    emit BuyPool(
-      address(_poolToken),
+   // buy pool
+   if(firstConnectorAddress == address(ETH_TOKEN_ADDRESS)){
+     // buy pool via ETH amount payable
+     poolPortal.buyPool.value(_amount)(
       _amount,
-      address(ETH_TOKEN_ADDRESS),
-      address(token),
-      firstConnectorAmountSent,
-      secondConnectorAmountSent);
-  }
-
-  // Helper for buy Bancor pool
-  function _buyBancorPool(
-    uint256 _amount,
-    uint _type,
-    IERC20 _poolToken
-  )
-   private
-  {
-    // get connectors
-    (IERC20 bancorConnector,
-       IERC20 ercConnector) = poolPortal.getBancorConnectorsByRelay(address(_poolToken));
-
-    // Approve all connectors to pool portal (pool calculates the required amount dynamicly)
-    bancorConnector.approve(address(poolPortal), bancorConnector.balanceOf(address(this)));
-    ercConnector.approve(address(poolPortal), ercConnector.balanceOf(address(this)));
-
-    // buy pool(relay) via relay amount not payable
-    // buy pool via ETH amount payable
-    (uint256 firstConnectorAmountSent,
-    uint256 secondConnectorAmountSent,) = poolPortal.buyPool(
-     _amount,
-     _type,
-    _poolToken
-    );
-
-    // reset approve
-    bancorConnector.approve(address(poolPortal), 0);
-    ercConnector.approve(address(poolPortal), 0);
-
-    // emit event
-    emit BuyPool(
-      address(_poolToken),
+      _type,
+     _poolToken
+     );
+   }else{
+     // approve first connector
+     IERC20(firstConnectorAddress).approve(address(poolPortal), firstConnectorAmountSent);
+     // buy pool via ERC20 not payable
+     poolPortal.buyPool(
       _amount,
-      address(bancorConnector),
-      address(ercConnector),
-      firstConnectorAmountSent,
-      secondConnectorAmountSent);
+      _type,
+     _poolToken
+     );
+   }
+
+   require(_poolToken.balanceOf(address(this)) >= _amount, "fund should receive pool");
+
+   // Add pool as ERC20 for withdraw
+   _addToken(address(_poolToken));
+
+   // emit event
+   emit BuyPool(
+     address(_poolToken),
+     _amount,
+     firstConnectorAddress,
+     secondConnectorAddress,
+     firstConnectorAmountSent,
+     secondConnectorAmountSent);
   }
+
+
 
 
   /**
   * @dev sell pool via pool portal
   *
   * @param _amount        amount of Bancor relay or Uniswap exchange to sell
+  * @param _type          type of pool (0 - Bancor, 1 - Uniswap)
   * @param _poolToken     address of Bancor relay or Uniswap exchange
   */
   function sellPool(
     uint256 _amount,
+    uint8 _type,
     IERC20 _poolToken
   )
   external onlyOwner {
@@ -539,7 +499,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      uint256 firstConnectorAmountReceive,
      uint256 secondConnectorAmountReceive, ) = poolPortal.sellPool(
       _amount,
-      uint(PortalType.Bancor),
+      _type,
      _poolToken
     );
 

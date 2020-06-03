@@ -133,15 +133,21 @@ contract PoolPortalMock {
   external
   payable
   returns(
+    address firstConnectorAddress,
+    address secondConnectorAddress,
     uint256 firstConnectorAmountReceive,
     uint256 secondConnectorAmountReceive,
     uint256 poolAmountSent
   )
   {
     if(_type == uint(PortalType.Bancor)){
+      firstConnectorAddress = BNT;
+      secondConnectorAddress = DAI;
       sellPoolViaBancor(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
+      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+      secondConnectorAddress = DAI;
       sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
@@ -150,10 +156,41 @@ contract PoolPortalMock {
     }
 
     // return mock data
-
     firstConnectorAmountReceive = _amount.div(2);
     secondConnectorAmountReceive = _amount.div(2);
     poolAmountSent = _amount;
+  }
+
+
+  function getDataForBuyingPool(IERC20 _poolToken, uint8 _type, uint256 _amount)
+    external
+    view
+    returns(
+      address firstConnectorAddress,
+      address secondConnectorAddress,
+      uint256 firstConnectorAmountSent,
+      uint256 secondConnectorAmountSent
+    )
+  {
+    if(_type == uint(PortalType.Bancor)){
+
+      // return mock data
+      firstConnectorAddress = BNT;
+      secondConnectorAddress = DAI;
+      firstConnectorAmountSent = _amount.div(2);
+      secondConnectorAmountSent = _amount.div(2);
+    }
+    else if(_type == uint(PortalType.Uniswap)){
+
+      // return mock data
+      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
+      secondConnectorAddress = DAI;
+      firstConnectorAmountSent = _amount.div(2);
+      secondConnectorAmountSent = _amount.div(2);
+    }
+    else {
+      revert("Unknown pool type");
+    }
   }
 
 

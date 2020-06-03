@@ -4,7 +4,7 @@ interface PoolPortalInterface {
   function buyPool
   (
     uint256 _amount,
-    uint _type,
+    uint8 _type,
     IERC20 _poolToken
   )
   external
@@ -20,7 +20,7 @@ interface PoolPortalInterface {
   function sellPool
   (
     uint256 _amount,
-    uint _type,
+    uint8 _type,
     IERC20 _poolToken
   )
   external
@@ -31,6 +31,16 @@ interface PoolPortalInterface {
     uint256 firstConnectorAmountReceive,
     uint256 secondConnectorAmountReceive,
     uint256 poolAmountSent
+  );
+
+  function getDataForBuyingPool(IERC20 _poolToken, uint8 _type, uint256 _amount)
+    external
+    view
+    returns(
+      address firstConnectorAddress,
+      address secondConnectorAddress,
+      uint256 firstConnectorAmountSent,
+      uint256 secondConnectorAmountSent
   );
 
   function getBacorConverterAddressByRelay(address relay)

@@ -79,7 +79,7 @@ contract PoolPortal {
   function buyPool
   (
     uint256 _amount,
-    uint _type,
+    uint8 _type,
     IERC20 _poolToken
   )
   external
@@ -122,7 +122,7 @@ contract PoolPortal {
   * @param _type       pool type
   * @param _poolToken  pool token address
   */
-  function getDataForBuyingPool(IERC20 _poolToken, uint256 _amount, uint8 _type)
+  function getDataForBuyingPool(IERC20 _poolToken, uint8 _type, uint256 _amount)
     external
     view
     returns(
@@ -315,7 +315,7 @@ contract PoolPortal {
   function sellPool
   (
     uint256 _amount,
-    uint _type,
+    uint8 _type,
     IERC20 _poolToken
   )
   external
