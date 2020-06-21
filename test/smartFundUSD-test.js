@@ -274,6 +274,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(0, totalShares)
       assert.equal(cEthAddress, cEther.address)
     })
+
+    it('Correct init commision', async function() {
+      const successFee = await smartFundUSD.successFee()
+      const platformFee = await smartFundUSD.platformFee()
+
+      assert.equal(Number(successFee), 1000)
+      assert.equal(Number(platformFee), 1000)
+      assert.equal(Number(successFee), Number(platformFee))
+    })
   })
 
   describe('Deposit', function() {
