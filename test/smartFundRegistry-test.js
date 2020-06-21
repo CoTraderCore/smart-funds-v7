@@ -39,7 +39,6 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
 
     this.registry = await SmartFundRegistry.new(
       '0x0000000000000000000000000000000000000000', //   Convert portal address
-      1000,                                         //   PLATFORM_FEE,
       this.permittedExchanges.address ,             //   PermittedExchanges.address,
       '0x0000000000000000000000000000000000000000', //   ExchangePortal.address,
       this.permittedPools.address ,                 //   PermittedPools.address,

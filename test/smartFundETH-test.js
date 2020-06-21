@@ -60,7 +60,7 @@ let xxxERC,
 
 contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
-  async function deployContracts(successFee=1000, platformFee=0){
+  async function deployContracts(successFee=1000){
     COT_DAO_WALLET = await CoTraderDAOWalletMock.new()
 
     // DEPLOY ERC20 TOKENS
@@ -168,7 +168,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       userOne,                                      // address _owner,
       'TEST ETH FUND',                              // string _name,
       successFee,                                   // uint256 _successFee,
-      platformFee,                                  // uint256 _platformFee,
+      successFee,                                   // uint256 _platformFee,
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
       permittedExchanges.address,                   // address _permittedExchangesAddress,
@@ -602,7 +602,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
   describe('Fund Manager', function() {
     it('should calculate fund manager and platform cut when no profits', async function() {
-      await deployContracts(1500, 1000)
+      await deployContracts(1500)
       const {
         fundManagerRemainingCut,
         fundValue,
@@ -641,27 +641,27 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
     }
 
     it('should calculate fund manager and platform cut correctly', async function() {
-      await deployContracts(1500, 0)
+      await deployContracts(1500)
       await fundManagerTest()
     })
 
     it('should calculate fund manager and platform cut correctly when not set', async function() {
-      await deployContracts(0, 0)
+      await deployContracts(0)
       await fundManagerTest(0)
     })
 
     it('should calculate fund manager and platform cut correctly when no platform fee', async function() {
-      await deployContracts(1500,0)
+      await deployContracts(1500)
       await fundManagerTest(15)
     })
 
     it('should calculate fund manager and platform cut correctly when no success fee', async function() {
-      await deployContracts(0,1000)
+      await deployContracts(0)
       await fundManagerTest(0)
     })
 
     it('should be able to withdraw fund manager profits', async function() {
-      await deployContracts(2000,0)
+      await deployContracts(2000)
       await fundManagerTest(20)
 
       await smartFundETH.fundManagerWithdraw(false, { from: userOne })
@@ -681,7 +681,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
   describe('Min return', function() {
     it('Not allow execude transaction trade if for some reason DEX not sent min return asset', async function() {
       // deploy smartFund with 10% success fee
-      await deployContracts(1000, 0)
+      await deployContracts(1000)
       // disable transfer in DEX
       await exchangePortal.changeStopTransferStatus(true)
       // give exchange portal contract some money
@@ -708,7 +708,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
   describe('Fund Manager profit cut with deposit/withdraw scenarios', function() {
     it('should accurately calculate shares when the manager makes a profit', async function() {
       // deploy smartFund with 10% success fee
-      await deployContracts(1000, 0)
+      await deployContracts(1000)
       const fee = await smartFundETH.successFee()
       assert.equal(fee, 1000)
 
@@ -764,7 +764,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     it('should accurately calculate shares when FM makes a loss then breaks even', async function() {
       // deploy smartFund with 10% success fee
-      await deployContracts(1000, 0)
+      await deployContracts(1000)
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(10)))
       await exchangePortal.pay({ from: userThree, value: toWei(String(3))})
@@ -1240,7 +1240,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
   describe('Platform cut', function() {
     it('Platform can get 10% from ETH profit', async function() {
       // deploy smartFund with 10% success fee and platform fee
-      await deployContracts(1000, 1000)
+      await deployContracts(1000)
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(50)))
       await exchangePortal.pay({ from: userOne, value: toWei(String(3))})
@@ -1320,7 +1320,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     it('Platform can get 10% from ERC profit', async function() {
       // deploy smartFund with 10% success fee and platform fee
-      await deployContracts(1000, 1000)
+      await deployContracts(1000)
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(50)))
       await exchangePortal.pay({ from: userOne, value: toWei(String(3))})
@@ -1438,7 +1438,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
   describe('Convert withdarwed assets to core fund asset', function() {
     it('correct convert CRYPTOCURRENCY', async function() {
       // deploy smartFund with 10% success fee
-      await deployContracts(1000, 0)
+      await deployContracts(1000)
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(1)))
 

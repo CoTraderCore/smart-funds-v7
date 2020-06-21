@@ -28,9 +28,6 @@ contract SmartFundRegistry is Ownable {
   address public exchangePortalAddress;
   address public convertPortalAddress;
 
-  // platForm fee is out of 10,000, e.g 2500 is 25%
-  uint256 public platformFee;
-
   // Default maximum success fee is 3000/30%
   uint256 public maximumSuccessFee = 3000;
 
@@ -50,7 +47,6 @@ contract SmartFundRegistry is Ownable {
   * @dev contructor
   *
   * @param _convertPortalAddress         address of convert portal contract
-  * @param _platformFee                  Initial platform fee
   * @param _permittedExchangesAddress    Address of the permittedExchanges contract
   * @param _exchangePortalAddress        Address of the initial ExchangePortal contract
   * @param _permittedPoolAddress         Address of the permittedPool contract
@@ -64,7 +60,6 @@ contract SmartFundRegistry is Ownable {
   */
   constructor(
     address _convertPortalAddress,
-    uint256 _platformFee,
     address _permittedExchangesAddress,
     address _exchangePortalAddress,
     address _permittedPoolAddress,
@@ -77,7 +72,6 @@ contract SmartFundRegistry is Ownable {
     address _permittedConvertsAddress
   ) public {
     convertPortalAddress = _convertPortalAddress;
-    platformFee = _platformFee;
     exchangePortalAddress = _exchangePortalAddress;
     permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
     permittedPools = PermittedPoolsInterface(_permittedPoolAddress);
@@ -113,8 +107,8 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundUSDFactory.createSmartFund(
         owner,
         _name,
-        _successFee,
-        platformFee,
+        _successFee, // manager fee
+        _successFee, // platform fee the same as a manager fee
         exchangePortalAddress,
         address(permittedExchanges),
         address(permittedPools),
@@ -130,8 +124,8 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundETHFactory.createSmartFund(
         owner,
         _name,
-        _successFee,
-        platformFee,
+        _successFee, // manager fee
+        _successFee, // platform fee the same as a manager fee
         exchangePortalAddress,
         address(permittedExchanges),
         address(permittedPools),
@@ -205,16 +199,6 @@ contract SmartFundRegistry is Ownable {
   function setMaximumSuccessFee(uint256 _maximumSuccessFee) external onlyOwner {
     maximumSuccessFee = _maximumSuccessFee;
   }
-
-  /**
-  * @dev Sets platform fee for all newly created SmartFunds
-  *
-  * @param _platformFee    New platform fee
-  */
-  function setPlatformFee(uint256 _platformFee) external onlyOwner {
-    platformFee = _platformFee;
-  }
-
 
   /**
   * @dev Sets new stableCoinAddress

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.24;
 
-import "./interfaces/IContractRegistry.sol";
-import "../helpers/stringToBytes32.sol";
+import "../bancor/interfaces/IContractRegistry.sol";
+import "./helpers/stringToBytes32.sol";
 import "../zeppelin-solidity/contracts/ownership/Ownable.sol";
 
 contract GetBancorAddressFromRegistry is Ownable{
