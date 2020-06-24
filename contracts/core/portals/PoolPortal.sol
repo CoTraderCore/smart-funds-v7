@@ -307,25 +307,19 @@ contract PoolPortal {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountReceive,
-    uint256 secondConnectorAmountReceive,
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount
     uint256 poolAmountSent
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorAmountReceive,
-       secondConnectorAmountReceive,
+      (connectorsAddress,
+       connectorsAmount,
        poolAmountSent) = sellPoolViaBancor(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorAmountReceive,
-       secondConnectorAmountReceive,
+      (connectorsAddress,
+       connectorsAmount,
        poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
@@ -345,10 +339,8 @@ contract PoolPortal {
   function sellPoolViaBancor(IERC20 _poolToken, uint256 _amount)
    private
    returns(
-     address firstConnectorAddress,
-     address secondConnectorAddress,
-     uint256 firstConnectorAmountReceive,
-     uint256 secondConnectorAmountReceive,
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount
      uint256 poolAmountSent
    )
   {
@@ -356,22 +348,21 @@ contract PoolPortal {
     _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+
     // liquidate relay
     BancorConverterInterface(converterAddress).liquidate(_amount);
-    // get connectors
-    (IERC20 bancorConnector,
-    IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
-
-    // return data
-    firstConnectorAddress = address(bancorConnector);
-    secondConnectorAddress = address(ercConnector);
-    firstConnectorAmountReceive = bancorConnector.balanceOf(address(this));
-    secondConnectorAmountReceive = ercConnector.balanceOf(address(this));
     poolAmountSent = _amount;
 
+    // get connectors
+    (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
+
     // transfer connectors back to fund
-    bancorConnector.transfer(msg.sender, firstConnectorAmountReceive);
-    ercConnector.transfer(msg.sender, secondConnectorAmountReceive);
+    uint256 received = 0;
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+       received = IERC20(connectorsAddress[i]).balanceOf(address(this));
+       IERC20(connectorsAddress[i]).transfer(msg.sender, received);
+       connectorsAmount[i] = received;
+    }
   }
 
 
@@ -449,15 +440,15 @@ contract PoolPortal {
   function getBancorConnectorsByRelay(address _relay)
     public
     view
-    returns(
-    IERC20 BNTConnector,
-    IERC20 ERCConnector
-    )
+    returns(address[] memory connectorsAddress)
   {
     address converterAddress = getBacorConverterAddressByRelay(_relay);
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-    BNTConnector = converter.connectorTokens(0);
-    ERCConnector = converter.connectorTokens(1);
+    uint256 connectorsCount = converter.connectorTokenCount();
+
+    for(uint8 i = 0; i<connectorsCount; i++){
+      connectorsAddress[i] = converter.connectorTokens(i);
+    }
   }
 
 
