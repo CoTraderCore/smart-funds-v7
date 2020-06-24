@@ -72,40 +72,41 @@ contract PoolPortalMock {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountSent,
-    uint256 secondConnectorAmountSent,
-    uint256 poolAmountReceive
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount
   )
   {
+    connectorsAddress = new address[](2);
+    connectorsAmount = new uint256[](2);
+
     if(_type == uint(PortalType.Bancor)){
       buyBancorPool(_poolToken, _amount);
+      connectorsAddress[0] = BNT;
+      connectorsAddress[1] = DAI;
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
       buyUniswapPool(address(_poolToken), _amount);
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = DAI;
     }
     else{
       // unknown portal type
       revert();
     }
 
-    firstConnectorAmountSent = _amount.div(2);
-    secondConnectorAmountSent = _amount.div(2);
-    poolAmountReceive = _amount;
+    connectorsAmount[0] = _amount.div(2);
+    connectorsAmount[1] = _amount.div(2);
   }
 
   function getBancorConnectorsByRelay(address relay)
   public
   view
-  returns(
-    IERC20 BNTConnector,
-    IERC20 ERCConnector
-  )
+  returns(address[] memory connectorsAddress)
   {
-    BNTConnector = IERC20(BNT);
-    ERCConnector = IERC20(DAI);
+    connectorsAddress = new address[](2);
+    connectorsAddress[0] = BNT;
+    connectorsAddress[1] = DAI;
   }
 
   function getUniswapConnectorsAmountByPoolAmount(
@@ -137,21 +138,22 @@ contract PoolPortalMock {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountReceive,
-    uint256 secondConnectorAmountReceive,
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
     uint256 poolAmountSent
   )
   {
+    connectorsAddress = new address[](2);
+    connectorsAmount = new uint256[](2);
+
     if(_type == uint(PortalType.Bancor)){
-      firstConnectorAddress = BNT;
-      secondConnectorAddress = DAI;
+      connectorsAddress[0] = BNT;
+      connectorsAddress[1] = DAI;
       sellPoolViaBancor(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
-      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-      secondConnectorAddress = DAI;
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = DAI;
       sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
@@ -160,8 +162,8 @@ contract PoolPortalMock {
     }
 
     // return mock data
-    firstConnectorAmountReceive = _amount.div(2);
-    secondConnectorAmountReceive = _amount.div(2);
+    connectorsAmount[0] = _amount.div(2);
+    connectorsAmount[1] = _amount.div(2);
     poolAmountSent = _amount;
   }
 
@@ -170,27 +172,27 @@ contract PoolPortalMock {
     external
     view
     returns(
-      address firstConnectorAddress,
-      address secondConnectorAddress,
-      uint256 firstConnectorAmountSent,
-      uint256 secondConnectorAmountSent
+      address[] memory connectorsAddress,
+      uint256[] memory connectorsAmount
   )
   {
-    if(_type == uint(PortalType.Bancor)){
+    connectorsAddress = new address[](2);
+    connectorsAmount = new uint256[](2);
 
+    if(_type == uint(PortalType.Bancor)){
       // return mock data
-      firstConnectorAddress = BNT;
-      secondConnectorAddress = DAI;
-      firstConnectorAmountSent = _amount.div(2);
-      secondConnectorAmountSent = _amount.div(2);
+      connectorsAddress[0] = BNT;
+      connectorsAddress[1] = DAI;
+      connectorsAmount[0] = _amount.div(2);
+      connectorsAmount[1] = _amount.div(2);
     }
     else if(_type == uint(PortalType.Uniswap)){
 
       // return mock data
-      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-      secondConnectorAddress = DAI;
-      firstConnectorAmountSent = _amount;
-      secondConnectorAmountSent = _amount;
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = DAI;
+      connectorsAmount[0] = _amount;
+      connectorsAmount[1] = _amount;
     }
     else {
       revert("Unknown pool type");
