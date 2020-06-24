@@ -434,21 +434,27 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    (address[] memory connectorsAddress,
     uint256[] memory connectorsAmount) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
 
-   // approve second connector
-   IERC20(secondConnectorAddress).approve(address(poolPortal), secondConnectorAmountSent);
+   // approve connectors
+   uint256 etherAmount = 0;
+   for(uint8 i = 0; i < connectorsAddress.length; i++){
+     if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+       IERC20(connectorsAddress[i]).approve(address(poolPortal), connectorsAmount[i]);
+     }
+     else{
+       etherAmount = connectorsAmount[i];
+     }
+   }
 
-   // buy pool via ETH amount payable
-   if(firstConnectorAddress == address(ETH_TOKEN_ADDRESS)){
-     poolPortal.buyPool.value(_amount)(
+   // buy pool via ERC20 and ETH
+   if(etherAmount > 0){
+     poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
      _poolToken
      );
    }
-   // buy pool via ERC20 and pool token amount (not payable)
+   // buy pool only via ERC20 (not payable)
    else{
-     // approve first connector
-     IERC20(firstConnectorAddress).approve(address(poolPortal), firstConnectorAmountSent);
      poolPortal.buyPool(
       _amount,
       _type,
@@ -499,8 +505,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     );
 
     // Add connectors to fund
-    _addToken(firstConnectorAddress);
-    _addToken(secondConnectorAddress);
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+      _addToken(connectorsAddress[i]);
+    }
 
     // event
     emit SellPool(

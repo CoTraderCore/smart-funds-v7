@@ -10,11 +10,8 @@ interface PoolPortalInterface {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountSent,
-    uint256 secondConnectorAmountSent,
-    uint256 poolAmountReceive
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount
   );
 
   function sellPool
@@ -26,10 +23,8 @@ interface PoolPortalInterface {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountReceive,
-    uint256 secondConnectorAmountReceive,
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
     uint256 poolAmountSent
   );
 
@@ -37,10 +32,8 @@ interface PoolPortalInterface {
     external
     view
     returns(
-      address firstConnectorAddress,
-      address secondConnectorAddress,
-      uint256 firstConnectorAmountSent,
-      uint256 secondConnectorAmountSent
+      address[] memory connectorsAddress,
+      uint256[] memory connectorsAmount
   );
 
   function getBacorConverterAddressByRelay(address relay)
@@ -58,10 +51,7 @@ interface PoolPortalInterface {
   function getBancorConnectorsByRelay(address relay)
   external
   view
-  returns(
-    IERC20 BNTConnector,
-    IERC20 ERCConnector
-  );
+  returns(address[] memory connectorsAddress);
 
   function getBancorRatio(address _from, address _to, uint256 _amount)
   external
