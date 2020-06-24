@@ -375,10 +375,8 @@ contract PoolPortal {
   function sellPoolViaUniswap(IERC20 _poolToken, uint256 _amount)
    private
    returns(
-     address firstConnectorAddress,
-     address secondConnectorAddress,
-     uint256 firstConnectorAmountReceive,
-     uint256 secondConnectorAmountReceive,
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount
      uint256 poolAmountSent
   )
   {
@@ -395,6 +393,7 @@ contract PoolPortal {
           address(_poolToken));
       // set deadline
       uint256 deadline = now + 15 minutes;
+
       // liquidate
       (uint256 eth_amount,
        uint256 token_amount) = exchange.removeLiquidity(
@@ -404,10 +403,12 @@ contract PoolPortal {
          deadline);
 
       // return data
-      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-      secondConnectorAddress = tokenAddress;
-      firstConnectorAmountReceive = eth_amount;
-      secondConnectorAmountReceive = token_amount;
+      connectorsAddress = new address[](2);
+      connectorsAmount = new uint256[](2);
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = tokenAddress;
+      connectorsAmount[0] = eth_amount;
+      connectorsAmount[1] = erc20Amount;
       poolAmountSent = _amount;
 
       // transfer assets back to smart fund
