@@ -126,33 +126,33 @@ contract PoolPortal {
     external
     view
     returns(
-      address firstConnectorAddress,
-      address secondConnectorAddress,
-      uint256 firstConnectorAmountSent,
-      uint256 secondConnectorAmountSent
+      address[] memory connectorsAddress,
+      uint256[] memory connectorsAmount
     )
   {
     if(_type == uint(PortalType.Bancor)){
       // get Bancor converter
       address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
-      // calculate connectors amount for buy certain pool amount
-      (uint256 bancorAmount,
-       uint256 connectorAmount) = getBancorConnectorsAmountByRelayAmount(_amount, _poolToken);
       // get converter as contract
       BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-      // approve bancor and coonector amount to converter
-      // get connectors
-      (IERC20 bancorConnector,
-      IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
+      uint256 connectorsCount = converter.connectorTokenCount();
 
-      // return data
-      firstConnectorAddress = address(bancorConnector);
-      secondConnectorAddress = address(ercConnector);
-      firstConnectorAmountSent = bancorAmount;
-      secondConnectorAmountSent = connectorAmount;
+      connectorsAddress = new address[](connectorsCount);
+      connectorsAmount = new uint256[](connectorsCount);
+
+      for(uint8 i = 0; i < connectorsCount; i++){
+        IERC20 currentConnector = converter.connectorTokens(i);
+
+        // push address of current connector
+        connectorsAddress[i] = address(currentConnector);
+
+        // push amount for current connector
+        connectorsAmount[i] = getBancorConnectorsAmountByRelayAmount(
+          _amount, _poolToken, address(currentConnector));
+      }
     }
     else if(_type == uint(PortalType.Uniswap)){
-      // get token address
+      /* // get token address
       address tokenAddress = uniswapFactory.getToken(address(_poolToken));
       // get tokens amd approve to exchange
       uint256 erc20Amount = getUniswapTokenAmountByETH(tokenAddress, _amount);
@@ -161,7 +161,8 @@ contract PoolPortal {
       firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
       secondConnectorAddress = tokenAddress;
       firstConnectorAmountSent = _amount;
-      secondConnectorAmountSent = erc20Amount;
+      secondConnectorAmountSent = erc20Amount; */
+
     }
     else {
       revert("Unknown pool type");
@@ -514,42 +515,37 @@ contract PoolPortal {
 
 
   /**
-  * @dev helper for get amount for both Bancor connectors for input amount of pool
+  * @dev helper for get value in pool for a certain connector address
   *
   * @param _amount      relay amount
   * @param _relay       address of bancor relay
+  * @param _connector   address of relay connector
   */
   function getBancorConnectorsAmountByRelayAmount
   (
     uint256 _amount,
-    IERC20 _relay
+    IERC20  _relay,
+    address connector
   )
     public
     view
-    returns(uint256 bancorAmount, uint256 connectorAmount)
+    returns(uint256 connectorAmount)
   {
     // get converter contract
     BancorConverterInterface converter = BancorConverterInterface(
       SmartTokenInterface(address(_relay)).owner());
-    // calculate BNT and second connector amount
-    // get connectors
-    IERC20 bancorConnector = converter.connectorTokens(0);
-    IERC20 ercConnector = converter.connectorTokens(1);
-    // get connectors balance
-    uint256 bntBalance = converter.getConnectorBalance(bancorConnector);
-    uint256 ercBalance = converter.getConnectorBalance(ercConnector);
+
+    // get connector balance
+    uint256 connectorBalance = converter.getConnectorBalance(_connector);
+
     // get bancor formula contract
     IBancorFormula bancorFormula = IBancorFormula(
       bancorRegistry.getBancorContractAddresByName("BancorFormula"));
+
     // calculate input
-    bancorAmount = bancorFormula.calculateFundCost(
-      _relay.totalSupply(),
-      bntBalance,
-      1000000,
-       _amount);
     connectorAmount = bancorFormula.calculateFundCost(
       _relay.totalSupply(),
-      ercBalance,
+      connectorBalance,
       1000000,
        _amount);
   }

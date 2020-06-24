@@ -5,4 +5,5 @@ interface BancorConverterInterface {
   function fund(uint256 _amount) external;
   function liquidate(uint256 _amount) external;
   function getConnectorBalance(IERC20 _connectorToken) external view returns (uint256);
+  function connectorTokenCount() external view returns (uint16);
 }
