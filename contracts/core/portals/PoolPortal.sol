@@ -85,27 +85,16 @@ contract PoolPortal {
   external
   payable
   returns(
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorAmountSent,
-    uint256 secondConnectorAmountSent,
-    uint256 poolAmountReceive
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (firstConnectorAddress,
-       secondConnectorAddress,
-       firstConnectorAmountSent,
-       secondConnectorAmountSent,
-       poolAmountReceive) = buyBancorPool(_poolToken, _amount);
+      (connectorsAddress, connectorsAmount) = buyBancorPool(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-       (firstConnectorAddress,
-        secondConnectorAddress,
-        firstConnectorAmountSent,
-        secondConnectorAmountSent,
-        poolAmountReceive) = buyUniswapPool(address(_poolToken), _amount);
+       (connectorsAddress, connectorsAmount) = buyUniswapPool(address(_poolToken), _amount);
     }
     else{
       // unknown portal type
@@ -153,16 +142,18 @@ contract PoolPortal {
       }
     }
     else if(_type == uint(PortalType.Uniswap)){
-      /* // get token address
+      // get token address
       address tokenAddress = uniswapFactory.getToken(address(_poolToken));
       // get tokens amd approve to exchange
       uint256 erc20Amount = getUniswapTokenAmountByETH(tokenAddress, _amount);
 
       // return data
-      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-      secondConnectorAddress = tokenAddress;
-      firstConnectorAmountSent = _amount;
-      secondConnectorAmountSent = erc20Amount; */
+      connectorsAddress = new address[](2);
+      connectorsAmount = new uint256[](2);
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = tokenAddress;
+      connectorsAmount[0] = _amount;
+      connectorsAmount[1] = erc20Amount;
 
     }
     else {
@@ -256,7 +247,7 @@ contract PoolPortal {
       // reset approve (some ERC20 not allow do new approve if already approved)
       IERC20(tokenAddress).approve(_poolToken, 0);
 
-      // addition check 
+      // addition check
       require(poolAmount > 0, "UNI pool received amount can not be zerro");
 
       // return data
