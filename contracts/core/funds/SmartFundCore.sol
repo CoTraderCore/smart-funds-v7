@@ -135,18 +135,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   event BuyPool(
     address poolAddress,
     uint256 poolAmount,
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance);
+    address[] connectorsAddress,
+    uint256[] connectorsAmount);
 
   event SellPool(
     address poolAddress,
     uint256 poolAmount,
-    address firstConnectorAddress,
-    address secondConnectorAddress,
-    uint256 firstConnectorBalance,
-    uint256 secondConnectorBalance);
+    address[] connectorsAddress,
+    uint256[] connectorsAmount);
 
   event Deposit(address indexed user, uint256 amount, uint256 sharesReceived, uint256 totalShares);
   event Withdraw(address indexed user, uint256 sharesRemoved, uint256 totalShares);
@@ -435,11 +431,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   )
   external onlyOwner {
    // get buy data
-   (address firstConnectorAddress,
-   address secondConnectorAddress,
-   uint256 firstConnectorAmountSent,
-   uint256 secondConnectorAmountSent
-   ) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
+   (address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
 
    // approve second connector
    IERC20(secondConnectorAddress).approve(address(poolPortal), secondConnectorAmountSent);
@@ -474,10 +467,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    emit BuyPool(
      address(_poolToken),
      _amount,
-     firstConnectorAddress,
-     secondConnectorAddress,
-     firstConnectorAmountSent,
-     secondConnectorAmountSent);
+     connectorsAddress,
+     connectorsAmount);
   }
 
 
@@ -500,10 +491,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     _poolToken.approve(address(poolPortal), _amount);
 
     // sell pool
-    (address firstConnectorAddress,
-     address secondConnectorAddress,
-     uint256 firstConnectorAmountReceive,
-     uint256 secondConnectorAmountReceive, ) = poolPortal.sellPool(
+    (address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount, ) = poolPortal.sellPool(
       _amount,
       _type,
      _poolToken
@@ -517,10 +506,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     emit SellPool(
       address(_poolToken),
       _amount,
-      firstConnectorAddress,
-      secondConnectorAddress,
-      firstConnectorAmountReceive,
-      secondConnectorAmountReceive);
+      connectorsAddress,
+      connectorsAmount);
   }
 
   /**
