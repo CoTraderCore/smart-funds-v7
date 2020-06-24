@@ -203,7 +203,7 @@ contract PoolPortal {
     // buy relay from converter
     converter.fund(_amount);
 
-    // addition check 
+    // addition check
     require(_amount > 0, "BNT pool recieved amount can not be zerro");
 
     // transfer relay back to smart fund
@@ -231,10 +231,8 @@ contract PoolPortal {
   function buyUniswapPool(address _poolToken, uint256 _ethAmount)
    private
    returns(
-     address firstConnectorAddress,
-     address secondConnectorAddress,
-     uint256 firstConnectorAmountSent,
-     uint256 secondConnectorAmountSent,
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount
      uint256 poolAmountReceive
    )
   {
@@ -254,21 +252,26 @@ contract PoolPortal {
         1,
         erc20Amount,
         deadline);
+
       // reset approve (some ERC20 not allow do new approve if already approved)
       IERC20(tokenAddress).approve(_poolToken, 0);
 
+      // addition check 
       require(poolAmount > 0, "UNI pool received amount can not be zerro");
 
       // return data
-      firstConnectorAddress = address(ETH_TOKEN_ADDRESS);
-      secondConnectorAddress = tokenAddress;
-      firstConnectorAmountSent = _ethAmount;
-      secondConnectorAmountSent = erc20Amount;
+      connectorsAddress = new address[](2);
+      connectorsAmount = new uint256[](2);
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = tokenAddress;
+      connectorsAmount[0] = _ethAmount;
+      connectorsAmount[1] = erc20Amount;
       poolAmountReceive = poolAmount;
 
       // transfer pool token back to smart fund
       IERC20(_poolToken).transfer(msg.sender, poolAmount);
-      // transfer ERC20 remains
+
+      // transfer remains ERC20
       uint256 remainsERC = IERC20(tokenAddress).balanceOf(address(this));
       if(remainsERC > 0)
           IERC20(tokenAddress).transfer(msg.sender, remainsERC);
