@@ -137,15 +137,16 @@ contract PoolPortal {
       BancorConverterInterface converter = BancorConverterInterface(converterAddress);
       uint256 connectorsCount = converter.connectorTokenCount();
 
+      // create arrays for data
       connectorsAddress = new address[](connectorsCount);
       connectorsAmount = new uint256[](connectorsCount);
 
+      // push data
       for(uint8 i = 0; i < connectorsCount; i++){
+        // get current connector address
         IERC20 currentConnector = converter.connectorTokens(i);
-
         // push address of current connector
         connectorsAddress[i] = address(currentConnector);
-
         // push amount for current connector
         connectorsAmount[i] = getBancorConnectorsAmountByRelayAmount(
           _amount, _poolToken, address(currentConnector));
@@ -179,53 +180,43 @@ contract PoolPortal {
   function buyBancorPool(IERC20 _poolToken, uint256 _amount)
    private
    returns(
-     address firstConnectorAddress,
-     address secondConnectorAddress,
-     uint256 firstConnectorAmountSent,
-     uint256 secondConnectorAmountSent,
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount
      uint256 poolAmountReceive
    )
   {
     // get Bancor converter
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
-    // calculate connectors amount for buy certain pool amount
-    (uint256 bancorAmount,
-     uint256 connectorAmount) = getBancorConnectorsAmountByRelayAmount(_amount, _poolToken);
     // get converter as contract
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-    // approve bancor and coonector amount to converter
-    // get connectors
-    (IERC20 bancorConnector,
-    IERC20 ercConnector) = getBancorConnectorsByRelay(address(_poolToken));
-    // reset approve (some ERC20 not allow do new approve if already approved)
-    bancorConnector.approve(converterAddress, 0);
-    ercConnector.approve(converterAddress, 0);
-    // transfer from fund and approve to converter
-    _transferFromSenderAndApproveTo(bancorConnector, bancorAmount, converterAddress);
-    _transferFromSenderAndApproveTo(ercConnector, connectorAmount, converterAddress);
+    // get connectors and amount
+    (connectorsAddress, connectorsAmount) = getDataForBuyingPool(_poolToken, 0, _amount);
+
+    // approve from portal to converter
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+      // reset approve (some ERC20 not allow do new approve if already approved)
+      IERC20(connectorsAddress[i]).approve(converterAddress, 0);
+      // transfer from fund and approve to converter
+      _transferFromSenderAndApproveTo(IERC20(connectorsAddress[i]), connectorsAmount[i], converterAddress);
+    }
+
     // buy relay from converter
     converter.fund(_amount);
 
+    // addition check 
     require(_amount > 0, "BNT pool recieved amount can not be zerro");
 
     // transfer relay back to smart fund
     _poolToken.transfer(msg.sender, _amount);
-
-    // return data
-    firstConnectorAddress = address(bancorConnector);
-    secondConnectorAddress = address(ercConnector);
-    firstConnectorAmountSent = bancorAmount;
-    secondConnectorAmountSent = connectorAmount;
     poolAmountReceive = _amount;
 
-    // transfer connectors back if a small amount remains
-    uint256 bancorRemains = bancorConnector.balanceOf(address(this));
-    if(bancorRemains > 0)
-       bancorConnector.transfer(msg.sender, bancorRemains);
-
-    uint256 ercRemains = ercConnector.balanceOf(address(this));
-    if(ercRemains > 0)
-        ercConnector.transfer(msg.sender, ercRemains);
+    // transfer connectors back to fund if some amount remains
+    uint256 remains = 0;
+    for(uint8 j = 0; j < connectorsAddress.length; j++){
+      remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
+      if(remains > 0)
+         IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
+    }
 
     setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
