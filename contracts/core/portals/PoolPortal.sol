@@ -90,11 +90,11 @@ contract PoolPortal {
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (connectorsAddress, connectorsAmount) = buyBancorPool(_poolToken, _amount);
+      (connectorsAddress, connectorsAmount,) = buyBancorPool(_poolToken, _amount);
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-       (connectorsAddress, connectorsAmount) = buyUniswapPool(address(_poolToken), _amount);
+       (connectorsAddress, connectorsAmount,) = buyUniswapPool(address(_poolToken), _amount);
     }
     else{
       // unknown portal type
@@ -112,7 +112,7 @@ contract PoolPortal {
   * @param _poolToken  pool token address
   */
   function getDataForBuyingPool(IERC20 _poolToken, uint _type, uint256 _amount)
-    external
+    public
     view
     returns(
       address[] memory connectorsAddress,
@@ -172,7 +172,7 @@ contract PoolPortal {
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount
+     uint256[] memory connectorsAmount,
      uint256 poolAmountReceive
    )
   {
@@ -223,7 +223,7 @@ contract PoolPortal {
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount
+     uint256[] memory connectorsAmount,
      uint256 poolAmountReceive
    )
   {
@@ -308,7 +308,7 @@ contract PoolPortal {
   payable
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount
+    uint256[] memory connectorsAmount,
     uint256 poolAmountSent
   )
   {
@@ -340,7 +340,7 @@ contract PoolPortal {
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount
+     uint256[] memory connectorsAmount,
      uint256 poolAmountSent
    )
   {
@@ -376,7 +376,7 @@ contract PoolPortal {
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount
+     uint256[] memory connectorsAmount,
      uint256 poolAmountSent
   )
   {
@@ -408,7 +408,7 @@ contract PoolPortal {
       connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
       connectorsAddress[1] = tokenAddress;
       connectorsAmount[0] = eth_amount;
-      connectorsAmount[1] = erc20Amount;
+      connectorsAmount[1] = token_amount;
       poolAmountSent = _amount;
 
       // transfer assets back to smart fund
@@ -448,7 +448,7 @@ contract PoolPortal {
     uint256 connectorsCount = converter.connectorTokenCount();
 
     for(uint8 i = 0; i<connectorsCount; i++){
-      connectorsAddress[i] = converter.connectorTokens(i);
+      connectorsAddress[i] = address(converter.connectorTokens(i));
     }
   }
 
@@ -502,7 +502,7 @@ contract PoolPortal {
   (
     uint256 _amount,
     IERC20  _relay,
-    address connector
+    address _connector
   )
     public
     view
@@ -513,7 +513,7 @@ contract PoolPortal {
       SmartTokenInterface(address(_relay)).owner());
 
     // get connector balance
-    uint256 connectorBalance = converter.getConnectorBalance(_connector);
+    uint256 connectorBalance = converter.getConnectorBalance(IERC20(_connector));
 
     // get bancor formula contract
     IBancorFormula bancorFormula = IBancorFormula(
