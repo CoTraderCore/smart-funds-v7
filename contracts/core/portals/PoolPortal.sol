@@ -183,16 +183,29 @@ contract PoolPortal {
     // get connectors and amount
     (connectorsAddress, connectorsAmount) = getDataForBuyingPool(_poolToken, 0, _amount);
 
+    // for detect if there are ETH in connectors or not
+    uint256 etherAmount = 0;
+
     // approve from portal to converter
     for(uint8 i = 0; i < connectorsAddress.length; i++){
-      // reset approve (some ERC20 not allow do new approve if already approved)
-      IERC20(connectorsAddress[i]).approve(converterAddress, 0);
-      // transfer from fund and approve to converter
-      _transferFromSenderAndApproveTo(IERC20(connectorsAddress[i]), connectorsAmount[i], converterAddress);
+      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+        // reset approve (some ERC20 not allow do new approve if already approved)
+        IERC20(connectorsAddress[i]).approve(converterAddress, 0);
+        // transfer from fund and approve to converter
+        _transferFromSenderAndApproveTo(IERC20(connectorsAddress[i]), connectorsAmount[i], converterAddress);
+      }else{
+        etherAmount = connectorsAmount[i];
+      }
     }
 
     // buy relay from converter
-    converter.fund(_amount);
+    if(etherAmount > 0){
+      // payable
+      converter.fund.value(etherAmount)(_amount);
+    }else{
+      // non payable
+      converter.fund(_amount);
+    }
 
     // addition check
     require(_amount > 0, "BNT pool recieved amount can not be zerro");
@@ -359,9 +372,17 @@ contract PoolPortal {
     // transfer connectors back to fund
     uint256 received = 0;
     for(uint8 i = 0; i < connectorsAddress.length; i++){
-       received = IERC20(connectorsAddress[i]).balanceOf(address(this));
-       IERC20(connectorsAddress[i]).transfer(msg.sender, received);
-       connectorsAmount[i] = received;
+      if(connectorsAddress[i] == address(ETH_TOKEN_ADDRESS)){
+        // tarnsfer ETH
+        received = address(this).balance;
+        (msg.sender).transfer(received);
+        connectorsAmount[i] = received;
+      }else{
+        // transfer ERC20
+        received = IERC20(connectorsAddress[i]).balanceOf(address(this));
+        IERC20(connectorsAddress[i]).transfer(msg.sender, received);
+        connectorsAmount[i] = received;
+      }
     }
   }
 

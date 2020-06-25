@@ -20,6 +20,7 @@ NOTE: in separate console
 1) Optimize core fund logic
 2) Made more flexible pool with the ability to add another dapp pool
 3) Bind platfromFee with managerFee
+4) Add 2+ pool connectors
 ```
 
 # Possible issue
