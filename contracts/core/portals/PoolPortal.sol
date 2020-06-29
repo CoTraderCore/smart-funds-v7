@@ -368,6 +368,8 @@ contract PoolPortal {
 
     // get connectors
     (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
+    // define connectors amount length 
+    connectorsAmount = new uint256[](connectorsAddress.length);
 
     // transfer connectors back to fund
     uint256 received = 0;
