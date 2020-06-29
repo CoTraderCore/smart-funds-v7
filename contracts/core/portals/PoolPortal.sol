@@ -467,6 +467,7 @@ contract PoolPortal {
     address converterAddress = getBacorConverterAddressByRelay(_relay);
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
     uint256 connectorsCount = converter.connectorTokenCount();
+    connectorsAddress = new address[](connectorsCount);
 
     for(uint8 i = 0; i<connectorsCount; i++){
       connectorsAddress[i] = address(converter.connectorTokens(i));
