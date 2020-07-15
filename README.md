@@ -17,10 +17,12 @@ NOTE: in separate console
 # Done
 
 ```
-1) Optimize core fund logic
+1) Optimized core fund logic
 2) Made more flexible pool with the ability to add another dapp pool
 3) Bind platfromFee with managerFee
 4) Add 2+ pool connectors
+5) Provide events with additional data for profit verifier script
+6) Provide pool buy/sell with additional bytes32 array for case if need pass additional data
 ```
 
 # Possible issue
