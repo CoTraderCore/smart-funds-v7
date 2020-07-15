@@ -22,13 +22,13 @@ NOTE: in separate console
 3) Bind platfromFee with managerFee
 4) Add 2+ pool connectors
 5) Provide events with additional data for profit verifier script
+6) Remove Bancor ETH wrapper from portals 
 ```
 
 # Todo
 ```
-1) Add support for bancor v2
+1) Add support for Bancor v2 pools
 2) Reduce 1inch gas cost in few times by get params offchain
-3) Remove Bancor ETH wrapper 
 ```
 
 # Possible issue

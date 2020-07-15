@@ -26,8 +26,6 @@ contract PoolPortal {
   IGetBancorAddressFromRegistry public bancorRegistry;
   UniswapFactoryInterface public uniswapFactory;
 
-  address public BancorEtherToken;
-
   // CoTrader platform recognize ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
@@ -47,14 +45,12 @@ contract PoolPortal {
   *
   * @param _bancorRegistryWrapper  address of GetBancorAddressFromRegistry
   * @param _bancorRatio            address of GetRatioForBancorAssets
-  * @param _bancorEtherToken       address of Bancor ETH wrapper
   * @param _uniswapFactory         address of Uniswap factory contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   */
   constructor(
     address _bancorRegistryWrapper,
     address _bancorRatio,
-    address _bancorEtherToken,
     address _uniswapFactory,
     address _tokensTypes
 
@@ -63,7 +59,6 @@ contract PoolPortal {
   {
     bancorRegistry = IGetBancorAddressFromRegistry(_bancorRegistryWrapper);
     bancorRatio = IGetRatioForBancorAssets(_bancorRatio);
-    BancorEtherToken = _bancorEtherToken;
     uniswapFactory = UniswapFactoryInterface(_uniswapFactory);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
@@ -368,7 +363,7 @@ contract PoolPortal {
 
     // get connectors
     (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
-    // define connectors amount length 
+    // define connectors amount length
     connectorsAmount = new uint256[](connectorsAddress.length);
 
     // transfer connectors back to fund
@@ -564,11 +559,8 @@ contract PoolPortal {
   view
   returns(uint256)
   {
-    // Change ETH to Bancor ETH wrapper
-    address fromAddress = IERC20(_from) == ETH_TOKEN_ADDRESS ? BancorEtherToken : _from;
-    address toAddress = IERC20(_to) == ETH_TOKEN_ADDRESS ? BancorEtherToken : _to;
     // return Bancor ratio
-    return bancorRatio.getRatio(fromAddress, toAddress, _amount);
+    return bancorRatio.getRatio(_from, _to, _amount);
   }
 
 
