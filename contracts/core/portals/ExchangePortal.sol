@@ -17,7 +17,6 @@ import "../../paraswap/interfaces/IParaswapParams.sol";
 
 import "../../bancor/interfaces/IGetBancorAddressFromRegistry.sol";
 import "../../bancor/interfaces/BancorNetworkInterface.sol";
-import "../../bancor/interfaces/PathFinderInterface.sol";
 
 import "../../oneInch/IOneSplitAudit.sol";
 
@@ -337,12 +336,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       bancorRegistry.getBancorContractAddresByName("BancorNetwork")
     );
 
-    PathFinderInterface pathFinder = PathFinderInterface(
-      bancorRegistry.getBancorContractAddresByName("BancorNetworkPathFinder")
-    );
-
     // Get Bancor tokens path
-    address[] memory path = pathFinder.generatePath(sourceToken, destinationToken);
+    address[] memory path = bancorNetwork.conversionPath(IERC20(sourceToken), IERC20(destinationToken));
 
     // Convert addresses to ERC20
     IERC20[] memory pathInERC20 = new IERC20[](path.length);

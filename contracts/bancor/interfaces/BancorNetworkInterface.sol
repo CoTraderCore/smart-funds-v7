@@ -36,4 +36,8 @@ interface BancorNetworkInterface {
         address _for
     ) external returns (uint256);
 
+    function conversionPath(
+        IERC20 _sourceToken,
+        IERC20 _targetToken
+    ) external view returns (address[] memory);
 }

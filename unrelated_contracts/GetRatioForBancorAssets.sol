@@ -116,10 +116,10 @@ interface BancorNetworkInterface {
         address _for
     ) external returns (uint256);
 
-}
-
-interface PathFinderInterface {
- function generatePath(address _sourceToken, address _targetToken) external view returns (address[] memory);
+    function conversionPath(
+        IERC20 _sourceToken,
+        IERC20 _targetToken
+    ) external view returns (address[]);
 }
 
 
@@ -146,17 +146,12 @@ contract GetRatioForBancorAssets {
   */
   function getRatio(address _from, address _to, uint256 _amount) public view returns(uint256 result){
     if(_amount > 0){
-      // get latest contracts
-      PathFinderInterface pathFinder = PathFinderInterface(
-        bancorRegistry.getBancorContractAddresByName("BancorNetworkPathFinder")
-      );
-
       BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
         bancorRegistry.getBancorContractAddresByName("BancorNetwork")
       );
 
       // get Bancor path array
-      address[] memory path = pathFinder.generatePath(_from, _to);
+      address[] memory path = bancorNetwork.conversionPath(_from, _to);
       ERC20[] memory pathInERC20 = new ERC20[](path.length);
 
       // Convert addresses to ERC20
