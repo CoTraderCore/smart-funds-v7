@@ -24,6 +24,12 @@ NOTE: in separate console
 5) Provide events with additional data for profit verifier script
 ```
 
+# Todo
+```
+1) Add support for bancor v2
+2) Reduce 1inch gas cost in few times by get params offchain 
+```
+
 # Possible issue
 
 ```
