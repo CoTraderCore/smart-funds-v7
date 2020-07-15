@@ -9,9 +9,8 @@ import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../../bancor/interfaces/BancorConverterInterface.sol";
-import "../../bancor/interfaces/IGetRatioForBancorAssets.sol";
+import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/SmartTokenInterface.sol";
-import "../../bancor/interfaces/IGetBancorAddressFromRegistry.sol";
 import "../../bancor/interfaces/IBancorFormula.sol";
 
 import "../../uniswap/interfaces/UniswapExchangeInterface.sol";
@@ -22,8 +21,7 @@ import "../interfaces/ITokensTypeStorage.sol";
 contract PoolPortal {
   using SafeMath for uint256;
 
-  IGetRatioForBancorAssets public bancorRatio;
-  IGetBancorAddressFromRegistry public bancorRegistry;
+  IGetBancorData public bancorData;
   UniswapFactoryInterface public uniswapFactory;
 
   // CoTrader platform recognize ETH by this address
@@ -43,22 +41,19 @@ contract PoolPortal {
   /**
   * @dev contructor
   *
-  * @param _bancorRegistryWrapper  address of GetBancorAddressFromRegistry
-  * @param _bancorRatio            address of GetRatioForBancorAssets
+  * @param _bancorData             address of helper contract GetBancorData
   * @param _uniswapFactory         address of Uniswap factory contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   */
   constructor(
-    address _bancorRegistryWrapper,
-    address _bancorRatio,
+    address _bancorData,
     address _uniswapFactory,
     address _tokensTypes
 
   )
   public
   {
-    bancorRegistry = IGetBancorAddressFromRegistry(_bancorRegistryWrapper);
-    bancorRatio = IGetRatioForBancorAssets(_bancorRatio);
+    bancorData = IGetBancorData(_bancorData);
     uniswapFactory = UniswapFactoryInterface(_uniswapFactory);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
@@ -536,7 +531,7 @@ contract PoolPortal {
 
     // get bancor formula contract
     IBancorFormula bancorFormula = IBancorFormula(
-      bancorRegistry.getBancorContractAddresByName("BancorFormula"));
+      bancorData.getBancorContractAddresByName("BancorFormula"));
 
     // calculate input
     connectorAmount = bancorFormula.calculateFundCost(
@@ -560,7 +555,7 @@ contract PoolPortal {
   returns(uint256)
   {
     // return Bancor ratio
-    return bancorRatio.getRatio(_from, _to, _amount);
+    return bancorData.getBancorRatioForAssets(IERC20(_from), IERC20(_to), _amount);
   }
 
 

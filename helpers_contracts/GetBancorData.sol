@@ -12,6 +12,7 @@ library stringToBytes32 {
     }
    }
 }
+
 interface IContractRegistry {
     function addressOf(bytes32 _contractName) external view returns (address);
     // deprecated, backward compatibility
@@ -19,7 +20,40 @@ interface IContractRegistry {
 }
 
 
+interface ERC20 {
+    function totalSupply() external view returns (uint256);
 
+    function balanceOf(address account) external view returns (uint256);
+
+    function transfer(address recipient, uint256 amount) external returns (bool);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+/*
+    Bancor Network interface
+*/
+interface BancorNetworkInterface {
+   function getReturnByPath(
+     ERC20[] _path,
+     uint256 _amount)
+     external
+     view
+     returns (uint256, uint256);
+
+    function conversionPath(
+      ERC20 _sourceToken,
+      ERC20 _targetToken
+    ) external view returns (address[]);
+}
 
 
 /**
@@ -87,6 +121,7 @@ contract Ownable {
 
 contract GetBancorAddressFromRegistry is Ownable{
   using stringToBytes32 for string;
+
   IContractRegistry public bancorRegistry;
 
   constructor(address _bancorRegistry)public{
@@ -99,6 +134,47 @@ contract GetBancorAddressFromRegistry is Ownable{
      result = bancorRegistry.addressOf(name);
   }
 
+  /**
+  * @dev get ratio between Bancor assets
+  *
+  * @param _from  ERC20 or Relay
+  * @param _to  ERC20 or Relay
+  * @param _amount  amount for _from
+  */
+  function getBancorRatioForAssets(ERC20 _from, ERC20 _to, uint256 _amount) public view returns(uint256 result){
+    if(_amount > 0){
+      BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
+        getBancorContractAddresByName("BancorNetwork")
+      );
+
+      // get Bancor path array
+      address[] memory path = bancorNetwork.conversionPath(_from, _to);
+      ERC20[] memory pathInERC20 = new ERC20[](path.length);
+
+      // Convert addresses to ERC20
+      for(uint i=0; i<path.length; i++){
+          pathInERC20[i] = ERC20(path[i]);
+      }
+
+      // get Ratio
+      ( uint256 ratio, ) = bancorNetwork.getReturnByPath(pathInERC20, _amount);
+      result = ratio;
+    }
+    else{
+      result = 0;
+    }
+  }
+
+  // get addresses array of token path
+  function getBancorPathForAssets(ERC20 _from, ERC20 _to) public view returns(address[]){
+    BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
+      getBancorContractAddresByName("BancorNetwork")
+    );
+
+    return bancorNetwork.conversionPath(_from, _to);
+  }
+
+  // update bancor registry
   function changeRegistryAddress(address _bancorRegistry) public onlyOwner{
     bancorRegistry = IContractRegistry(_bancorRegistry);
   }

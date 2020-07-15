@@ -15,7 +15,7 @@ import "../../paraswap/interfaces/ParaswapInterface.sol";
 import "../../paraswap/interfaces/IPriceFeed.sol";
 import "../../paraswap/interfaces/IParaswapParams.sol";
 
-import "../../bancor/interfaces/IGetBancorAddressFromRegistry.sol";
+import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/BancorNetworkInterface.sol";
 
 import "../../oneInch/IOneSplitAudit.sol";
@@ -51,7 +51,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IOneSplitAudit public oneInch;
 
   // BANCOR
-  IGetBancorAddressFromRegistry public bancorRegistry;
+  IGetBancorData public bancorData;
 
   // CoTrader additional
   PoolPortalInterface public poolPortal;
@@ -89,7 +89,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _paraswap               paraswap main address
   * @param _paraswapPrice          paraswap price feed address
   * @param _paraswapParams         helper contract for convert params from bytes32
-  * @param _bancorRegistryWrapper  address of Bancor Registry Wrapper
+  * @param _bancorData             address of GetBancorData helper
   * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
@@ -100,7 +100,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _paraswap,
     address _paraswapPrice,
     address _paraswapParams,
-    address _bancorRegistryWrapper,
+    address _bancorData,
     address _permitedStable,
     address _poolPortal,
     address _oneInch,
@@ -113,8 +113,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     paraswapInterface = ParaswapInterface(_paraswap);
     priceFeedInterface = IPriceFeed(_paraswapPrice);
     paraswapParams = IParaswapParams(_paraswapParams);
+    bancorData = IGetBancorData(_bancorData);
     paraswapSpender = paraswapInterface.getTokenTransferProxy();
-    bancorRegistry = IGetBancorAddressFromRegistry(_bancorRegistryWrapper);
     permitedStable = PermittedStablesInterface(_permitedStable);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
@@ -333,11 +333,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
  {
     // get latest bancor contracts
     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
-      bancorRegistry.getBancorContractAddresByName("BancorNetwork")
+      bancorData.getBancorContractAddresByName("BancorNetwork")
     );
 
     // Get Bancor tokens path
-    address[] memory path = bancorNetwork.conversionPath(IERC20(sourceToken), IERC20(destinationToken));
+    address[] memory path = bancorData.getBancorPathForAssets(IERC20(sourceToken), IERC20(destinationToken));
 
     // Convert addresses to ERC20
     IERC20[] memory pathInERC20 = new IERC20[](path.length);
