@@ -789,6 +789,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     tokensTypes.addNewTokenType(_token,  _type);
   }
 
+  // owner of portal can change getBancorData helper, for case if Bancor do some major updates
+  function senNewGetBancorData(address _bancorData) public onlyOwner {
+    bancorData = IGetBancorData(_bancorData);
+  }
+
   // fallback payable function to receive ether from other contract addresses
   fallback() external payable {}
 

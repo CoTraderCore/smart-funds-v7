@@ -23,14 +23,14 @@ NOTE: in separate console
 4) Add 2+ pool connectors
 5) Provide events with additional data for profit verifier script
 6) Remove Bancor ETH wrapper from portals
-7) Recieve data like Bancor path, ratio ect via proxy contract, for case if Bancor will update some method.
+7) Recieve data like Bancor path, ratio ect via proxy getBancorData contract, for case if Bancor will update some method.
+8) Made upgradable addresses of getBancorData contract in Pool and Exchnage portals
 ```
 
 # Todo
 ```
 1) Add support for Bancor v2 pools
 2) Reduce 1inch gas cost in few times by get params offchain
-3) Make upgradable addresses of contract like proxy GetBancorRatio in portals
 ```
 
 # Possible issue

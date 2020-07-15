@@ -5,6 +5,7 @@ pragma solidity ^0.6.0;
 * and provide ratio and addition info for pool assets
 */
 
+import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -18,7 +19,7 @@ import "../../uniswap/interfaces/UniswapFactoryInterface.sol";
 
 import "../interfaces/ITokensTypeStorage.sol";
 
-contract PoolPortal {
+contract PoolPortal is Ownable{
   using SafeMath for uint256;
 
   IGetBancorData public bancorData;
@@ -556,6 +557,11 @@ contract PoolPortal {
   {
     // return Bancor ratio
     return bancorData.getBancorRatioForAssets(IERC20(_from), IERC20(_to), _amount);
+  }
+
+  // owner of portal can change getBancorData helper, for case if Bancor do some major updates
+  function senNewGetBancorData(address _bancorData) public onlyOwner {
+    bancorData = IGetBancorData(_bancorData);
   }
 
 
