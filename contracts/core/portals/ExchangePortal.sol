@@ -52,7 +52,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IOneSplitAudit public oneInch;
 
   // BANCOR
-  address public BancorEtherToken;
   IGetBancorAddressFromRegistry public bancorRegistry;
 
   // CoTrader additional
@@ -92,7 +91,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _paraswapPrice          paraswap price feed address
   * @param _paraswapParams         helper contract for convert params from bytes32
   * @param _bancorRegistryWrapper  address of Bancor Registry Wrapper
-  * @param _BancorEtherToken       address of Bancor ETH wrapper
   * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
@@ -104,7 +102,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _paraswapPrice,
     address _paraswapParams,
     address _bancorRegistryWrapper,
-    address _BancorEtherToken,
     address _permitedStable,
     address _poolPortal,
     address _oneInch,
@@ -119,7 +116,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     paraswapParams = IParaswapParams(_paraswapParams);
     paraswapSpender = paraswapInterface.getTokenTransferProxy();
     bancorRegistry = IGetBancorAddressFromRegistry(_bancorRegistryWrapper);
-    BancorEtherToken = _BancorEtherToken;
     permitedStable = PermittedStablesInterface(_permitedStable);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
@@ -345,12 +341,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       bancorRegistry.getBancorContractAddresByName("BancorNetworkPathFinder")
     );
 
-    // Change source and destination to Bancor ETH wrapper
-    address source = IERC20(sourceToken) == ETH_TOKEN_ADDRESS ? BancorEtherToken : sourceToken;
-    address destination = IERC20(destinationToken) == ETH_TOKEN_ADDRESS ? BancorEtherToken : destinationToken;
-
     // Get Bancor tokens path
-    address[] memory path = pathFinder.generatePath(source, destination);
+    address[] memory path = pathFinder.generatePath(sourceToken, destinationToken);
 
     // Convert addresses to ERC20
     IERC20[] memory pathInERC20 = new IERC20[](path.length);
