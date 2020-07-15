@@ -27,7 +27,8 @@ NOTE: in separate console
 # Todo
 ```
 1) Add support for bancor v2
-2) Reduce 1inch gas cost in few times by get params offchain 
+2) Reduce 1inch gas cost in few times by get params offchain
+3) Remove Bancor ETH wrapper 
 ```
 
 # Possible issue
