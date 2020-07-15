@@ -119,7 +119,7 @@ contract Ownable {
 }
 
 
-contract GetBancorAddressFromRegistry is Ownable{
+contract GetBancorData is Ownable{
   using stringToBytes32 for string;
 
   IContractRegistry public bancorRegistry;
