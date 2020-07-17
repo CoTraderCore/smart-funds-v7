@@ -73,7 +73,7 @@ contract PoolPortal is Ownable{
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] memory _additionalArgs
+    bytes32[] calldata _additionalArgs
   )
   external
   payable
@@ -310,7 +310,7 @@ contract PoolPortal is Ownable{
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] memory _additionalArgs
+    bytes32[] calldata _additionalArgs
   )
   external
   payable
