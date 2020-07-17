@@ -5,7 +5,8 @@ interface PoolPortalInterface {
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken
+    IERC20 _poolToken,
+    bytes32[] memory _additionalArgs
   )
   external
   payable
@@ -18,7 +19,8 @@ interface PoolPortalInterface {
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken
+    IERC20 _poolToken,
+    bytes32[] memory _additionalArgs
   )
   external
   payable

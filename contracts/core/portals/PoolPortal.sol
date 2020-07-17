@@ -63,15 +63,17 @@ contract PoolPortal is Ownable{
   /**
   * @dev buy Bancor or Uniswap pool
   *
-  * @param _amount     amount of pool token
-  * @param _type       pool type
-  * @param _poolToken  pool token address
+  * @param _amount          amount of pool token
+  * @param _type            pool type
+  * @param _poolToken       pool token address
+  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
   */
   function buyPool
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken
+    IERC20 _poolToken,
+    bytes32[] memory _additionalArgs
   )
   external
   payable
@@ -301,12 +303,14 @@ contract PoolPortal is Ownable{
   * @param _amount     amount of pool token
   * @param _type       pool type
   * @param _poolToken  pool token address
+  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
   */
   function sellPool
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken
+    IERC20 _poolToken,
+    bytes32[] memory _additionalArgs
   )
   external
   payable

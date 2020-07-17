@@ -420,14 +420,16 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev buy pool via pool portal
   *
-  * @param _amount        For Bancor amount it's relay, for Uniswap amount it's ETH
-  * @param _type          type of pool (0 - Bancor, 1 - Uniswap)
-  * @param _poolToken     address of relay for Bancor and exchange for Uniswap
+  * @param _amount          For Bancor amount it's relay, for Uniswap amount it's ETH
+  * @param _type            type of pool (0 - Bancor, 1 - Uniswap)
+  * @param _poolToken       address of relay for Bancor and exchange for Uniswap
+  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
   */
   function buyPool(
    uint256 _amount,
    uint _type,
-   IERC20 _poolToken
+   IERC20 _poolToken,
+   bytes32[] memory _additionalArgs
   )
   external onlyOwner {
    // get buy data
@@ -450,7 +452,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
-     _poolToken
+     _poolToken,
+     _additionalArgs
      );
    }
    // buy pool only via ERC20 (not payable)
@@ -458,7 +461,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      poolPortal.buyPool(
       _amount,
       _type,
-     _poolToken
+     _poolToken,
+     _additionalArgs
      );
    }
 
@@ -483,14 +487,16 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev sell pool via pool portal
   *
-  * @param _amount        amount of Bancor relay or Uniswap exchange to sell
-  * @param _type          type of pool (0 - Bancor, 1 - Uniswap)
-  * @param _poolToken     address of Bancor relay or Uniswap exchange
+  * @param _amount          amount of Bancor relay or Uniswap exchange to sell
+  * @param _type            type of pool (0 - Bancor, 1 - Uniswap)
+  * @param _poolToken       address of Bancor relay or Uniswap exchange
+  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
   */
   function sellPool(
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken
+    IERC20 _poolToken,
+    bytes32[] memory _additionalArgs
   )
   external onlyOwner {
     // approve pool
@@ -501,7 +507,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      uint256[] memory connectorsAmount, ) = poolPortal.sellPool(
       _amount,
       _type,
-     _poolToken
+     _poolToken,
+     _additionalArgs
     );
 
     // Add connectors to fund

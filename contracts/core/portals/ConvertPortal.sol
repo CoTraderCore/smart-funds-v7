@@ -166,7 +166,8 @@ contract ConvertPortal {
     poolPortal.sellPool(
       _sourceAmount,
       1, // type Uniswap
-      IERC20(_source)
+      IERC20(_source),
+      BYTES32_EMPTY_ARRAY
     );
 
     // convert pool connectors to destanation

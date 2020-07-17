@@ -1153,7 +1153,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
 
       // buy BNT pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address)
+      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
 
       // check key after buy Bancor pools
       assert.equal(await tokensType.getType(DAIBNT.address), TOKEN_KEY_BANCOR_POOL)
@@ -1164,7 +1164,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(2)))
 
       // sell pool
-      await smartFundUSD.sellPool(toWei(String(2)), 0, DAIBNT.address)
+      await smartFundUSD.sellPool(toWei(String(2)), 0, DAIBNT.address, [])
 
       // Check balance after sell pool
       assert.equal(await BNT.balanceOf(smartFundUSD.address), toWei(String(1)))
@@ -1199,7 +1199,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), 0)
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address)
+      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
 
       // Check key after buy UNI pool
       assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
@@ -1210,7 +1210,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const fundETHBalanceAfterBuy = await web3.eth.getBalance(smartFundUSD.address)
 
       // Sell UNI Pool
-      await smartFundUSD.sellPool(toWei(String(2)), 1, DAIUNI.address)
+      await smartFundUSD.sellPool(toWei(String(2)), 1, DAIUNI.address, [])
 
       // Check balance after buy pool
       const fundETHBalanceAfterSell = await web3.eth.getBalance(smartFundUSD.address)
@@ -1257,9 +1257,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address)
+      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
       // Buy BNT Pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address)
+      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
 
       // Fund get UNI and BNT Pools
       assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(2)))
@@ -1307,9 +1307,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address)
+      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
       // Buy BNT Pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address)
+      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
 
       await smartFundUSD.withdraw(0, false)
 
@@ -1613,7 +1613,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), 0)
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address)
+      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
 
       assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
       assert.equal(await tokensType.getType(DAI.address), TOKEN_KEY_CRYPTOCURRENCY)
@@ -1668,7 +1668,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
 
     // buy BNT pool
-    await smartFundUSD.buyPool(toWei(String(1)), 0, DAIBNT.address)
+    await smartFundUSD.buyPool(toWei(String(1)), 0, DAIBNT.address, [])
 
     // fund receive asset
     assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(1)))
