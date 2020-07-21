@@ -369,8 +369,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _sourceAmount      Amount to convert (in _source token)
   * @param _destination       ERC20 token to convert to
   * @param _type              The type of exchange to trade with
-  * @param _additionalArgs    Array of bytes32 additional arguments
-  * @param _additionalData    For any size data (if not used set just 0x0)
+  * @param _distribution      Special param for 1inch (if not used just set [])
+  * @param _additionalArgs    Array of bytes32 additional arguments (if not used just set [])
+  * @param _additionalData    For additional data (if not used just set "0x0")
   * @param _minReturn         Min expected amount of destination
   */
   function trade(
@@ -378,6 +379,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
+    uint256[] calldata _distribution,
     bytes32[] calldata _additionalArgs,
     bytes calldata _additionalData,
     uint256 _minReturn
@@ -395,6 +397,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _sourceAmount,
         _destination,
         _type,
+        _distribution,
         _additionalArgs,
         _additionalData
       );
@@ -405,6 +408,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _sourceAmount,
         _destination,
         _type,
+        _distribution,
         _additionalArgs,
         _additionalData
       );

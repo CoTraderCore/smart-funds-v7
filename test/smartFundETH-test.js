@@ -22,6 +22,7 @@ const PermittedExchanges = artifacts.require('./core/verification/PermittedExcha
 const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
 const PermittedConverts = artifacts.require('./core/verification/PermittedConverts.sol')
 
+
 // mock
 const Token = artifacts.require('./tokens/Token')
 const ExchangePortalMock = artifacts.require('./portalsMock/ExchangePortalMock')
@@ -29,6 +30,7 @@ const PoolPortalMock = artifacts.require('./portalsMock/PoolPortalMock')
 const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
 const CToken = artifacts.require('./compoundMock/CToken')
 const CEther = artifacts.require('./compoundMock/CEther')
+const OneInch = artifacts.require('./OneInchMock')
 
 
 // Tokens keys converted in bytes32
@@ -54,7 +56,8 @@ let xxxERC,
     convertPortal,
     permittedConverts,
     permittedExchanges,
-    permittedPools
+    permittedPools,
+    oneInch
 
 
 
@@ -62,6 +65,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
   async function deployContracts(successFee=1000){
     COT_DAO_WALLET = await CoTraderDAOWalletMock.new()
+    oneInch = await OneInch.new()
 
     // DEPLOY ERC20 TOKENS
     xxxERC = await Token.new(
@@ -151,7 +155,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       exchangePortal.address,
       poolPortal.address,
       tokensType.address,
-      cEther.address
+      cEther.address,
+      oneInch.address
     )
 
     // allow exchange portal and pool portal write to token type storage
@@ -307,7 +312,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
         // make a trade with the fund
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
           from: userOne,
         })
 
@@ -324,7 +329,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
         // make a trade with the fund
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
           from: userOne,
         })
 
@@ -344,7 +349,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
         // Trade 100 eth for 100 bat via kyber
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
           from: userOne,
         })
 
@@ -364,10 +369,10 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         // deposit in fund
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, yyyERC.address, 0, [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, yyyERC.address, 0, [], [], "0x", 1,{
           from: userOne,
         })
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, xxxERC.address, 0, [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, xxxERC.address, 0, [], [], "0x", 1,{
           from: userOne,
         })
 
@@ -391,6 +396,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           xxxERC.address,
           0,
           [],
+          [],
           "0x",
           1,
           {
@@ -411,6 +417,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
+          [],
           [],
           "0x",
           1,
@@ -464,6 +471,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           xxxERC.address,
           0,
           [],
+          [],
           "0x",
           1,
           {
@@ -484,6 +492,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
+          [],
           [],
           "0x",
           1,
@@ -515,6 +524,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           xxxERC.address,
           0,
           [],
+          [],
           "0x",
           1,
           {
@@ -531,6 +541,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
+          [],
           [],
           "0x",
           1,
@@ -630,7 +641,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       await xxxERC.transfer(exchangePortal.address, 200, { from: userOne })
 
       // Trade 100 ether for 100 xxx
-      await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], "0x", 1,{
+      await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
         from: userOne,
       })
 
@@ -705,6 +716,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         toWei(String(1)),
         {
@@ -734,6 +746,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -754,6 +767,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         xxxERC.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -787,6 +801,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -811,6 +826,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
+        [],
         [],
         "0x",
         1,
@@ -870,6 +886,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         DAI.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -905,6 +922,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         xxxERC.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -957,6 +975,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(2)),
         DAI.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1059,6 +1078,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         BNT.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -1072,6 +1092,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         DAI.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1116,6 +1137,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         DAI.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1163,6 +1185,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         DAI.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -1176,6 +1199,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         BNT.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1212,6 +1236,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         DAI.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -1225,6 +1250,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         BNT.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1265,6 +1291,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -1285,6 +1312,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1347,6 +1375,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         xxxERC.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1460,6 +1489,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         toWei(String(1)),
         {
@@ -1504,6 +1534,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         DAI.address,
         0,
+        [],
         [],
         "0x",
         1,
@@ -1556,6 +1587,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       BNT.address,
       0,
       [],
+      [],
       "0x",
       1,
       {
@@ -1569,6 +1601,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       toWei(String(1)),
       DAI.address,
       0,
+      [],
       [],
       "0x",
       1,

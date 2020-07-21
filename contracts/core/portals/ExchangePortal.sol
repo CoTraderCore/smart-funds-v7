@@ -58,7 +58,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   PermittedStablesInterface public permitedStable;
 
   // Enum
-  // NOTE: You can add a new type at the end, but do not change this order
+  // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
+  // because order has dependency in other contracts like ConvertPortal 
   enum ExchangeType { Paraswap, Bancor, OneInch }
 
   // This contract recognizes ETH by this address
@@ -132,16 +133,18 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _sourceAmount      Amount to convert from (in _source token)
   * @param _destination       ERC20 token to convert to
   * @param _type              The type of exchange to trade with (For now 0 - because only paraswap)
-  * @param _additionalArgs    Array of bytes32 additional arguments (For fixed size items and for different types items in array )
-  * @param _additionalData    For any size data (if not used set just 0x0)
+  * @param _distribution      Special param for 1inch (if not used just set [])
+  * @param _additionalArgs    Array of bytes32 additional arguments (For pass additional fixed size types items, if not used just set [])
+  * @param _additionalData    For additional data (if not used just set 0x0)
   *
-  * @return The amount of _destination received from the trade
+  * @return receivedAmount    The amount of _destination received from the trade
   */
   function trade(
     IERC20 _source,
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
+    uint256[] calldata _distribution,
     bytes32[] calldata _additionalArgs,
     bytes calldata _additionalData
   )
@@ -149,12 +152,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     override
     payable
     tokenEnabled(_destination)
-    returns (uint256)
+    returns (uint256 receivedAmount)
   {
 
     require(_source != _destination);
-
-    uint256 receivedAmount;
 
     if (_source == ETH_TOKEN_ADDRESS) {
       require(msg.value == _sourceAmount);
@@ -186,7 +187,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       receivedAmount = _tradeViaOneInch(
           address(_source),
           address(_destination),
-          _sourceAmount
+          _sourceAmount,
+          _distribution,
+          _additionalArgs
       );
     }
 
@@ -195,6 +198,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       revert();
     }
 
+    // Additional check
     require(receivedAmount > 0, "received amount can not be zerro");
 
     // Send assets
@@ -225,8 +229,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       receivedAmount,
       uint8(_type)
     );
-
-    return receivedAmount;
   }
 
 
@@ -284,26 +286,22 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
  function _tradeViaOneInch(
    address sourceToken,
    address destinationToken,
-   uint256 sourceAmount
+   uint256 sourceAmount,
+   uint256[] memory _distribution,
+   bytes32[] memory _additionalArgs
    )
    private
    returns(uint256 destinationReceived)
  {
-    (, uint256[] memory distribution) = oneInch.getExpectedReturn(
-      IERC20(sourceToken),
-      IERC20(destinationToken),
-      sourceAmount,
-      10,
-      0);
-
+    uint256 flags = uint256(_additionalArgs[0]);
     if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
       oneInch.swap.value(sourceAmount)(
         IERC20(sourceToken),
         IERC20(destinationToken),
         sourceAmount,
         1,
-        distribution,
-        0
+        _distribution,
+        flags
         );
     } else {
       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInch));
@@ -312,8 +310,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
         IERC20(destinationToken),
         sourceAmount,
         1,
-        distribution,
-        0
+        _distribution,
+        flags
         );
     }
 

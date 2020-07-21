@@ -210,6 +210,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         0,
         [],
+        [],
         "0x",
         1,
         {
@@ -230,6 +231,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
+        [],
         [],
         "0x",
         1,

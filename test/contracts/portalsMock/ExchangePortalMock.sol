@@ -49,6 +49,7 @@ contract ExchangePortalMock {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
+    uint256[] calldata _distribution,
     bytes32[] calldata _additionalArgs,
     bytes calldata _additionalData
   ) external payable returns (uint256) {

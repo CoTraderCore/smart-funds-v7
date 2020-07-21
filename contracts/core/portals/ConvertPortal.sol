@@ -9,16 +9,19 @@ import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
 import "../../compound/CToken.sol";
+import "../../oneInch/IOneSplitAudit.sol";
+import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 
-
-contract ConvertPortal {
+contract ConvertPortal is Ownable{
   address constant private ETH_TOKEN_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
   bytes32[] private BYTES32_EMPTY_ARRAY = new bytes32[](0);
+  uint256[] private UINT_EMPTY_ARRAY = new uint256[](0);
   address public CEther;
   address public sUSD;
   ExchangePortalInterface public exchangePortal;
   PoolPortalInterface public poolPortal;
   ITokensTypeStorage  public tokensTypes;
+  IOneSplitAudit public oneInch;
 
   /**
   * @dev contructor
@@ -27,12 +30,14 @@ contract ConvertPortal {
   * @param _poolPortal             address of pool portal
   * @param _tokensTypes            address of the tokens type storage
   * @param _CEther                 address of Compound ETH wrapper
+  * @param _oneInch                address of 1inch main contract
   */
   constructor(
     address _exchangePortal,
     address _poolPortal,
     address _tokensTypes,
-    address _CEther
+    address _CEther,
+    address _oneInch
     )
     public
   {
@@ -40,6 +45,7 @@ contract ConvertPortal {
     poolPortal = PoolPortalInterface(_poolPortal);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     CEther = _CEther;
+    oneInch = IOneSplitAudit(_oneInch);
   }
 
   // convert CRYPTOCURRENCY, COMPOUND, BANCOR/UNISWAP pools to _destination asset
@@ -59,7 +65,7 @@ contract ConvertPortal {
     uint256 receivedAmount = 0;
     // convert assets
     if(tokensTypes.getType(_source) == bytes32("CRYPTOCURRENCY")){
-      receivedAmount = convertCryptocurency(_source, _sourceAmount, _destination);
+      receivedAmount = convertCryptocurency(_source, _sourceAmount, _destination, false);
     }
     else if (tokensTypes.getType(_source) == bytes32("BANCOR_ASSET")){
       receivedAmount = convertBancorPool(_source, _sourceAmount, _destination);
@@ -123,29 +129,7 @@ contract ConvertPortal {
     if(_destination != underlyingAddress){
       uint256 destAmount = 0;
       // convert via 1inch
-      // Convert ETH
-      if(underlyingAddress == ETH_TOKEN_ADDRESS){
-        destAmount = exchangePortal.trade.value(underlyingAmount)(
-          IERC20(underlyingAddress),
-          underlyingAmount,
-          IERC20(_destination),
-          2,
-          BYTES32_EMPTY_ARRAY,
-          "0x"
-        );
-      }
-      // Convert ERC20
-      else{
-        IERC20(underlyingAddress).approve(address(exchangePortal), underlyingAmount);
-        destAmount = exchangePortal.trade(
-          IERC20(underlyingAddress),
-          underlyingAmount,
-          IERC20(_destination),
-          2,
-          BYTES32_EMPTY_ARRAY,
-          "0x"
-        );
-      }
+      destAmount = convertCryptocurency(underlyingAddress, underlyingAmount, _destination, true);
       return destAmount;
     }
     else{
@@ -177,28 +161,13 @@ contract ConvertPortal {
 
     // convert ERC20 connector via 1inch if destination != ERC20 connector
     if(ERCConnector != _destination){
-      IERC20(ERCConnector).approve(address(exchangePortal), ERCAmount);
-      exchangePortal.trade(
-        IERC20(ERCConnector),
-        ERCAmount,
-        IERC20(_destination),
-        2, // type 1inch
-        BYTES32_EMPTY_ARRAY,
-        "0x"
-      );
+      convertCryptocurency(ERCConnector, ERCAmount, _destination, true);
     }
 
     // if destanation != ETH, convert ETH also
     if(_destination != ETH_TOKEN_ADDRESS){
       uint256 ETHAmount = address(this).balance;
-      exchangePortal.trade.value(ETHAmount)(
-        IERC20(ETH_TOKEN_ADDRESS),
-        ETHAmount,
-        IERC20(_destination),
-        2, // type 1inch
-        BYTES32_EMPTY_ARRAY,
-        "0x"
-      );
+      convertCryptocurency(ETH_TOKEN_ADDRESS, ETHAmount, _destination, true);
     }
 
     // return received amount
@@ -210,29 +179,58 @@ contract ConvertPortal {
   }
 
   // helper for convert standrad crypto assets
-  function convertCryptocurency(address _source, uint256 _sourceAmount, address _destination)
+  function convertCryptocurency(
+    address _source,
+    uint256 _sourceAmount,
+    address _destination,
+    bool    _isLocalConvert
+    )
     private
     returns(uint256)
   {
+    (, uint256[] memory distribution) = oneInch.getExpectedReturn(
+      IERC20(_source),
+      IERC20(_destination),
+      _sourceAmount,
+      10,
+      0);
+
+    bytes32[] memory additionalArgs = new bytes32[](1);
+    additionalArgs[0] = bytes32(0x000000000000000000000000000000000000000000000000000000000000000a);
+
     // Convert crypto via 1inch aggregator
     uint256 destAmount = 0;
     if(_source == ETH_TOKEN_ADDRESS){
+      // Trade ETH
       destAmount = exchangePortal.trade.value(_sourceAmount)(
         IERC20(_source),
         _sourceAmount,
         IERC20(_destination),
         2,
-        BYTES32_EMPTY_ARRAY,
+        distribution,
+        additionalArgs,
         "0x"
       );
     }else{
-      _transferFromSenderAndApproveTo(IERC20(_source), _sourceAmount, address(exchangePortal));
+      // Approve ERC 20
+
+      // if it's local convert just approve
+      if(_isLocalConvert){
+        IERC20(_source).approve(address(exchangePortal), _sourceAmount);
+      }
+      // if it's not local сщтмуке transfer from sender and approve
+      else{
+        _transferFromSenderAndApproveTo(IERC20(_source), _sourceAmount, address(exchangePortal));
+      }
+
+      // Trade ERC20
       destAmount = exchangePortal.trade(
         IERC20(_source),
         _sourceAmount,
         IERC20(_destination),
         2,
-        BYTES32_EMPTY_ARRAY,
+        distribution,
+        additionalArgs,
         "0x"
       );
     }
@@ -252,6 +250,7 @@ contract ConvertPortal {
       _sourceAmount,
       IERC20(_destination),
       1,
+      UINT_EMPTY_ARRAY,
       BYTES32_EMPTY_ARRAY,
       "0x"
     );
@@ -270,6 +269,11 @@ contract ConvertPortal {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount), "Can not transfer from");
 
     _source.approve(_to, _sourceAmount);
+  }
+
+  // owner can change oneInch
+  function setNewOneInch(address _oneInch) external onlyOwner {
+    oneInch = IOneSplitAudit(_oneInch);
   }
 
   // fallback payable function to receive ether from other contract addresses
