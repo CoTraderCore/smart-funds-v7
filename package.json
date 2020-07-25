@@ -43,6 +43,8 @@
     "solium": "^1.1.7",
     "truffle": "^5.1.24",
     "truffle-hdwallet-provider": "0.0.5",
-    "web3-utils": "^1.0.0-beta.34"
+    "web3-utils": "^1.0.0-beta.34",
+    "keccak256": "1.0.0",
+    "merkletreejs": "0.2.8"
   }
 }
