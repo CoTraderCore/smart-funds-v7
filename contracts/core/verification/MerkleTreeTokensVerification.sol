@@ -2,7 +2,7 @@ pragma solidity ^0.6.10;
 
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 
-contract MerkleTreeTokensVerification {
+contract MerkleTreeTokensVerification is Ownable{
   bytes32 public root;
 
   constructor(bytes32 _root)public{

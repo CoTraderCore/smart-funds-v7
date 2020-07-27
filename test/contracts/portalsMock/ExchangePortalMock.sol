@@ -36,7 +36,7 @@ contract ExchangePortalMock {
     uint256 _div,
     address _stableCoinAddress,
     address _cETH,
-    address _tokensTypes
+    address _tokensTypes,
     address _merkleTreeWhiteList
     )
     public
@@ -65,7 +65,7 @@ contract ExchangePortalMock {
 
     // throw if destanation token not in white list
     if(_verifyDestanation)
-      _verifyToken(_destination, _proof, _positions);
+      _verifyToken(address(_destination), _proof, _positions);
 
     // check ETH payable case
     if (_source == ETH_TOKEN_ADDRESS) {

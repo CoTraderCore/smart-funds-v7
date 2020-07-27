@@ -1,11 +1,15 @@
 import { BN, fromWei, toWei } from 'web3-utils'
 
+import { MerkleTree } from 'merkletreejs'
+import keccak256 from 'keccak256'
 import ether from './helpers/ether'
 import EVMRevert from './helpers/EVMRevert'
 import { duration } from './helpers/duration'
 import latestTime from './helpers/latestTime'
 import advanceTimeAndBlock from './helpers/advanceTimeAndBlock'
+
 const BigNumber = BN
+const buf2hex = x => '0x'+x.toString('hex')
 
 
 require('chai')
@@ -14,6 +18,7 @@ require('chai')
   .should()
 
 const ETH_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+
 // real contracts
 const SmartFundETH = artifacts.require('./core/funds/SmartFundETH.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
@@ -21,7 +26,7 @@ const ConvertPortal = artifacts.require('./core/portals/ConvertPortal.sol')
 const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
 const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
 const PermittedConverts = artifacts.require('./core/verification/PermittedConverts.sol')
-
+const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')
 
 // mock
 const Token = artifacts.require('./tokens/Token')
@@ -57,7 +62,9 @@ let xxxERC,
     permittedConverts,
     permittedExchanges,
     permittedPools,
-    oneInch
+    oneInch,
+    merkleWhiteList,
+    MerkleTREE
 
 
 
@@ -126,6 +133,20 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       toWei(String(100000000))
     )
 
+    // Create MerkleTREE instance
+    const leaves = [
+      xxxERC.address,
+      yyyERC.address,
+      BNT.address,
+      DAI.address,
+      ETH_TOKEN_ADDRESS
+    ].map(x => keccak256(x)).sort(Buffer.compare)
+
+    MerkleTREE = new MerkleTree(leaves, keccak256)
+
+    // Deploy merkle white list contract
+    merkleWhiteList = await MerkleWhiteList.new(MerkleTREE.getRoot())
+
     // Deploy tokens type storage
     tokensType = await TokensTypeStorage.new()
 
@@ -139,7 +160,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       1,
       DAI.address,
       cEther.address,
-      tokensType.address
+      tokensType.address,
+      merkleWhiteList.address
     )
 
     // Depoy poolPortal
@@ -311,8 +333,12 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         // deposit in fund
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
+        // get proof and position for dest token
+        const proof = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const position = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
         // make a trade with the fund
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, proof, position, "0x", 1,{
           from: userOne,
         })
 
@@ -328,8 +354,12 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         // deposit in fund
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
+        // get proof and position for dest token
+        const proof = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const position = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
         // make a trade with the fund
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, proof, position, "0x", 1,{
           from: userOne,
         })
 
@@ -348,8 +378,12 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         // deposit in fund
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
+        // get proof and position for dest token
+        const proof = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const position = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
         // Trade 100 eth for 100 bat via kyber
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, proof, position, "0x", 1,{
           from: userOne,
         })
 
@@ -369,10 +403,19 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         // deposit in fund
         await smartFundETH.deposit({ from: userOne, value: 100 })
 
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, yyyERC.address, 0, [], [], "0x", 1,{
+        // get proof and position for dest token
+        const proofYYY = MerkleTREE.getProof(keccak256(yyyERC.address)).map(x => buf2hex(x.data))
+        const positionYYY = MerkleTREE.getProof(keccak256(yyyERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, yyyERC.address, 0, proofYYY, positionYYY, "0x", 1,{
           from: userOne,
         })
-        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, xxxERC.address, 0, [], [], "0x", 1,{
+
+        // get proof and position for dest token
+        const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
+        await smartFundETH.trade(ETH_TOKEN_ADDRESS, 50, xxxERC.address, 0, proofXXX, positionXXX, "0x", 1,{
           from: userOne,
         })
 
@@ -390,13 +433,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
         assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(1)))
 
+        // get proof and position for dest token
+        const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
         await smartFundETH.trade(
           ETH_TOKEN_ADDRESS,
           toWei(String(1)),
           xxxERC.address,
           0,
-          [],
-          [],
+          proofXXX,
+          positionXXX,
           "0x",
           1,
           {
@@ -411,14 +458,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
         assert.equal(await smartFundETH.calculateFundValue(), toWei(String(2)))
 
+        // get proof and position for dest token
+        const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
+        const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
+
         // should receive 200 'ether' (wei)
         await smartFundETH.trade(
           xxxERC.address,
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
-          [],
-          [],
+          proofETH,
+          positionETH,
           "0x",
           1,
           {
@@ -465,13 +516,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
         assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(1)))
 
+        // get proof and position for dest token
+        const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+        const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
         await smartFundETH.trade(
           ETH_TOKEN_ADDRESS,
           toWei(String(1)),
           xxxERC.address,
           0,
-          [],
-          [],
+          proofXXX,
+          positionXXX,
           "0x",
           1,
           {
@@ -486,14 +541,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
         assert.equal(await smartFundETH.calculateFundValue(), toWei(String(2)))
 
+        // get proof and position for dest token
+        const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
+        const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
+
         // should receive 200 'ether' (wei)
         await smartFundETH.trade(
           xxxERC.address,
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
-          [],
-          [],
+          proofETH,
+          positionETH,
           "0x",
           1,
           {
@@ -523,8 +582,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           toWei(String(1)),
           xxxERC.address,
           0,
-          [],
-          [],
+          proofXXX,
+          positionXXX,
           "0x",
           1,
           {
@@ -541,8 +600,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
           toWei(String(1)),
           ETH_TOKEN_ADDRESS,
           0,
-          [],
-          [],
+          proofETH,
+          positionETH,
           "0x",
           1,
           {
@@ -640,8 +699,12 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // send xxx to exchange
       await xxxERC.transfer(exchangePortal.address, 200, { from: userOne })
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // Trade 100 ether for 100 xxx
-      await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, [], [], "0x", 1,{
+      await smartFundETH.trade(ETH_TOKEN_ADDRESS, 100, xxxERC.address, 0, proofXXX, positionXXX, "0x", 1,{
         from: userOne,
       })
 
@@ -710,13 +773,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // deposit in fund
       await smartFundETH.deposit({ from: userOne, value: toWei(String(1)) })
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         toWei(String(1)),
         {
@@ -740,13 +807,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // deposit in fund
       await smartFundETH.deposit({ from: userOne, value: toWei(String(1)) })
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -767,8 +838,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -795,13 +866,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // deposit in fund
       await smartFundETH.deposit({ from: userTwo, value: toWei(String(1)) })
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -821,13 +896,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // 1 token is now worth 2 ether, funds value is 3 ether
       await exchangePortal.setRatio(1, 2)
 
+      // get proof and position for dest token
+      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
+      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         xxxERC.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
-        [],
-        [],
+        proofETH,
+        positionETH,
         "0x",
         1,
         {
@@ -879,14 +958,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // deposit in fund
       await smartFundETH.deposit({ from: userOne, value: toWei(String(1)) })
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -917,13 +1000,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       await smartFundETH.compoundMint(toWei(String(1)), cEther.address)
       assert.equal(await cEther.balanceOf(smartFundETH.address), toWei(String(1)))
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -969,14 +1056,19 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       // mint 1 cEth
       await smartFundETH.compoundMint(toWei(String(1)), cEther.address)
+
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(2)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1071,14 +1163,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       await smartFundETH.deposit({ from: userOne, value: toWei(String(2)) })
 
+      // get proof and position for dest token
+      const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
+      const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 BNT from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         BNT.address,
         0,
-        [],
-        [],
+        proofBNT,
+        positionBNT,
         "0x",
         1,
         {
@@ -1086,14 +1182,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         }
       )
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1131,14 +1231,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       await smartFundETH.deposit({ from: userOne, value: toWei(String(2)) })
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1178,14 +1282,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       await smartFundETH.deposit({ from: userOne, value: toWei(String(4)) })
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 2 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(2)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1193,14 +1301,20 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         }
       )
 
+
       // get 1 BNT from exchange portal
+
+      // get proof and position for dest token
+      const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
+      const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         BNT.address,
         0,
-        [],
-        [],
+        proofBNT,
+        positionBNT,
         "0x",
         1,
         {
@@ -1229,14 +1343,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       await smartFundETH.deposit({ from: userOne, value: toWei(String(4)) })
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 2 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(2)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1244,14 +1362,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         }
       )
 
+      // get proof and position for dest token
+      const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
+      const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 BNT from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         BNT.address,
         0,
-        [],
-        [],
+        proofBNT,
+        positionBNT,
         "0x",
         1,
         {
@@ -1285,13 +1407,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(1)))
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -1306,14 +1432,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       assert.equal(await smartFundETH.calculateFundValue(), toWei(String(2)))
 
+      // get proof and position for dest token
+      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
+      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
+
       // should receive 200 'ether' (wei)
       await smartFundETH.trade(
         xxxERC.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
-        [],
-        [],
+        proofETH,
+        positionETH,
         "0x",
         1,
         {
@@ -1370,13 +1500,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // 1 token is now cost 1 ether
       await exchangePortal.setRatio(1, 1)
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -1483,13 +1617,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       // deposit in fund
       await smartFundETH.deposit({ from: userOne, value: toWei(String(1)) })
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         toWei(String(1)),
         {
@@ -1528,14 +1666,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
       await smartFundETH.deposit({ from: userOne, value: toWei(String(2)) })
 
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // get 1 DAI from exchange portal
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         DAI.address,
         0,
-        [],
-        [],
+        proofDAI,
+        positionDAI,
         "0x",
         1,
         {
@@ -1580,14 +1722,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     await smartFundETH.deposit({ from: userOne, value: toWei(String(2)) })
 
+    // get proof and position for dest token
+    const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
+    const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
+
     // get 1 BNT from exchange portal
     await smartFundETH.trade(
       ETH_TOKEN_ADDRESS,
       toWei(String(1)),
       BNT.address,
       0,
-      [],
-      [],
+      proofBNT,
+      positionBNT,
       "0x",
       1,
       {
@@ -1595,14 +1741,18 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       }
     )
 
+    // get proof and position for dest token
+    const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+    const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
     // get 1 DAI from exchange portal
     await smartFundETH.trade(
       ETH_TOKEN_ADDRESS,
       toWei(String(1)),
       DAI.address,
       0,
-      [],
-      [],
+      proofDAI,
+      positionDAI,
       "0x",
       1,
       {

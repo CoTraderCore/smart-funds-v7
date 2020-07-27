@@ -160,7 +160,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   {
     // throw if destanation token not in white list
     if(_verifyDestanation)
-      _verifyToken(_destination, _proof, _positions);
+      _verifyToken(address(_destination), _proof, _positions);
 
     require(_source != _destination, "source can not be destination");
 
@@ -239,7 +239,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     // Check if we hold a positive amount of _source
     if (endAmount > 0) {
       if (_source == ETH_TOKEN_ADDRESS) {
-        (_receiver).transfer(endAmount);
+        payable(_receiver).transfer(endAmount);
       } else {
         _source.transfer(_receiver, endAmount);
       }
