@@ -2,6 +2,7 @@ pragma solidity ^0.6.0;
 
 import "../../../contracts/zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../../contracts/core/interfaces/ITokensTypeStorage.sol";
+import "../../../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
 
 import "../compoundMock/CEther.sol";
 import "../compoundMock/CToken.sol";
@@ -10,6 +11,8 @@ contract ExchangePortalMock {
 
   using SafeMath for uint256;
   ITokensTypeStorage public tokensTypes;
+  // Contract for merkle tree white list verification
+  IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
   // This contract recognizes ETH by this address, airswap recognizes ETH as address(0x0)
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
@@ -34,6 +37,7 @@ contract ExchangePortalMock {
     address _stableCoinAddress,
     address _cETH,
     address _tokensTypes
+    address _merkleTreeWhiteList
     )
     public
   {
@@ -42,6 +46,7 @@ contract ExchangePortalMock {
     stableCoinAddress = _stableCoinAddress;
     cEther = CEther(_cETH);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
+    merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
 
   function trade(
@@ -49,14 +54,20 @@ contract ExchangePortalMock {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
-    uint256[] calldata _distribution,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
+    bytes32[] calldata _proof,
+    uint256[] calldata _positions,
+    bytes calldata _additionalData,
+    bool _verifyDestanation
   ) external payable returns (uint256) {
     require(_source != _destination);
 
     uint256 receivedAmount;
 
+    // throw if destanation token not in white list
+    if(_verifyDestanation)
+      _verifyToken(_destination, _proof, _positions);
+
+    // check ETH payable case
     if (_source == ETH_TOKEN_ADDRESS) {
       require(msg.value == _sourceAmount);
     } else {
@@ -115,6 +126,20 @@ contract ExchangePortalMock {
     }
 
     setTokenType(address(_destination), "CRYPTOCURRENCY");
+  }
+
+  // Facilitates for verify destanation token input (check if token in merkle list or not)
+  // revert transaction if token not in list
+  function _verifyToken(
+    address _destination,
+    bytes32 [] memory proof,
+    uint256 [] memory positions)
+    private
+  {
+    bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
+
+    if(!status)
+      revert("Dest not in white list");
   }
 
 
