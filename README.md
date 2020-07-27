@@ -33,6 +33,7 @@ NOTE: in separate console
 ```
 1) Add support for Bancor v2 pools new methods
 2) Add merkle tree white list verification in PoolPortal
+3) Try reduce 1inch gas in ConvertPortal 
 ```
 
 # Possible issue

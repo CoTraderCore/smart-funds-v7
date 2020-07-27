@@ -195,8 +195,7 @@ contract ConvertPortal is Ownable{
       10,
       0);
 
-    bytes32[] memory additionalArgs = new bytes32[](1);
-    additionalArgs[0] = bytes32(0x000000000000000000000000000000000000000000000000000000000000000a);
+    bytes memory additionalData = abi.encode(10, distribution);
 
     // Convert crypto via 1inch aggregator
     uint256 destAmount = 0;
@@ -207,9 +206,10 @@ contract ConvertPortal is Ownable{
         _sourceAmount,
         IERC20(_destination),
         2,
-        distribution,
-        additionalArgs,
-        "0x"
+        BYTES32_EMPTY_ARRAY,
+        UINT_EMPTY_ARRAY,
+        additionalData,
+        false
       );
     }else{
       // Approve ERC 20
@@ -229,9 +229,10 @@ contract ConvertPortal is Ownable{
         _sourceAmount,
         IERC20(_destination),
         2,
-        distribution,
-        additionalArgs,
-        "0x"
+        BYTES32_EMPTY_ARRAY,
+        UINT_EMPTY_ARRAY,
+        additionalData,
+        false
       );
     }
     return destAmount;
@@ -250,9 +251,10 @@ contract ConvertPortal is Ownable{
       _sourceAmount,
       IERC20(_destination),
       1,
-      UINT_EMPTY_ARRAY,
       BYTES32_EMPTY_ARRAY,
-      "0x"
+      UINT_EMPTY_ARRAY,
+      "0x",
+      false
     );
 
     return destAmount;
