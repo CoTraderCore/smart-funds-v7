@@ -369,8 +369,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _sourceAmount      Amount to convert (in _source token)
   * @param _destination       ERC20 token to convert to
   * @param _type              The type of exchange to trade with
-  * @param _distribution      Special param for 1inch (if not used just set [])
-  * @param _additionalArgs    Array of bytes32 additional arguments (if not used just set [])
+  * @param _proof             Merkle tree proof (if not used just set [])
+  * @param _positions         Merkle tree positions (if not used just set [])
   * @param _additionalData    For additional data (if not used just set "0x0")
   * @param _minReturn         Min expected amount of destination
   */
@@ -379,8 +379,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
-    uint256[] calldata _distribution,
-    bytes32[] calldata _additionalArgs,
+    bytes32[] calldata _proof,
+    uint256[] calldata _positions,
     bytes calldata _additionalData,
     uint256 _minReturn
   ) external onlyOwner {
@@ -397,9 +397,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _sourceAmount,
         _destination,
         _type,
-        _distribution,
-        _additionalArgs,
-        _additionalData
+        _proof,
+        _positions,
+        _additionalData,
+        true
       );
     } else {
       _source.approve(address(exchangePortal), _sourceAmount);
@@ -408,9 +409,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _sourceAmount,
         _destination,
         _type,
-        _distribution,
-        _additionalArgs,
-        _additionalData
+        _proof,
+        _positions,
+        _additionalData,
+        true
       );
     }
 

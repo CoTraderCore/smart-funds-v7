@@ -9,9 +9,10 @@ interface ExchangePortalInterface {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
-    uint256[] calldata _distribution,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
+    bytes32[] calldata _proof,
+    uint256[] calldata _positions,
+    bytes calldata _additionalData,
+    bool isWhiteListedTokens
   )
     external
     payable

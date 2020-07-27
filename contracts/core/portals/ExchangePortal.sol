@@ -13,7 +13,6 @@ import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../../paraswap/interfaces/ParaswapInterface.sol";
 import "../../paraswap/interfaces/IPriceFeed.sol";
-import "../../paraswap/interfaces/IParaswapParams.sol";
 
 import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/BancorNetworkInterface.sol";
@@ -32,7 +31,7 @@ import "../interfaces/ITokensTypeStorage.sol";
 contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
-  uint public version = 2;
+  uint public version = 3;
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
@@ -44,7 +43,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   address public paraswap;
   ParaswapInterface public paraswapInterface;
   IPriceFeed public priceFeedInterface;
-  IParaswapParams public paraswapParams;
   address public paraswapSpender;
 
   // 1INCH
@@ -59,7 +57,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
-  // because order has dependency in other contracts like ConvertPortal 
+  // because order has dependency in other contracts like ConvertPortal
   enum ExchangeType { Paraswap, Bancor, OneInch }
 
   // This contract recognizes ETH by this address
@@ -89,7 +87,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   *
   * @param _paraswap               paraswap main address
   * @param _paraswapPrice          paraswap price feed address
-  * @param _paraswapParams         helper contract for convert params from bytes32
   * @param _bancorData             address of GetBancorData helper
   * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
@@ -100,7 +97,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   constructor(
     address _paraswap,
     address _paraswapPrice,
-    address _paraswapParams,
     address _bancorData,
     address _permitedStable,
     address _poolPortal,
@@ -113,7 +109,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     paraswap = _paraswap;
     paraswapInterface = ParaswapInterface(_paraswap);
     priceFeedInterface = IPriceFeed(_paraswapPrice);
-    paraswapParams = IParaswapParams(_paraswapParams);
     bancorData = IGetBancorData(_bancorData);
     paraswapSpender = paraswapInterface.getTokenTransferProxy();
     permitedStable = PermittedStablesInterface(_permitedStable);
@@ -133,8 +128,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _sourceAmount      Amount to convert from (in _source token)
   * @param _destination       ERC20 token to convert to
   * @param _type              The type of exchange to trade with (For now 0 - because only paraswap)
-  * @param _distribution      Special param for 1inch (if not used just set [])
-  * @param _additionalArgs    Array of bytes32 additional arguments (For pass additional fixed size types items, if not used just set [])
   * @param _additionalData    For additional data (if not used just set 0x0)
   *
   * @return receivedAmount    The amount of _destination received from the trade
@@ -144,9 +137,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     uint256 _sourceAmount,
     IERC20 _destination,
     uint256 _type,
-    uint256[] calldata _distribution,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
+    bytes32[] calldata _proof,
+    uint256[] calldata _positions,
+    bytes calldata _additionalData,
+    bool _isWhiteListedTokens
   )
     external
     override
@@ -170,8 +164,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
           address(_source),
           address(_destination),
           _sourceAmount,
-          _additionalData,
-          _additionalArgs
+          _additionalData
       );
     }
     // SHOULD TRADE BANCOR HERE
@@ -188,8 +181,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
           address(_source),
           address(_destination),
           _sourceAmount,
-          _distribution,
-          _additionalArgs
+          _additionalData
       );
     }
 
@@ -201,7 +193,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     // Additional check
     require(receivedAmount > 0, "received amount can not be zerro");
 
-    // Send assets
+    // Send destination
     if (_destination == ETH_TOKEN_ADDRESS) {
       (msg.sender).transfer(receivedAmount);
     } else {
@@ -209,18 +201,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       _destination.transfer(msg.sender, receivedAmount);
     }
 
-    // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
-    uint256 endAmount = (_source == ETH_TOKEN_ADDRESS) ? address(this).balance : _source.balanceOf(address(this));
+    // Send remains
+    _sendRemains(_source);
 
-    // Check if we hold a positive amount of _source
-    if (endAmount > 0) {
-      if (_source == ETH_TOKEN_ADDRESS) {
-        (msg.sender).transfer(endAmount);
-      } else {
-        _source.transfer(msg.sender, endAmount);
-      }
-    }
-
+    // Trigger event
     emit Trade(
       msg.sender,
       address(_source),
@@ -231,14 +215,30 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     );
   }
 
+  // Facilitates for send source remains
+  function _sendRemains(IERC20 _source) internal {
+    // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
+    uint256 endAmount = (_source == ETH_TOKEN_ADDRESS)
+    ? address(this).balance
+    : _source.balanceOf(address(this));
+
+    // Check if we hold a positive amount of _source
+    if (endAmount > 0) {
+      if (_source == ETH_TOKEN_ADDRESS) {
+        (msg.sender).transfer(endAmount);
+      } else {
+        _source.transfer(msg.sender, endAmount);
+      }
+    }
+  }
+
 
   // Facilitates trade with Paraswap
   function _tradeViaParaswap(
     address sourceToken,
     address destinationToken,
     uint256 sourceAmount,
-    bytes memory exchangeData,
-    bytes32[] memory _additionalArgs
+    bytes memory _additionalData
  )
    private
    returns (uint256 destinationReceived)
@@ -247,7 +247,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address[] memory callees,
     uint256[] memory startIndexes,
     uint256[] memory values,
-    uint256 mintPrice) = paraswapParams.getParaswapParamsFromBytes32Array(_additionalArgs);
+    uint256 mintPrice,
+    bytes memory exchangeData) = abi.decode(_additionalData, (uint256, address[], uint256[], uint256[], uint256, bytes));
 
    if (IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
      paraswapInterface.swap.value(sourceAmount)(
@@ -287,13 +288,14 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
    address sourceToken,
    address destinationToken,
    uint256 sourceAmount,
-   uint256[] memory _distribution,
-   bytes32[] memory _additionalArgs
+   bytes memory _additionalData
    )
    private
    returns(uint256 destinationReceived)
  {
-    uint256 flags = uint256(_additionalArgs[0]);
+    (uint256 flags,
+     uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
+
     if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
       oneInch.swap.value(sourceAmount)(
         IERC20(sourceToken),
