@@ -1,12 +1,14 @@
 import { BN, fromWei, toWei } from 'web3-utils'
-
+import { MerkleTree } from 'merkletreejs'
+import keccak256 from 'keccak256'
 import ether from './helpers/ether'
 import EVMRevert from './helpers/EVMRevert'
 import { duration } from './helpers/duration'
 import latestTime from './helpers/latestTime'
 import advanceTimeAndBlock from './helpers/advanceTimeAndBlock'
-const BigNumber = BN
 
+const BigNumber = BN
+const buf2hex = x => '0x'+x.toString('hex')
 
 require('chai')
   .use(require('chai-as-promised'))
@@ -17,6 +19,7 @@ const ETH_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 // real contracts
 const SmartFundETH = artifacts.require('./core/funds/SmartFundETH.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
+const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')
 
 // mock contracts
 const ReEntrancyFundAtack = artifacts.require('./ReEntrancyFundAtack')
@@ -43,7 +46,9 @@ let xxxERC,
     yyyERC,
     atackContract,
     atackContractAsManager,
-    tokensType
+    tokensType,
+    merkleWhiteList,
+    MerkleTREE
 
 contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
 
@@ -113,6 +118,19 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       toWei(String(100000000))
     )
 
+    const leaves = [
+      xxxERC.address,
+      yyyERC.address,
+      BNT.address,
+      DAI.address,
+      ETH_TOKEN_ADDRESS
+    ].map(x => keccak256(x)).sort(Buffer.compare)
+
+    MerkleTREE = new MerkleTree(leaves, keccak256)
+
+    // Deploy merkle white list contract
+    merkleWhiteList = await MerkleWhiteList.new(MerkleTREE.getRoot())
+
     // Deploy tokens type storage
     tokensType = await TokensTypeStorage.new()
 
@@ -122,7 +140,8 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       1,
       DAI.address,
       cEther.address,
-      tokensType.address
+      tokensType.address,
+      merkleWhiteList.address
     )
 
     // Depoy poolPortal
@@ -203,14 +222,18 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
 
       assert.equal(await tokensType.isPermittedAddress(exchangePortal.address), true)
 
+      // get proof and position for dest token
+      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
+      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
+
       // Manager make profit
       await smartFundETH.trade(
         ETH_TOKEN_ADDRESS,
         toWei(String(1)),
         xxxERC.address,
         0,
-        [],
-        [],
+        proofXXX,
+        positionXXX,
         "0x",
         1,
         {
@@ -225,14 +248,18 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
 
       assert.equal(await smartFundETH.calculateFundValue(), toWei(String(2)))
 
+      // get proof and position for dest token
+      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
+      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
+
       // should receive 200 'ether' (wei)
       await smartFundETH.trade(
         xxxERC.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
         0,
-        [],
-        [],
+        proofETH,
+        positionETH,
         "0x",
         1,
         {

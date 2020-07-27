@@ -1,5 +1,4 @@
 import { BN, fromWei, toWei } from 'web3-utils'
-
 import { MerkleTree } from 'merkletreejs'
 import keccak256 from 'keccak256'
 import ether from './helpers/ether'
