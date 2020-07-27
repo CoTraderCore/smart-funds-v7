@@ -12,7 +12,7 @@ interface ExchangePortalInterface {
     bytes32[] calldata _proof,
     uint256[] calldata _positions,
     bytes calldata _additionalData,
-    bool isWhiteListedTokens
+    bool _verifyDestanation
   )
     external
     payable

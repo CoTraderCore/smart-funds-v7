@@ -25,12 +25,14 @@ NOTE: in separate console
 6) Recieve data like Bancor path, ratio ect via proxy getBancorData contract, for case if Bancor will update some method.
 7) Made upgradable addresses of getBancorData contract in Pool and Exchnage portals
 8) Return bytes32 additional args for buy and sell pools
+9) Reduce 1inch gas cost in few times by get params offchain
+10) Add merkle tree white list verification in ExchangePortal
 ```
 
 # Todo
 ```
 1) Add support for Bancor v2 pools new methods
-2) Reduce 1inch gas cost in few times by get params offchain
+2) Add merkle tree white list verification in PoolPortal
 ```
 
 # Possible issue

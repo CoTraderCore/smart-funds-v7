@@ -26,6 +26,7 @@ import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PermittedStablesInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
+import "../interfaces/IMerkleTreeTokensVerification.sol";
 
 
 contract ExchangePortal is ExchangePortalInterface, Ownable {
@@ -35,6 +36,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
+
+  // Contract for merkle tree white list verification
+  IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
   // COMPOUND
   CEther public cEther;
@@ -93,6 +97,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _oneInch                address of 1inch OneSplitAudit contract
   * @param _cEther                 address of the COMPOUND cEther
   * @param _tokensTypes            address of the ITokensTypeStorage
+  * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
     address _paraswap,
@@ -102,7 +107,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _poolPortal,
     address _oneInch,
     address _cEther,
-    address _tokensTypes
+    address _tokensTypes,
+    address _merkleTreeWhiteList
     )
     public
   {
@@ -116,6 +122,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     oneInch = IOneSplitAudit(_oneInch);
     cEther = CEther(_cEther);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
+    merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
 
 
@@ -128,7 +135,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _sourceAmount      Amount to convert from (in _source token)
   * @param _destination       ERC20 token to convert to
   * @param _type              The type of exchange to trade with (For now 0 - because only paraswap)
+  * @param _proof             Merkle tree proof (if not used just set [])
+  * @param _positions         Merkle tree positions (if not used just set [])
   * @param _additionalData    For additional data (if not used just set 0x0)
+  * @param _verifyDestanation For additional check if token in list or not
   *
   * @return receivedAmount    The amount of _destination received from the trade
   */
@@ -140,7 +150,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     bytes32[] calldata _proof,
     uint256[] calldata _positions,
     bytes calldata _additionalData,
-    bool _isWhiteListedTokens
+    bool _verifyDestanation
   )
     external
     override
@@ -148,9 +158,13 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     tokenEnabled(_destination)
     returns (uint256 receivedAmount)
   {
+    // throw if destanation token not in white list
+    if(_verifyDestanation)
+      _verifyToken(_destination, _proof, _positions);
 
-    require(_source != _destination);
+    require(_source != _destination, "source can not be destination");
 
+    // check ETH payable case
     if (_source == ETH_TOKEN_ADDRESS) {
       require(msg.value == _sourceAmount);
     } else {
@@ -202,7 +216,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     }
 
     // Send remains
-    _sendRemains(_source);
+    _sendRemains(_source, msg.sender);
 
     // Trigger event
     emit Trade(
@@ -216,7 +230,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   // Facilitates for send source remains
-  function _sendRemains(IERC20 _source) internal {
+  function _sendRemains(IERC20 _source, address _receiver) private {
     // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
     uint256 endAmount = (_source == ETH_TOKEN_ADDRESS)
     ? address(this).balance
@@ -225,11 +239,26 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     // Check if we hold a positive amount of _source
     if (endAmount > 0) {
       if (_source == ETH_TOKEN_ADDRESS) {
-        (msg.sender).transfer(endAmount);
+        (_receiver).transfer(endAmount);
       } else {
-        _source.transfer(msg.sender, endAmount);
+        _source.transfer(_receiver, endAmount);
       }
     }
+  }
+
+
+  // Facilitates for verify destanation token input (check if token in merkle list or not)
+  // revert transaction if token not in list
+  function _verifyToken(
+    address _destination,
+    bytes32 [] memory proof,
+    uint256 [] memory positions)
+    private
+  {
+    bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
+
+    if(!status)
+      revert("Dest not in white list");
   }
 
 
