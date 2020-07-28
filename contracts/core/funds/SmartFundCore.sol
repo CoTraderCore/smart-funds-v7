@@ -446,6 +446,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    uint256 etherAmount = 0;
    for(uint8 i = 0; i < connectorsAddress.length; i++){
      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+       // fund can't buy token which not in traded tokens list
+       require(tokensTraded[connectorsAddress[i]], "cant buy pool for non traded token");
+       // approve
        IERC20(connectorsAddress[i]).approve(address(poolPortal), connectorsAmount[i]);
      }
      else{
