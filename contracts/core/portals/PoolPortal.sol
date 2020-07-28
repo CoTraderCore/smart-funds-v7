@@ -10,6 +10,7 @@ import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../../bancor/interfaces/BancorConverterInterface.sol";
+import "../../bancor/interfaces/BancorConverterInterfaceV2.sol";
 import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/SmartTokenInterface.sol";
 import "../../bancor/interfaces/IBancorFormula.sol";
@@ -73,7 +74,8 @@ contract PoolPortal is Ownable{
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    bytes _additionData
   )
   external
   payable
@@ -83,7 +85,25 @@ contract PoolPortal is Ownable{
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (connectorsAddress, connectorsAmount,) = buyBancorPool(_poolToken, _amount);
+      // get bancor pool version from params
+      uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
+
+      // buy Bancor v2
+      if(bancorPoolVersion >= 28){
+        (connectorsAddress, connectorsAmount,) = buyBancorPoolV2(
+          _poolToken,
+          _amount,
+          _additionData
+        );
+      }
+      // buy Bancor v1
+      else {
+        (connectorsAddress, connectorsAmount,) = buyBancorPoolV1(
+          _poolToken,
+          _amount
+        );
+      }
+
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
@@ -161,7 +181,7 @@ contract PoolPortal is Ownable{
   * @param _poolToken        address of bancor converter
   * @param _amount           amount of bancor relay
   */
-  function buyBancorPool(IERC20 _poolToken, uint256 _amount)
+  function buyBancorPoolV1(IERC20 _poolToken, uint256 _amount)
    private
    returns(
      address[] memory connectorsAddress,
@@ -216,6 +236,49 @@ contract PoolPortal is Ownable{
     }
 
     setTokenType(address(_poolToken), "BANCOR_ASSET");
+  }
+
+  function buyBancorPoolV2(IERC20 _poolToken, uint256 _amount, bytes additionData)
+    private
+    returns(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
+    uint256 poolAmountReceive
+  )
+  {
+    // get Bancor converter
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+
+    // get connetor tokens
+    (connectorsAddress,
+     connectorsAmount),
+     uint256 minReturn = abi.decode(_additionalData, (IERC20[], uint256[], uint256));
+
+    // transfer from sender and approve to converter
+
+    // for detect if there are ETH in connectors or not
+    uint256 etherAmount = 0;
+    // approve from portal to converter
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+      if(connectorsAddress[i] != ETH_TOKEN_ADDRESS){
+        // reset approve (some ERC20 not allow do new approve if already approved)
+        connectorsAddress[i].approve(converterAddress, 0);
+        // transfer from fund and approve to converter
+        _transferFromSenderAndApproveTo(connectorsAddress[i], connectorsAmount[i], converterAddress);
+      }else{
+        etherAmount = connectorsAmount[i];
+      }
+    }
+
+    // buy relay from converter
+    if(etherAmount > 0){
+      // payable
+      converter.addLiquidity.value(etherAmount)(connectorsAddress, connectorsAmount, minReturn);
+    }else{
+      // non payable
+      converter.addLiquidity(connectorsAddress, connectorsAmount, minReturn);
+    }
   }
 
 
