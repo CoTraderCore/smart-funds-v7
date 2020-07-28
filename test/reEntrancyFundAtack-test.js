@@ -16,6 +16,19 @@ require('chai')
   .should()
 
 const ETH_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
+
+// Create additional mock bytes params for trade via Paraswap aggregator
+const PARASWAP_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
+  ['uint256', 'address[]', 'uint256[]', 'uint256[]', 'uint256', 'bytes'],
+  [1,
+   ['0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'],
+   [1,2],
+   [1,2],
+   1,
+   "0x"
+  ])
+
+
 // real contracts
 const SmartFundETH = artifacts.require('./core/funds/SmartFundETH.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
@@ -234,7 +247,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
         0,
         proofXXX,
         positionXXX,
-        "0x",
+        PARASWAP_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne
@@ -260,7 +273,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
         0,
         proofETH,
         positionETH,
-        "0x",
+        PARASWAP_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne,

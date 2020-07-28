@@ -75,8 +75,8 @@ contract ExchangePortalMock {
     }
 
     if (_type == uint(ExchangeType.Paraswap)) {
-      // Trade via Paraswap (We can add special logic fo Paraswap here)
-      receivedAmount = _trade(_source, _destination, _sourceAmount);
+      // Trade via Paraswap
+      receivedAmount = _tradeViaParaswapMock(_source, _destination, _sourceAmount, _additionalData);
     }
     else if (_type == uint(ExchangeType.Bancor)) {
       // Trade via Bancor (We can add special logic fo Bancor here)
@@ -126,6 +126,37 @@ contract ExchangePortalMock {
     }
 
     setTokenType(address(_destination), "CRYPTOCURRENCY");
+  }
+
+
+  function _tradeViaParaswapMock(
+    IERC20 _source,
+    IERC20 _destination,
+    uint256 _sourceAmount,
+    bytes calldata _additionalData
+  )
+    private
+    returns(uint256)
+  {
+    // Test decode correct params
+    (uint256 minDestinationAmount,
+     address[] memory callees,
+     uint256[] memory startIndexes,
+     uint256[] memory values,
+     uint256 mintPrice,
+     bytes memory exchangeData) = abi.decode(
+       _additionalData,
+       (uint256, address[], uint256[], uint256[], uint256, bytes)
+     );
+
+     // check params
+     require(minDestinationAmount > 0, 'Not corerct minDestinationAmount param for Paraswap');
+     require(callees.length > 0, 'Not corerct callees param for Paraswap');
+     require(startIndexes.length  > 0, 'Not corerct startIndexes param for Paraswap');
+     require(values.length  > 0, 'Not corerct values param for Paraswap');
+     require(mintPrice > 0, 'Not corerct mintPrice param for Paraswap');
+
+     return _trade(_source, _destination, _sourceAmount);
   }
 
   // Facilitates for verify destanation token input (check if token in merkle list or not)
