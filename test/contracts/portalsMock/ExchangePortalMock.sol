@@ -83,8 +83,8 @@ contract ExchangePortalMock {
       receivedAmount = _trade(_source, _destination, _sourceAmount);
     }
     else if (_type == uint(ExchangeType.OneInch)) {
-      // Trade via Bancor(We can add special logic fo Bancor here)
-      receivedAmount = _trade(_source, _destination, _sourceAmount);
+      // Trade via 1inch
+      receivedAmount = _tradeViaOneInchMock(_source, _destination, _sourceAmount, _additionalData);
     }
     else {
       // unknown exchange type
@@ -126,6 +126,26 @@ contract ExchangePortalMock {
     }
 
     setTokenType(address(_destination), "CRYPTOCURRENCY");
+  }
+
+  function _tradeViaOneInchMock(
+    IERC20 _source,
+    IERC20 _destination,
+    uint256 _sourceAmount,
+    bytes calldata _additionalData
+  )
+    private
+    returns(uint256)
+  {
+    // test decode params
+    (uint256 flags,
+     uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
+
+    // check params
+    require(flags > 0, "Not correct flags param for 1inch aggregator");
+    require(_distribution.length > 0, "Not correct _distribution param for 1inch aggregator");
+
+    return _trade(_source, _destination, _sourceAmount);
   }
 
 

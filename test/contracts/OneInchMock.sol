@@ -25,7 +25,9 @@ contract OneInchMock {
             uint256 returnAmount,
             uint256[] memory distribution
         ){
-          returnAmount = 0;
-          distribution = new uint256[](0);
+          returnAmount = 1;
+          distribution = new uint256[](2);
+          distribution[0] = 1;
+          distribution[1] = 2;
         }
 }

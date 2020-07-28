@@ -31,6 +31,13 @@ const PARASWAP_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
    "0x"
   ])
 
+// Create additional mock bytes params for trade via 1inch aggregator
+const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
+  ['uint256', 'uint256[]'],
+  [1,
+   [1,1]
+  ])
+
 // real contracts
 const SmartFundUSD = artifacts.require('./core/funds/SmartFundUSD.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
@@ -373,7 +380,14 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // make a trade with the fund
-        await smartFundUSD.trade(DAI.address, 100, xxxERC.address, 0, proofXXX, positionXXX, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1,{
+        await smartFundUSD.trade(
+          DAI.address,
+          100,
+          xxxERC.address,
+          2,
+          proofXXX,
+          positionXXX,
+          ONEINCH_MOCK_ADDITIONAL_PARAMS, 1,{
           from: userOne,
         })
 
@@ -395,7 +409,14 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // make a trade with the fund
-        await smartFundUSD.trade(DAI.address, 100, xxxERC.address, 0, proofXXX, positionXXX, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1,{
+        await smartFundUSD.trade(
+          DAI.address,
+          100,
+          xxxERC.address,
+          2,
+          proofXXX,
+          positionXXX,
+          ONEINCH_MOCK_ADDITIONAL_PARAMS, 1,{
           from: userOne,
         })
 
@@ -420,7 +441,14 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // Trade 100 eth for 100 bat via kyber
-        await smartFundUSD.trade(DAI.address, 100, xxxERC.address, 0, proofXXX, positionXXX, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1,{
+        await smartFundUSD.trade(
+          DAI.address,
+          100,
+          xxxERC.address,
+          0,
+          proofXXX,
+          positionXXX,
+          PARASWAP_MOCK_ADDITIONAL_PARAMS, 1,{
           from: userOne,
         })
 
@@ -448,10 +476,24 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-        await smartFundUSD.trade(DAI.address, 50, yyyERC.address, 0, proofYYY, positionYYY, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1, {
+        await smartFundUSD.trade(
+          DAI.address,
+          50,
+          yyyERC.address,
+          0,
+          proofYYY,
+          positionYYY,
+          PARASWAP_MOCK_ADDITIONAL_PARAMS, 1, {
           from: userOne,
         })
-        await smartFundUSD.trade(DAI.address, 50, xxxERC.address, 0, proofXXX, positionXXX, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1, {
+        await smartFundUSD.trade(
+          DAI.address,
+          50,
+          xxxERC.address,
+          2,
+          proofXXX,
+          positionXXX,
+          ONEINCH_MOCK_ADDITIONAL_PARAMS, 1, {
           from: userOne,
         })
 
@@ -633,10 +675,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           DAI.address,
           toWei(String(1)),
           xxxERC.address,
-          0,
+          2,
           proofXXX,
           positionXXX,
-          PARASWAP_MOCK_ADDITIONAL_PARAMS,
+          ONEINCH_MOCK_ADDITIONAL_PARAMS,
           1,
           {
             from: userOne,
@@ -772,7 +814,13 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
       // Trade 100 DAI for 100 XXX
-      await smartFundUSD.trade(DAI.address, 100, xxxERC.address, 0, proofXXX, positionXXX, PARASWAP_MOCK_ADDITIONAL_PARAMS, 1,{
+      await smartFundUSD.trade(
+        DAI.address,
+        100, xxxERC.address,
+        2,
+        proofXXX,
+        positionXXX,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS, 1,{
         from: userOne,
       })
 
@@ -949,10 +997,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         xxxERC.address,
         toWei(String(1)),
         DAI.address,
-        0,
+        2,
         proofDAI,
         positionDAI,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne,
@@ -1022,10 +1070,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
-        0,
+        2,
         proofETH,
         positionETH,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne,
@@ -1150,10 +1198,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         DAI.address,
         toWei(String(2)),
         ETH_TOKEN_ADDRESS,
-        0,
+        2,
         proofETH,
         positionETH,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne,
@@ -1386,10 +1434,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         DAI.address,
         toWei(String(1)),
         BNT.address,
-        0,
+        2,
         proofBNT,
         positionBNT,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne,
@@ -1565,10 +1613,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
-        0,
+        2,
         proofXXX,
         positionXXX,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        ONEINCH_MOCK_ADDITIONAL_PARAMS,
         1,
         {
           from: userOne
@@ -1827,10 +1875,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       DAI.address,
       toWei(String(1)),
       BNT.address,
-      0,
+      2,
       proofBNT,
       positionBNT,
-      PARASWAP_MOCK_ADDITIONAL_PARAMS,
+      ONEINCH_MOCK_ADDITIONAL_PARAMS,
       1,
       {
         from: userOne,
