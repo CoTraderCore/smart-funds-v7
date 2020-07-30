@@ -256,13 +256,15 @@ contract PoolPortal is Ownable{
       converterAddress,
       msg.sender);
 
+    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
+
     // buy relay from converter
     if(etherAmount > 0){
       // payable
-      converter.addLiquidity.value(etherAmount)(connectorsAddress, connectorsAmount, minReturn);
+      converter.addLiquidity.value(etherAmount)(IERC20Tokens, connectorsAmount, minReturn);
     }else{
       // non payable
-      converter.addLiquidity(connectorsAddress, connectorsAmount, minReturn);
+      converter.addLiquidity(IERC20Tokens, connectorsAmount, minReturn);
     }
 
     // transfer remains back to fund
@@ -278,6 +280,7 @@ contract PoolPortal is Ownable{
   }
 
   // helper for buying bancor pool v1 and v2 functions
+  // approved connectors from sender to converter
   function approveBancorConnectors(
     address[] memory connectorsAddress,
     uint256[] memory connectorsAmount,
@@ -303,6 +306,7 @@ contract PoolPortal is Ownable{
   }
 
   // helper for buying bancor pool v1 and v2 functions
+  // transfer remains assets after bying pool
   function transferBancorRemains(address[] memory connectorsAddress, address receiver) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
@@ -312,6 +316,19 @@ contract PoolPortal is Ownable{
          IERC20(connectorsAddress[j]).transfer(receiver, remains);
     }
   }
+
+  // helper for buying bancor pool v2 functions
+  // convert address type to IERC20 type
+  function convertFromAddressToIERC20(address[] memory _addresses)
+   private
+   pure
+   returns(IERC20[] memory IERC20Tokens)
+   {
+     IERC20Tokens = new IERC20[](_addresses.length);
+     for(uint8 i = 0; i < _addresses.length; i ++){
+       IERC20Tokens[i] = IERC20(_addresses[i]);
+     }
+   }
 
 
   /**
