@@ -68,6 +68,7 @@ contract PoolPortal is Ownable{
   * @param _type            pool type
   * @param _poolToken       pool token address
   * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
+  * @param _additionData    for provide any additional data, if not used just set "0x"
   */
   function buyPool
   (
