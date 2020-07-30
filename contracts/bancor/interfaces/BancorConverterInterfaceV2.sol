@@ -8,7 +8,7 @@ interface BancorConverterInterfaceV2 {
     uint256 _minReturn) external payable;
 
   function removeLiquidity(
-    uint256 _amount, IERC20[]
-    memory _reserveTokens,
-    uint256[] memory _reserveMinReturnAmounts) external;
+    uint256 _amount,
+    IERC20[] calldata _reserveTokens,
+    uint256[] calldata _reserveMinReturnAmounts) external;
 }

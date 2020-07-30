@@ -75,7 +75,7 @@ contract PoolPortal is Ownable{
     uint _type,
     IERC20 _poolToken,
     bytes32[] calldata _additionalArgs,
-    bytes _additionData
+    bytes calldata _additionData
   )
   external
   payable
@@ -92,7 +92,6 @@ contract PoolPortal is Ownable{
       if(bancorPoolVersion >= 28){
         (connectorsAddress, connectorsAmount,) = buyBancorPoolV2(
           _poolToken,
-          _amount,
           _additionData
         );
       }
@@ -176,7 +175,8 @@ contract PoolPortal is Ownable{
 
 
   /**
-  * @dev helper for buy pool in Bancor network
+  * @dev helper for buy pool in Bancor network for version 1
+  * v1 buy works by pool amount
   *
   * @param _poolToken        address of bancor converter
   * @param _amount           amount of bancor relay
@@ -196,20 +196,13 @@ contract PoolPortal is Ownable{
     // get connectors and amount
     (connectorsAddress, connectorsAmount) = getDataForBuyingPool(_poolToken, 0, _amount);
 
-    // for detect if there are ETH in connectors or not
-    uint256 etherAmount = 0;
-
-    // approve from portal to converter
-    for(uint8 i = 0; i < connectorsAddress.length; i++){
-      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
-        // reset approve (some ERC20 not allow do new approve if already approved)
-        IERC20(connectorsAddress[i]).approve(converterAddress, 0);
-        // transfer from fund and approve to converter
-        _transferFromSenderAndApproveTo(IERC20(connectorsAddress[i]), connectorsAmount[i], converterAddress);
-      }else{
-        etherAmount = connectorsAmount[i];
-      }
-    }
+    // transfer from sender and approve to converter
+    // for detect if there are ETH in connectors or not we use etherAmount
+    uint256 etherAmount = approveBancorConnectors(
+      connectorsAddress,
+      connectorsAmount,
+      converterAddress,
+      msg.sender);
 
     // buy relay from converter
     if(etherAmount > 0){
@@ -222,23 +215,22 @@ contract PoolPortal is Ownable{
 
     // addition check
     require(_amount > 0, "BNT pool recieved amount can not be zerro");
-
+    transferBancorRemains(connectorsAddress, msg.sender);
     // transfer relay back to smart fund
     _poolToken.transfer(msg.sender, _amount);
     poolAmountReceive = _amount;
-
-    // transfer connectors back to fund if some amount remains
-    uint256 remains = 0;
-    for(uint8 j = 0; j < connectorsAddress.length; j++){
-      remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
-      if(remains > 0)
-         IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
-    }
-
+    // set token type for this asset
     setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
 
-  function buyBancorPoolV2(IERC20 _poolToken, uint256 _amount, bytes additionData)
+  /**
+  * @dev helper for buy pool in Bancor network for version 2
+  * v2 works by connectors amount
+  *
+  * @param _poolToken         address of bancor converter
+  * @param _additionalData    bytes data
+  */
+  function buyBancorPoolV2(IERC20 _poolToken, bytes memory _additionalData)
     private
     returns(
     address[] memory connectorsAddress,
@@ -250,26 +242,19 @@ contract PoolPortal is Ownable{
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
 
+    uint256 minReturn;
     // get connetor tokens
     (connectorsAddress,
-     connectorsAmount),
-     uint256 minReturn = abi.decode(_additionalData, (IERC20[], uint256[], uint256));
+     connectorsAmount,
+     minReturn) = abi.decode(_additionalData, (address[], uint256[], uint256));
 
     // transfer from sender and approve to converter
-
-    // for detect if there are ETH in connectors or not
-    uint256 etherAmount = 0;
-    // approve from portal to converter
-    for(uint8 i = 0; i < connectorsAddress.length; i++){
-      if(connectorsAddress[i] != ETH_TOKEN_ADDRESS){
-        // reset approve (some ERC20 not allow do new approve if already approved)
-        connectorsAddress[i].approve(converterAddress, 0);
-        // transfer from fund and approve to converter
-        _transferFromSenderAndApproveTo(connectorsAddress[i], connectorsAmount[i], converterAddress);
-      }else{
-        etherAmount = connectorsAmount[i];
-      }
-    }
+    // for detect if there are ETH in connectors or not we use etherAmount
+    uint256 etherAmount = approveBancorConnectors(
+      connectorsAddress,
+      connectorsAmount,
+      converterAddress,
+      msg.sender);
 
     // buy relay from converter
     if(etherAmount > 0){
@@ -278,6 +263,53 @@ contract PoolPortal is Ownable{
     }else{
       // non payable
       converter.addLiquidity(connectorsAddress, connectorsAmount, minReturn);
+    }
+
+    // transfer remains back to fund
+    transferBancorRemains(connectorsAddress, msg.sender);
+    // get pool amount
+    poolAmountReceive = _poolToken.balanceOf(address(this));
+    // additional check
+    require(poolAmountReceive > 0, "BNT pool recieved amount can not be zerro");
+    // transfer relay back to smart fund
+    _poolToken.transfer(msg.sender, poolAmountReceive);
+    // set token type for this asset
+    setTokenType(address(_poolToken), "BANCOR_ASSET");
+  }
+
+  // helper for buying bancor pool v1 and v2 functions
+  function approveBancorConnectors(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
+    address converterAddress,
+    address msgSender
+  )
+    private
+    returns(uint256 etherAmount)
+  {
+    // approve from portal to converter
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+        // reset approve (some ERC20 not allow do new approve if already approved)
+        IERC20(connectorsAddress[i]).approve(converterAddress, 0);
+        // transfer assets from fund
+        require(IERC20(connectorsAddress[i]).transferFrom(msgSender, address(this), connectorsAmount[i]));
+        // approve assets to converter
+        IERC20(connectorsAddress[i]).approve(converterAddress, connectorsAmount[i]);
+      }else{
+        etherAmount = connectorsAmount[i];
+      }
+    }
+  }
+
+  // helper for buying bancor pool v1 and v2 functions
+  function transferBancorRemains(address[] memory connectorsAddress, address receiver) private {
+    // transfer connectors back to fund if some amount remains
+    uint256 remains = 0;
+    for(uint8 j = 0; j < connectorsAddress.length; j++){
+      remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
+      if(remains > 0)
+         IERC20(connectorsAddress[j]).transfer(receiver, remains);
     }
   }
 
