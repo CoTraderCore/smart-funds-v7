@@ -406,6 +406,7 @@ contract PoolPortal is Ownable{
   {
     UniswapExchangeInterface exchange = UniswapExchangeInterface(
       uniswapFactory.getExchange(_token));
+
     return exchange.getTokenToEthOutputPrice(_amount);
   }
 
@@ -417,13 +418,15 @@ contract PoolPortal is Ownable{
   * @param _type       pool type
   * @param _poolToken  pool token address
   * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
+  * @param _additionData    for provide any additional data, if not used just set "0x"
   */
   function sellPool
   (
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionData
   )
   external
   payable
@@ -434,9 +437,19 @@ contract PoolPortal is Ownable{
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      (connectorsAddress,
-       connectorsAmount,
-       poolAmountSent) = sellPoolViaBancor(_poolToken, _amount);
+      uint8 bancorPoolVersion = uint8(_additionalArgs[0]);
+      // sell v2 Bancor pool
+      if(bancorPoolVersion >= 28){
+        (connectorsAddress,
+         connectorsAmount,
+          poolAmountSent) = sellPoolViaBancorV2(_poolToken, _amount, _additionData);
+      }
+      // sell v1 Bancor pool
+      else{
+        (connectorsAddress,
+         connectorsAmount,
+         poolAmountSent) = sellPoolViaBancorV1(_poolToken, _amount);
+      }
     }
     else if (_type == uint(PortalType.Uniswap)){
       (connectorsAddress,
@@ -457,7 +470,7 @@ contract PoolPortal is Ownable{
   * @param _poolToken        address of bancor relay
   * @param _amount           amount of bancor relay
   */
-  function sellPoolViaBancor(IERC20 _poolToken, uint256 _amount)
+  function sellPoolViaBancorV1(IERC20 _poolToken, uint256 _amount)
    private
    returns(
      address[] memory connectorsAddress,
@@ -469,28 +482,72 @@ contract PoolPortal is Ownable{
     _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
-
     // liquidate relay
     BancorConverterInterface(converterAddress).liquidate(_amount);
     poolAmountSent = _amount;
-
     // get connectors
     (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
+    // transfer conectors back to sender
+    connectorsAmount = transferConnectorsToSender(connectorsAddress, msg.sender);
+  }
+
+
+  /**
+  * @dev helper for sell pool in Bancor network
+  *
+  * @param _poolToken        address of bancor relay
+  * @param _amount           amount of bancor relay
+  * @param _additionalData   for any additional data
+  */
+  function sellPoolViaBancorV2(IERC20 _poolToken, uint256 _amount, bytes _additionalData)
+   private
+   returns(
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount,
+     uint256 poolAmountSent
+   )
+  {
+    // get Bancor Converter address
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    // get connetor tokens
+    (connectorsAddress) = abi.decode(_additionalData, (address[], uint256[]));
+    // convert tokens from address to IERC20 type
+    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
+    // get coneverter contract
+    BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+    // remove liquidity
+    converter.removeLiquidity()
+
+    poolAmountSent = _amount;
+    // transfer conectors back to sender
+    connectorsAmount = transferConnectorsToSender(connectorsAddress, msg.sender);
+  }
+
+
+  // helper for sell Bancor v1 nad v2 pool
+  // transfer reserve from sold pool share back to sender
+  // return array with amount of recieved connectors
+  function transferConnectorsToSender(
+    address[] memory connectorsAddress,
+    address msgSender
+  )
+    private
+    returns(uint256 connectorsAmount)
+  {
     // define connectors amount length
     connectorsAmount = new uint256[](connectorsAddress.length);
-
     // transfer connectors back to fund
     uint256 received = 0;
     for(uint8 i = 0; i < connectorsAddress.length; i++){
       if(connectorsAddress[i] == address(ETH_TOKEN_ADDRESS)){
         // tarnsfer ETH
         received = address(this).balance;
-        (msg.sender).transfer(received);
+        (msgSender).transfer(received);
         connectorsAmount[i] = received;
       }else{
         // transfer ERC20
         received = IERC20(connectorsAddress[i]).balanceOf(address(this));
-        IERC20(connectorsAddress[i]).transfer(msg.sender, received);
+        IERC20(connectorsAddress[i]).transfer(msgSender, received);
         connectorsAmount[i] = received;
       }
     }

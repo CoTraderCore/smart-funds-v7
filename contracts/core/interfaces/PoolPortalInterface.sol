@@ -7,7 +7,7 @@ interface PoolPortalInterface {
     uint _type,
     IERC20 _poolToken,
     bytes32[] calldata _additionalArgs,
-    bytes calldata _additionData 
+    bytes calldata _additionData
   )
   external
   payable
@@ -21,7 +21,8 @@ interface PoolPortalInterface {
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionData
   )
   external
   payable

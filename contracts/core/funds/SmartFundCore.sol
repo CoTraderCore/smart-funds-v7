@@ -504,12 +504,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _type            type of pool (0 - Bancor, 1 - Uniswap)
   * @param _poolToken       address of Bancor relay or Uniswap exchange
   * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
+  * @param _additionData    for provide any additional data, if not used just set "0x"
   */
   function sellPool(
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionData
   )
   external onlyOwner {
     // approve pool
@@ -521,7 +523,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       _amount,
       _type,
      _poolToken,
-     _additionalArgs
+     _additionalArgs,
+     _additionData
     );
 
     // Add connectors to fund
