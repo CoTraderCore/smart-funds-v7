@@ -27,12 +27,12 @@ NOTE: in separate console
 8) Return bytes32 additional args for buy and sell pools
 9) Reduce 1inch gas cost in few times by get params offchain
 10) Add merkle tree white list verification in ExchangePortal
+11) Add support for Bancor v2 pools new methods
 ```
 
 # Todo
 ```
-1) Add support for Bancor v2 pools new methods
-3) Try reduce 1inch gas in ConvertPortal 
+1) Try reduce 1inch gas in ConvertPortal
 ```
 
 # Possible issue

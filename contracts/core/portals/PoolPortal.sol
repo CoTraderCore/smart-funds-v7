@@ -68,7 +68,7 @@ contract PoolPortal is Ownable{
   * @param _type            pool type
   * @param _poolToken       pool token address
   * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionData    for provide any additional data, if not used just set "0x"
+  * @param _additionalData    for provide any additional data, if not used just set "0x"
   */
   function buyPool
   (
@@ -76,7 +76,7 @@ contract PoolPortal is Ownable{
     uint _type,
     IERC20 _poolToken,
     bytes32[] calldata _additionalArgs,
-    bytes calldata _additionData
+    bytes calldata _additionalData
   )
   external
   payable
@@ -93,7 +93,7 @@ contract PoolPortal is Ownable{
       if(bancorPoolVersion >= 28){
         (connectorsAddress, connectorsAmount,) = buyBancorPoolV2(
           _poolToken,
-          _additionData
+          _additionalData
         );
       }
       // buy Bancor v1
@@ -418,7 +418,7 @@ contract PoolPortal is Ownable{
   * @param _type       pool type
   * @param _poolToken  pool token address
   * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionData    for provide any additional data, if not used just set "0x"
+  * @param _additionalData    for provide any additional data, if not used just set "0x"
   */
   function sellPool
   (
@@ -426,7 +426,7 @@ contract PoolPortal is Ownable{
     uint _type,
     IERC20 _poolToken,
     bytes32[] calldata _additionalArgs,
-    bytes calldata _additionData
+    bytes calldata _additionalData
   )
   external
   payable
@@ -437,12 +437,12 @@ contract PoolPortal is Ownable{
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      uint8 bancorPoolVersion = uint8(_additionalArgs[0]);
+      uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
       // sell v2 Bancor pool
       if(bancorPoolVersion >= 28){
         (connectorsAddress,
          connectorsAmount,
-          poolAmountSent) = sellPoolViaBancorV2(_poolToken, _amount, _additionData);
+          poolAmountSent) = sellPoolViaBancorV2(_poolToken, _amount, _additionalData);
       }
       // sell v1 Bancor pool
       else{
@@ -499,7 +499,7 @@ contract PoolPortal is Ownable{
   * @param _amount           amount of bancor relay
   * @param _additionalData   for any additional data
   */
-  function sellPoolViaBancorV2(IERC20 _poolToken, uint256 _amount, bytes _additionalData)
+  function sellPoolViaBancorV2(IERC20 _poolToken, uint256 _amount, bytes memory _additionalData)
    private
    returns(
      address[] memory connectorsAddress,
@@ -509,14 +509,16 @@ contract PoolPortal is Ownable{
   {
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
-    // get connetor tokens
-    (connectorsAddress) = abi.decode(_additionalData, (address[], uint256[]));
+
+    uint256[] memory reserveMinReturnAmounts;
+    // get connetor tokens data for remove liquidity
+    (connectorsAddress, reserveMinReturnAmounts) = abi.decode(_additionalData, (address[], uint256[]));
     // convert tokens from address to IERC20 type
     IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
     // get coneverter contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
     // remove liquidity
-    converter.removeLiquidity()
+    converter.removeLiquidity(_amount, IERC20Tokens, reserveMinReturnAmounts);
 
     poolAmountSent = _amount;
     // transfer conectors back to sender
@@ -532,7 +534,7 @@ contract PoolPortal is Ownable{
     address msgSender
   )
     private
-    returns(uint256 connectorsAmount)
+    returns(uint256[] memory connectorsAmount)
   {
     // define connectors amount length
     connectorsAmount = new uint256[](connectorsAddress.length);
@@ -542,7 +544,7 @@ contract PoolPortal is Ownable{
       if(connectorsAddress[i] == address(ETH_TOKEN_ADDRESS)){
         // tarnsfer ETH
         received = address(this).balance;
-        (msgSender).transfer(received);
+        payable(msgSender).transfer(received);
         connectorsAmount[i] = received;
       }else{
         // transfer ERC20
