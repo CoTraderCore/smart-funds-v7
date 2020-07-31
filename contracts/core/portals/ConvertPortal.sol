@@ -151,7 +151,8 @@ contract ConvertPortal is Ownable{
       _sourceAmount,
       1, // type Uniswap
       IERC20(_source),
-      BYTES32_EMPTY_ARRAY
+      BYTES32_EMPTY_ARRAY,
+      "0x"
     );
 
     // convert pool connectors to destanation
