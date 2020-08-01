@@ -159,7 +159,7 @@ contract SmartFundRegistry is Ownable {
   *
   * @param _newExchangePortalAddress    Address of the new exchange portal to be set
   */
-  function setExchangePortalAddress(address _newExchangePortalAddress) public onlyOwner {
+  function setExchangePortalAddress(address _newExchangePortalAddress) external onlyOwner {
     // Require that the new exchange portal is permitted by permittedExchanges
     require(permittedExchanges.permittedAddresses(_newExchangePortalAddress));
 

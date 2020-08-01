@@ -253,7 +253,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _destination,
     bytes32 [] memory proof,
     uint256 [] memory positions)
-    private
+    public
   {
     bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
 
@@ -265,7 +265,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   function _verifyParaswapData(
     bytes memory _additionalData
  )
-   private
+   public
  {
    (uint256 minDestinationAmount,
     address[] memory callees,
