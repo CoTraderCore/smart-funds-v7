@@ -8,6 +8,8 @@ pragma solidity ^0.6.0;
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
+import "../interfaces/PermittedExchangesInterface.sol";
+import "../interfaces/PermittedPoolsInterface.sol";
 import "../../compound/CToken.sol";
 import "../../oneInch/IOneSplitAudit.sol";
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
@@ -20,6 +22,8 @@ contract ConvertPortal is Ownable{
   address public sUSD;
   ExchangePortalInterface public exchangePortal;
   PoolPortalInterface public poolPortal;
+  PermittedExchangesInterface public permittedExchanges;
+  PermittedPoolsInterface public permittedPools;
   ITokensTypeStorage  public tokensTypes;
   IOneSplitAudit public oneInch;
 
@@ -28,6 +32,8 @@ contract ConvertPortal is Ownable{
   *
   * @param _exchangePortal         address of exchange portal
   * @param _poolPortal             address of pool portal
+  * @param _permittedExchanges     address of permittedExchanges
+  * @param _permittedPools         address of pool portal
   * @param _tokensTypes            address of the tokens type storage
   * @param _CEther                 address of Compound ETH wrapper
   * @param _oneInch                address of 1inch main contract
@@ -35,6 +41,8 @@ contract ConvertPortal is Ownable{
   constructor(
     address _exchangePortal,
     address _poolPortal,
+    address _permittedExchanges,
+    address _permittedPools,
     address _tokensTypes,
     address _CEther,
     address _oneInch
@@ -43,6 +51,8 @@ contract ConvertPortal is Ownable{
   {
     exchangePortal = ExchangePortalInterface(_exchangePortal);
     poolPortal = PoolPortalInterface(_poolPortal);
+    permittedExchanges = PermittedExchangesInterface(_permittedExchanges);
+    permittedPools = PermittedPoolsInterface(_permittedPools);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     CEther = _CEther;
     oneInch = IOneSplitAudit(_oneInch);
@@ -277,6 +287,30 @@ contract ConvertPortal is Ownable{
   // owner can change oneInch
   function setNewOneInch(address _oneInch) external onlyOwner {
     oneInch = IOneSplitAudit(_oneInch);
+  }
+
+  /**
+  * @dev Sets a new default ExchangePortal address
+  *
+  * @param _newExchangePortalAddress    Address of the new exchange portal to be set
+  */
+  function setExchangePortalAddress(address _newExchangePortalAddress) external onlyOwner {
+    // Require that the new exchange portal is permitted by permittedExchanges
+    require(permittedExchanges.permittedAddresses(_newExchangePortalAddress));
+
+    exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
+  }
+
+  /**
+  * @dev Sets a new default Portal Portal address
+  *
+  * @param _poolPortalAddress    Address of the new pool portal to be set
+  */
+  function setPoolPortalAddress (address _poolPortalAddress) external onlyOwner {
+    // Require that the new pool portal is permitted by permittedPools
+    require(permittedPools.permittedAddresses(_poolPortalAddress));
+
+    poolPortal = PoolPortalInterface(_poolPortalAddress);
   }
 
   // fallback payable function to receive ether from other contract addresses
