@@ -82,7 +82,8 @@ contract PoolPortal is Ownable{
   payable
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount
+    uint256[] memory connectorsAmount,
+    uint256 poolAmountReceive
   )
   {
     if(_type == uint(PortalType.Bancor)){
@@ -91,14 +92,14 @@ contract PoolPortal is Ownable{
 
       // buy Bancor v2
       if(bancorPoolVersion >= 28){
-        (connectorsAddress, connectorsAmount,) = buyBancorPoolV2(
+        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV2(
           _poolToken,
           _additionalData
         );
       }
       // buy Bancor v1
       else {
-        (connectorsAddress, connectorsAmount,) = buyBancorPoolV1(
+        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV1(
           _poolToken,
           _amount
         );
@@ -107,7 +108,9 @@ contract PoolPortal is Ownable{
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-       (connectorsAddress, connectorsAmount,) = buyUniswapPool(address(_poolToken), _amount);
+       (connectorsAddress, connectorsAmount, poolAmountReceive) = buyUniswapPool(
+         address(_poolToken),
+         _amount);
     }
     else{
       // unknown portal type

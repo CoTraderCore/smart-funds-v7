@@ -13,7 +13,8 @@ interface PoolPortalInterface {
   payable
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount
+    uint256[] memory connectorsAmount,
+    uint256 poolAmountReceive
   );
 
   function sellPool

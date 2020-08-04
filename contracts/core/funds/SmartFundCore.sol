@@ -416,10 +416,19 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       );
     }
 
-    require(receivedAmount >= _minReturn, "received amount can not be less than min return");
+    // make sure fund recive destanation
+    require(receivedAmount >= _minReturn,
+      "received amount can not be less than min return");
 
+    // add token to trader list
     _addToken(address(_destination));
-    emit Trade(address(_source), _sourceAmount, address(_destination), receivedAmount);
+
+    // emit event
+    emit Trade(
+      address(_source),
+      _sourceAmount,
+      address(_destination),
+      receivedAmount);
   }
 
 
@@ -444,14 +453,19 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    bytes calldata _additionData
   )
   external onlyOwner {
+   uint256 poolAmountReceive;
    // approve connectors
    uint256 etherAmount = 0;
    for(uint8 i = 0; i < _connectorsAddress.length; i++){
      if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
        // fund can't buy token which not in traded tokens list
-       require(tokensTraded[_connectorsAddress[i]], "cant buy pool for non traded token");
+       require(tokensTraded[_connectorsAddress[i]],
+         "cant buy pool for non traded token");
+
        // approve
-       IERC20(_connectorsAddress[i]).approve(address(poolPortal), _connectorsAmount[i]);
+       IERC20(_connectorsAddress[i]).approve(
+         address(poolPortal),
+         _connectorsAmount[i]);
      }
      else{
        etherAmount = _connectorsAmount[i];
@@ -460,7 +474,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
    // buy pool via ERC20 and ETH
    if(etherAmount > 0){
-     poolPortal.buyPool.value(etherAmount)(
+    (,,poolAmountReceive) = poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
      _poolToken,
@@ -470,7 +484,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    }
    // buy pool only via ERC20 (not payable)
    else{
-     poolPortal.buyPool(
+     (,,poolAmountReceive) = poolPortal.buyPool(
       _amount,
       _type,
      _poolToken,
@@ -479,7 +493,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      );
    }
 
-   require(_poolToken.balanceOf(address(this)) >= _amount, "fund should receive pool");
+   // make sure fund receive pool
+   require(_poolToken.balanceOf(address(this)) >= poolAmountReceive,
+   "fund should receive pool");
 
    // Add pool as ERC20 for withdraw
    _addToken(address(_poolToken));
@@ -489,7 +505,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    // emit event
    emit BuyPool(
      address(_poolToken),
-     _amount,
+     poolAmountReceive,
      _connectorsAddress,
      _connectorsAmount);
   }
