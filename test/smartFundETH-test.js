@@ -189,14 +189,6 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       tokensType.address
     )
 
-    convertPortal = await ConvertPortal.new(
-      exchangePortal.address,
-      poolPortal.address,
-      tokensType.address,
-      cEther.address,
-      oneInch.address
-    )
-
     // allow exchange portal and pool portal write to token type storage
     await tokensType.addNewPermittedAddress(exchangePortal.address)
     await tokensType.addNewPermittedAddress(poolPortal.address)
@@ -204,6 +196,17 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     permittedExchanges = await PermittedExchanges.new(exchangePortal.address)
     permittedPools = await PermittedPools.new(poolPortal.address)
+
+    convertPortal = await ConvertPortal.new(
+      exchangePortal.address,
+      poolPortal.address,
+      permittedExchanges.address,
+      permittedPools.address,
+      tokensType.address,
+      cEther.address,
+      oneInch.address
+    )
+
     permittedConverts = await PermittedConverts.new(convertPortal.address)
 
     // Deploy ETH fund
@@ -1261,8 +1264,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
       assert.equal(await DAIBNT.balanceOf(smartFundETH.address), 0)
 
+      // get pool addresses and connectors
+      const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
+        DAIBNT.address,
+        0,
+        toWei(String(2)))
+
       // buy BNT pool
-      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
+      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddress, connectorsAmount, [], "0x")
       // after buy BNT pool recieved asset should be marked as BANCOR POOL
       assert.equal(await tokensType.getType(DAIBNT.address), TOKEN_KEY_BANCOR_POOL)
 
@@ -1272,7 +1281,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIBNT.balanceOf(smartFundETH.address), toWei(String(2)))
 
       // sell pool
-      await smartFundETH.sellPool(toWei(String(2)), 0, DAIBNT.address, [])
+      await smartFundETH.sellPool(toWei(String(2)), 0, DAIBNT.address, [], "0x")
 
       // Check balance after sell pool
       assert.equal(await BNT.balanceOf(smartFundETH.address), toWei(String(1)))
@@ -1310,8 +1319,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
       assert.equal(await DAIUNI.balanceOf(smartFundETH.address), 0)
 
+      // get pool addresses and connectors
+      const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
+        DAIUNI.address,
+        1,
+        toWei(String(1)))
+
       // Buy UNI Pool
-      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
+      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddress, connectorsAmount, [], "0x")
       // After buy UNI pool recieved asset should be marked as UNI POOL
       assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
 
@@ -1321,7 +1336,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       const fundETHBalanceAfterBuy = await web3.eth.getBalance(smartFundETH.address)
 
       // Sell UNI Pool
-      await smartFundETH.sellPool(toWei(String(2)), 1, DAIUNI.address, [])
+      await smartFundETH.sellPool(toWei(String(2)), 1, DAIUNI.address, [], "0x")
 
       // Check balance after buy pool
       const fundETHBalanceAfterSell = await web3.eth.getBalance(smartFundETH.address)
@@ -1378,10 +1393,23 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         }
       )
 
+      // get UNI pool addresses and connectors
+      const { connectorsAddress:connectorsAddressUNI, connectorsAmount:connectorsAmountUNI } = await poolPortal.getDataForBuyingPool(
+        DAIUNI.address,
+        1,
+        toWei(String(1)))
+
       // Buy UNI Pool
-      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
+      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
+
+      // get BNT pool addresses and connectors
+      const { connectorsAddress:connectorsAddressBNT, connectorsAmount:connectorsAmountBNT } = await poolPortal.getDataForBuyingPool(
+        DAIBNT.address,
+        0,
+        toWei(String(2)))
+
       // Buy BNT Pool
-      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
+      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
 
       // Fund get UNI and BNT Pools
       assert.equal(await DAIBNT.balanceOf(smartFundETH.address), toWei(String(2)))
@@ -1437,10 +1465,30 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
         }
       )
 
+      // get UNI pool addresses and connectors
+      const {
+        connectorsAddress:connectorsAddressUNI,
+        connectorsAmount:connectorsAmountUNI
+      } = await poolPortal.getDataForBuyingPool(
+        DAIUNI.address,
+        1,
+        toWei(String(1)))
+
       // Buy UNI Pool
-      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
+      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
+
+
+      // get BNT pool addresses and connectors
+      const {
+        connectorsAddress:connectorsAddressBNT,
+        connectorsAmount:сonnectorsAmountBNT
+      } = await poolPortal.getDataForBuyingPool(
+        DAIBNT.address,
+        0,
+        toWei(String(2)))
+
       // Buy BNT Pool
-      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
+      await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, сonnectorsAmountBNT, [], "0x")
 
       await smartFundETH.withdraw(0, false,)
 
@@ -1745,8 +1793,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
       assert.equal(await DAIUNI.balanceOf(smartFundETH.address), 0)
 
+      // get UNI pool addresses and connectors
+      const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
+        DAIUNI.address,
+        1,
+        toWei(String(1)))
+
       // Buy UNI Pool
-      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, [])
+      await smartFundETH.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddress, connectorsAmount, [], "0x")
 
       assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
 
@@ -1820,8 +1874,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
     assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
     assert.equal(await DAIBNT.balanceOf(smartFundETH.address), 0)
 
+    // get pool addresses and connectors
+    const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
+      DAIBNT.address,
+      0,
+      toWei(String(2)))
+
     // buy BNT pool
-    await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, [])
+    await smartFundETH.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddress, connectorsAmount, [], "0x")
     // after buy BNT pool recieved asset should be marked as BANCOR POOL
     assert.equal(await tokensType.getType(DAIBNT.address), TOKEN_KEY_BANCOR_POOL)
 

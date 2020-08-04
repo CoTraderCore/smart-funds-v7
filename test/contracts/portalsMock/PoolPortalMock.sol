@@ -68,13 +68,15 @@ contract PoolPortalMock {
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] memory _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionalData
   )
   external
   payable
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount
+    uint256[] memory connectorsAmount,
+    uint256 poolReceivedAmount
   )
   {
     connectorsAddress = new address[](2);
@@ -84,16 +86,20 @@ contract PoolPortalMock {
       buyBancorPool(_poolToken, _amount);
       connectorsAddress[0] = BNT;
       connectorsAddress[1] = DAI;
+
+      poolReceivedAmount = _amount;
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
       buyUniswapPool(address(_poolToken), _amount);
       connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
       connectorsAddress[1] = DAI;
+
+      poolReceivedAmount = _amount;
     }
     else{
       // unknown portal type
-      revert();
+      revert("unknown portal type");
     }
 
     connectorsAmount[0] = _amount.div(2);
@@ -135,7 +141,8 @@ contract PoolPortalMock {
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
-    bytes32[] memory _additionalArgs
+    bytes32[] memory _additionalArgs,
+    bytes calldata _additionalData
   )
   external
   payable
