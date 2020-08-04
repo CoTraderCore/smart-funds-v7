@@ -426,35 +426,35 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev buy pool via pool portal
   *
-  * @param _amount          For Bancor amount it's relay, for Uniswap amount it's ETH
-  * @param _type            type of pool (0 - Bancor, 1 - Uniswap)
-  * @param _poolToken       address of relay for Bancor and exchange for Uniswap
-  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionData    for provide any additional data, if not used just set "0x"
+  * @param _amount             For Bancor amount it's relay, for Uniswap amount it's ETH, for Bancor v2 can be 0
+  * @param _type               type of pool (0 - Bancor, 1 - Uniswap)
+  * @param _poolToken          address of relay for Bancor and exchange for Uniswap
+  * @param _connectorsAddress  address of pool connectors (can be [] for bancor v1)
+  * @param _connectorsAmount   amount of pool connectors  (can be [] for bancor v1)
+  * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
+  * @param _additionData       for provide any additional data, if not used just set "0x"
   */
   function buyPool(
    uint256 _amount,
    uint _type,
    IERC20 _poolToken,
+   address[] calldata _connectorsAddress,
+   uint256[] calldata _connectorsAmount,
    bytes32[] calldata _additionalArgs,
    bytes calldata _additionData
   )
   external onlyOwner {
-   // get buy data
-   (address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount) = poolPortal.getDataForBuyingPool(_poolToken, _type, _amount);
-
    // approve connectors
    uint256 etherAmount = 0;
-   for(uint8 i = 0; i < connectorsAddress.length; i++){
-     if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+   for(uint8 i = 0; i < _connectorsAddress.length; i++){
+     if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
        // fund can't buy token which not in traded tokens list
-       require(tokensTraded[connectorsAddress[i]], "cant buy pool for non traded token");
+       require(tokensTraded[_connectorsAddress[i]], "cant buy pool for non traded token");
        // approve
-       IERC20(connectorsAddress[i]).approve(address(poolPortal), connectorsAmount[i]);
+       IERC20(_connectorsAddress[i]).approve(address(poolPortal), _connectorsAmount[i]);
      }
      else{
-       etherAmount = connectorsAmount[i];
+       etherAmount = _connectorsAmount[i];
      }
    }
 
@@ -490,8 +490,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    emit BuyPool(
      address(_poolToken),
      _amount,
-     connectorsAddress,
-     connectorsAmount);
+     _connectorsAddress,
+     _connectorsAmount);
   }
 
 
