@@ -205,8 +205,7 @@ contract PoolPortal is Ownable{
     uint256 etherAmount = approveBancorConnectors(
       connectorsAddress,
       connectorsAmount,
-      converterAddress,
-      msg.sender);
+      converterAddress);
 
     // buy relay from converter
     if(etherAmount > 0){
@@ -219,7 +218,7 @@ contract PoolPortal is Ownable{
 
     // addition check
     require(_amount > 0, "BNT pool recieved amount can not be zerro");
-    transferBancorRemains(connectorsAddress, msg.sender);
+    transferBancorRemains(connectorsAddress);
     // transfer relay back to smart fund
     _poolToken.transfer(msg.sender, _amount);
     poolAmountReceive = _amount;
@@ -257,8 +256,7 @@ contract PoolPortal is Ownable{
     uint256 etherAmount = approveBancorConnectors(
       connectorsAddress,
       connectorsAmount,
-      converterAddress,
-      msg.sender);
+      converterAddress);
 
     IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
 
@@ -272,7 +270,7 @@ contract PoolPortal is Ownable{
     }
 
     // transfer remains back to fund
-    transferBancorRemains(connectorsAddress, msg.sender);
+    transferBancorRemains(connectorsAddress);
     // get pool amount
     poolAmountReceive = _poolToken.balanceOf(address(this));
     // additional check
@@ -288,8 +286,7 @@ contract PoolPortal is Ownable{
   function approveBancorConnectors(
     address[] memory connectorsAddress,
     uint256[] memory connectorsAmount,
-    address converterAddress,
-    address msgSender
+    address converterAddress
   )
     private
     returns(uint256 etherAmount)
@@ -299,10 +296,11 @@ contract PoolPortal is Ownable{
       if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
         // reset approve (some ERC20 not allow do new approve if already approved)
         IERC20(connectorsAddress[i]).approve(converterAddress, 0);
-        // transfer assets from fund
-        require(IERC20(connectorsAddress[i]).transferFrom(msgSender, address(this), connectorsAmount[i]));
-        // approve assets to converter
-        IERC20(connectorsAddress[i]).approve(converterAddress, connectorsAmount[i]);
+        // transfer from msg.sender and approve to
+        _transferFromSenderAndApproveTo(
+          IERC20(connectorsAddress[i]),
+          connectorsAmount[i],
+          converterAddress);
       }else{
         etherAmount = connectorsAmount[i];
       }
@@ -311,13 +309,13 @@ contract PoolPortal is Ownable{
 
   // helper for buying bancor pool v1 and v2 functions
   // transfer remains assets after bying pool
-  function transferBancorRemains(address[] memory connectorsAddress, address receiver) private {
+  function transferBancorRemains(address[] memory connectorsAddress) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
     for(uint8 j = 0; j < connectorsAddress.length; j++){
       remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
       if(remains > 0)
-         IERC20(connectorsAddress[j]).transfer(receiver, remains);
+         IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
     }
   }
 
@@ -491,7 +489,7 @@ contract PoolPortal is Ownable{
     // get connectors
     (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
     // transfer conectors back to sender
-    connectorsAmount = transferConnectorsToSender(connectorsAddress, msg.sender);
+    connectorsAmount = transferConnectorsToSender(connectorsAddress);
   }
 
 
@@ -525,17 +523,14 @@ contract PoolPortal is Ownable{
 
     poolAmountSent = _amount;
     // transfer conectors back to sender
-    connectorsAmount = transferConnectorsToSender(connectorsAddress, msg.sender);
+    connectorsAmount = transferConnectorsToSender(connectorsAddress);
   }
 
 
-  // helper for sell Bancor v1 nad v2 pool
+  // helper for sell Bancor v1 and v2 pool
   // transfer reserve from sold pool share back to sender
   // return array with amount of recieved connectors
-  function transferConnectorsToSender(
-    address[] memory connectorsAddress,
-    address msgSender
-  )
+  function transferConnectorsToSender(address[] memory connectorsAddress)
     private
     returns(uint256[] memory connectorsAmount)
   {
@@ -547,12 +542,12 @@ contract PoolPortal is Ownable{
       if(connectorsAddress[i] == address(ETH_TOKEN_ADDRESS)){
         // tarnsfer ETH
         received = address(this).balance;
-        payable(msgSender).transfer(received);
+        payable(msg.sender).transfer(received);
         connectorsAmount[i] = received;
       }else{
         // transfer ERC20
         received = IERC20(connectorsAddress[i]).balanceOf(address(this));
-        IERC20(connectorsAddress[i]).transfer(msgSender, received);
+        IERC20(connectorsAddress[i]).transfer(msg.sender, received);
         connectorsAmount[i] = received;
       }
     }
