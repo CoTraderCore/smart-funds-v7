@@ -87,23 +87,26 @@ contract PoolPortal is Ownable{
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      // get bancor pool versions from additional params
+      // get bancor pool version and type from additional params
       uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
-      uint256 isV2 = uint256(_additionalArgs[1]);
+      uint256 converterType = uint256(_additionalArgs[1]);
 
-      // buy Bancor v 2
-      if(isV2 == 2){
-        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV2(
-          _poolToken,
-          _additionalData
-        );
-      }
-      // buy Bancor v 0.6
-      else if(bancorPoolVersion >= 28){
-        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV06(
-          _poolToken,
-          _additionalData
-        );
+      // buy pool according version and type
+      if(bancorPoolVersion >= 28){
+        // buy Bancor v 2
+        if(converterType == 2){
+          (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV2(
+            _poolToken,
+            _additionalData
+          );
+        }
+        // buy Bancor new v 0.6
+        else{
+          (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV06(
+            _poolToken,
+            _additionalData
+          );
+        }
       }
       // buy Bancor v 1
       else {
@@ -143,6 +146,7 @@ contract PoolPortal is Ownable{
       uint256[] memory connectorsAmount
     )
   {
+    // Buy Bancor pool 
     if(_type == uint(PortalType.Bancor)){
       // get Bancor converter
       address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
@@ -165,6 +169,7 @@ contract PoolPortal is Ownable{
           _amount, _poolToken, address(currentConnector));
       }
     }
+    // Buy Uniswap pool
     else if(_type == uint(PortalType.Uniswap)){
       // get token address
       address tokenAddress = uniswapFactory.getToken(address(_poolToken));
@@ -463,22 +468,26 @@ contract PoolPortal is Ownable{
     uint256 poolAmountSent
   )
   {
+    // Sell Bancor Pool
     if(_type == uint(PortalType.Bancor)){
+      // get Bancor converter version and type
       uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
-      uint256 isV2 = uint256(_additionalArgs[1]);
+      uint256 bancorConverterType = uint256(_additionalArgs[1]);
 
-      // buy Bancor v2
-      if(isV2 == 2){
-        (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaBancorV2(
-          _poolToken,
-          _amount
-        );
-      }
-      // sell v 0.6 Bancor pool
-      else if(bancorPoolVersion >= 28){
-        (connectorsAddress,
-         connectorsAmount,
-          poolAmountSent) = sellPoolViaBancorV06(_poolToken, _amount, _additionalData);
+      if(bancorPoolVersion >= 28){
+        // sell Bancor v2 pool
+        if(bancorConverterType == 2){
+          (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaBancorV2(
+            _poolToken,
+            _amount
+          );
+        }
+        // sell new Bancor v 0.6 pool
+        else{
+          (connectorsAddress,
+           connectorsAmount,
+            poolAmountSent) = sellPoolViaBancorV06(_poolToken, _amount, _additionalData);
+        }
       }
       // sell v1 Bancor pool
       else{
@@ -487,14 +496,14 @@ contract PoolPortal is Ownable{
          poolAmountSent) = sellPoolViaBancorV1(_poolToken, _amount);
       }
     }
+    // Sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
       (connectorsAddress,
        connectorsAmount,
        poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
     }
     else{
-      // unknown portal type
-      revert();
+      revert("Unknown portal type");
     }
 
     emit SellPool(address(_poolToken), _amount, msg.sender);
