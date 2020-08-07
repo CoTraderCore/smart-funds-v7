@@ -10,7 +10,7 @@ import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../../bancor/interfaces/BancorConverterInterface.sol";
-import "../../bancor/interfaces/BancorConverterInterfaceV2.sol";
+import "../../bancor/interfaces/BancorConverterInterfaceV06.sol";
 import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/SmartTokenInterface.sol";
 import "../../bancor/interfaces/IBancorFormula.sol";
@@ -251,7 +251,7 @@ contract PoolPortal is Ownable{
   {
     // get Bancor converter
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
-    BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+    BancorConverterInterfaceV06 converter = BancorConverterInterfaceV06(converterAddress);
 
     uint256 minReturn;
     // get connetor tokens
@@ -554,7 +554,7 @@ contract PoolPortal is Ownable{
     // convert tokens from address to IERC20 type
     IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
     // get coneverter contract
-    BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+    BancorConverterInterfaceV06 converter = BancorConverterInterfaceV06(converterAddress);
     // remove liquidity
     converter.removeLiquidity(_amount, IERC20Tokens, reserveMinReturnAmounts);
 
@@ -577,6 +577,8 @@ contract PoolPortal is Ownable{
      uint256 poolAmountSent
    )
   {
+    // transfer pool from fund
+    _poolToken.transferFrom(msg.sender, address(this), _amount);
     // TODO
   }
 
