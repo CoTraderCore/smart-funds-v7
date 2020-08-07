@@ -87,17 +87,25 @@ contract PoolPortal is Ownable{
   )
   {
     if(_type == uint(PortalType.Bancor)){
-      // get bancor pool version from params
+      // get bancor pool versions from additional params
       uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
+      uint256 isV2 = uint256(_additionalArgs[1]);
 
-      // buy Bancor v2
-      if(bancorPoolVersion >= 28){
+      // buy Bancor v 2
+      if(isV2 == 2){
         (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV2(
           _poolToken,
           _additionalData
         );
       }
-      // buy Bancor v1
+      // buy Bancor v 0.6
+      else if(bancorPoolVersion >= 28){
+        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV06(
+          _poolToken,
+          _additionalData
+        );
+      }
+      // buy Bancor v 1
       else {
         (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV1(
           _poolToken,
@@ -227,13 +235,13 @@ contract PoolPortal is Ownable{
   }
 
   /**
-  * @dev helper for buy pool in Bancor network for version 2
-  * v2 works by connectors amount
+  * @dev helper for buy pool in Bancor network for version 0.6
+  * v 0.6 works by connectors amount
   *
   * @param _poolToken         address of bancor converter
   * @param _additionalData    bytes data
   */
-  function buyBancorPoolV2(IERC20 _poolToken, bytes memory _additionalData)
+  function buyBancorPoolV06(IERC20 _poolToken, bytes memory _additionalData)
     private
     returns(
     address[] memory connectorsAddress,
@@ -279,6 +287,24 @@ contract PoolPortal is Ownable{
     _poolToken.transfer(msg.sender, poolAmountReceive);
     // set token type for this asset
     setTokenType(address(_poolToken), "BANCOR_ASSET");
+  }
+
+  /**
+  * @dev helper for buy pool in Bancor network for version 2
+  * v 2 works by connectors amount
+  *
+  * @param _poolToken         address of bancor converter
+  * @param _additionalData    bytes data
+  */
+  function buyBancorPoolV2(IERC20 _poolToken, bytes memory _additionalData)
+    private
+    returns(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
+    uint256 poolAmountReceive
+  )
+  {
+    // TODO
   }
 
   // helper for buying bancor pool v1 and v2 functions
@@ -439,11 +465,20 @@ contract PoolPortal is Ownable{
   {
     if(_type == uint(PortalType.Bancor)){
       uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
-      // sell v2 Bancor pool
-      if(bancorPoolVersion >= 28){
+      uint256 isV2 = uint256(_additionalArgs[1]);
+
+      // buy Bancor v2
+      if(isV2 == 2){
+        (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaBancorV2(
+          _poolToken,
+          _amount
+        );
+      }
+      // sell v 0.6 Bancor pool
+      else if(bancorPoolVersion >= 28){
         (connectorsAddress,
          connectorsAmount,
-          poolAmountSent) = sellPoolViaBancorV2(_poolToken, _amount, _additionalData);
+          poolAmountSent) = sellPoolViaBancorV06(_poolToken, _amount, _additionalData);
       }
       // sell v1 Bancor pool
       else{
@@ -466,7 +501,7 @@ contract PoolPortal is Ownable{
   }
 
   /**
-  * @dev helper for sell pool in Bancor network
+  * @dev helper for sell pool in Bancor network v1
   *
   * @param _poolToken        address of bancor relay
   * @param _amount           amount of bancor relay
@@ -494,13 +529,13 @@ contract PoolPortal is Ownable{
 
 
   /**
-  * @dev helper for sell pool in Bancor network
+  * @dev helper for sell pool in Bancor network v0.6
   *
   * @param _poolToken        address of bancor relay
   * @param _amount           amount of bancor relay
   * @param _additionalData   for any additional data
   */
-  function sellPoolViaBancorV2(IERC20 _poolToken, uint256 _amount, bytes memory _additionalData)
+  function sellPoolViaBancorV06(IERC20 _poolToken, uint256 _amount, bytes memory _additionalData)
    private
    returns(
      address[] memory connectorsAddress,
@@ -526,6 +561,23 @@ contract PoolPortal is Ownable{
     poolAmountSent = _amount;
     // transfer conectors back to sender
     connectorsAmount = transferConnectorsToSender(connectorsAddress);
+  }
+
+  /**
+  * @dev helper for sell pool in Bancor network v2
+  *
+  * @param _poolToken        address of bancor relay
+  * @param _amount           amount of bancor relay
+  */
+  function sellPoolViaBancorV2(IERC20 _poolToken, uint256 _amount)
+   private
+   returns(
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount,
+     uint256 poolAmountSent
+   )
+  {
+    // TODO
   }
 
 
