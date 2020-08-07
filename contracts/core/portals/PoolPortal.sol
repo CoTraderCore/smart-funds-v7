@@ -508,6 +508,8 @@ contract PoolPortal is Ownable{
      uint256 poolAmountSent
    )
   {
+    // transfer pool from fund
+    _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
 
