@@ -1,6 +1,6 @@
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
-interface BancorConverterInterfaceV2 {
+interface BancorConverterInterfaceV1 {
 
   function addLiquidity(
     IERC20[] calldata _reserveTokens,
