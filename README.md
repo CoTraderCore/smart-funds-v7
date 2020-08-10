@@ -28,12 +28,12 @@ NOTE: in separate console
 9) Reduce 1inch gas cost in few times by get params offchain
 10) Add merkle tree white list verification in ExchangePortal
 11) Add support for Bancor v 0.6 pools new methods
+12) Pass data for buying old Bancor and UNI v1 pools offchain
 ```
 
 # Todo
 ```
 1) Try reduce 1inch gas in ConvertPortal
-2) Pass data for buying old Bancor and UNI v1 pools offchain
 ```
 
 # Possible issue
