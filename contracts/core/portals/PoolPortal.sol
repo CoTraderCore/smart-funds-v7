@@ -11,6 +11,7 @@ import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../../bancor/interfaces/BancorConverterInterface.sol";
 import "../../bancor/interfaces/BancorConverterInterfaceV1.sol";
+import "../../bancor/interfaces/BancorConverterInterfaceV2.sol";
 import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/SmartTokenInterface.sol";
 import "../../bancor/interfaces/IBancorFormula.sol";
@@ -61,7 +62,7 @@ contract PoolPortal is Ownable{
   }
 
   /**
-  * @dev this function provide necessary data for buy a BNT v0 and UNI v1 pool token by input
+  * @dev this function provide necessary data for buy a old BNT and UNI v1 pools by input amount
   *
   * @param _amount     amount of pool token (or ETH for Uniswap)
   * @param _type       pool type
@@ -175,8 +176,8 @@ contract PoolPortal is Ownable{
     emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
   }
 
-  // helper for buying Bancor pool
-  // Bancor has 3 pool cases
+  // helper for buying Bancor pool token by a certain converter version and type
+  // Bancor has 3 cases for different converter version and type
   function buyBancorPool(
     uint256 _amount,
     IERC20 _poolToken,
@@ -188,68 +189,72 @@ contract PoolPortal is Ownable{
     private
     returns(uint256 poolAmountReceive)
   {
-    // buy pool according version and type
+    // get Bancor converter address
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    // transfer from sender and approve to converter
+    // for detect if there are ETH in connectors or not we use etherAmount
+    uint256 etherAmount = approveBancorConnectorsToConverter(
+      _connectorsAddress,
+      _connectorsAmount,
+      converterAddress
+    );
+
+    // Buy Bancor pool according converter version and type
     // encode and compare converter version
-    if(uint256(_additionalArgs[0]) >= 28){
-      // buy Bancor v2
+    if(uint256(_additionalArgs[0]) >= 28) {
       // encode and compare converter type
-      if(uint256(_additionalArgs[1]) == 2){
-        (poolAmountReceive) = buyBancorPoolV2(
-          _poolToken,
+      if(uint256(_additionalArgs[1]) == 2) {
+        // buy Bancor v2 case
+        buyBancorPoolV2(
+          converterAddress,
+          etherAmount,
           _connectorsAddress,
-          _connectorsAmount,
-          _additionalData
+          _connectorsAmount
         );
-      }
-      // buy Bancor v1
-      else{
-        (poolAmountReceive) = buyBancorPoolV1(
-          _poolToken,
+      } else{
+        // buy Bancor v1 case
+        buyBancorPoolV1(
+          converterAddress,
+          etherAmount,
           _connectorsAddress,
           _connectorsAmount,
           _additionalData
         );
       }
     }
-    // buy Bancor old v0
     else {
-      (poolAmountReceive) = buyBancorPoolV0(
-        _poolToken,
-        _connectorsAddress,
-        _connectorsAmount,
+      // buy Bancor old v0 case
+      buyBancorPoolOldV(
+        converterAddress,
+        etherAmount,
         _amount
       );
     }
+
+    // get recieved pool amount
+    poolAmountReceive = _poolToken.balanceOf(address(this));
+    // addition check
+    require(poolAmountReceive > 0, "Recieved amount can not be zerro");
+    // transfer connectors remains
+    transferBancorRemains(_connectorsAddress);
+    // transfer pool token back to smart fund
+    _poolToken.transfer(msg.sender, poolAmountReceive);
+    // set token type for this asset
+    setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
 
 
-
   /**
-  * @dev helper for buy pool in Bancor network for converter type 0
-  * v0 calculate by pool amount input
-  *
-  * @param _poolToken        address of bancor converter
-  * @param _amount           amount of bancor relay
+  * @dev helper for buy pool in Bancor network for old converter version
   */
-  function buyBancorPoolV0(
-    IERC20 _poolToken,
-    address[] memory _connectorsAddress,
-    uint256[] memory _connectorsAmount,
+  function buyBancorPoolOldV(
+    address converterAddress,
+    uint256 etherAmount,
     uint256 _amount)
    private
-   returns(uint256 poolAmountReceive)
   {
-    // get Bancor converter
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // get converter as contract
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-    // transfer from sender and approve to converter
-    // for detect if there are ETH in connectors or not we use etherAmount
-    uint256 etherAmount = approveBancorConnectors(
-      _connectorsAddress,
-      _connectorsAmount,
-      converterAddress);
-
     // buy relay from converter
     if(etherAmount > 0){
       // payable
@@ -258,50 +263,25 @@ contract PoolPortal is Ownable{
       // non payable
       converter.fund(_amount);
     }
-
-    // addition check
-    require(_amount > 0, "BNT pool recieved amount can not be zerro");
-    transferBancorRemains(_connectorsAddress);
-    // transfer relay back to smart fund
-    _poolToken.transfer(msg.sender, _amount);
-    poolAmountReceive = _amount;
-    // set token type for this asset
-    setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
 
+
   /**
-  * @dev helper for buy pool in Bancor network for converter type 1
-  * v1 calculoate pool by connectors amount
-  *
-  * @param _poolToken         address of bancor converter
-  * @param _additionalData    bytes data
+  * @dev helper for buy pool in Bancor network for new converter type 1
   */
   function buyBancorPoolV1(
-    IERC20 _poolToken,
+    address converterAddress,
+    uint256 etherAmount,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
-    bytes memory _additionalData)
-    private
-    returns(
-    uint256 poolAmountReceive
+    bytes memory _additionalData
   )
+    private
   {
-    // get Bancor converter
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     BancorConverterInterfaceV1 converter = BancorConverterInterfaceV1(converterAddress);
-
     // get additional data
     (uint256 minReturn) = abi.decode(_additionalData, (uint256));
-
-    // transfer from sender and approve to converter
-    // for detect if there are ETH in connectors or not we use etherAmount
-    uint256 etherAmount = approveBancorConnectors(
-      _connectorsAddress,
-      _connectorsAmount,
-      converterAddress);
-
     IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(_connectorsAddress);
-
     // buy relay from converter
     if(etherAmount > 0){
       // payable
@@ -310,40 +290,35 @@ contract PoolPortal is Ownable{
       // non payable
       converter.addLiquidity(IERC20Tokens, _connectorsAmount, minReturn);
     }
-
-    // transfer remains back to fund
-    transferBancorRemains(_connectorsAddress);
-    // get pool amount
-    poolAmountReceive = _poolToken.balanceOf(address(this));
-    // additional check
-    require(poolAmountReceive > 0, "BNT pool recieved amount can not be zerro");
-    // transfer relay back to smart fund
-    _poolToken.transfer(msg.sender, poolAmountReceive);
-    // set token type for this asset
-    setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
 
   /**
-  * @dev helper for buy pool in Bancor network for converter type 2
-  * v 2 works by connectors amount
-  *
-  * @param _poolToken         address of bancor converter
-  * @param _additionalData    bytes data
+  * @dev helper for buy pool in Bancor network for new converter type 2
   */
   function buyBancorPoolV2(
-    IERC20 _poolToken,
+    address converterAddress,
+    uint256 etherAmount,
     address[] calldata _connectorsAddress,
-    uint256[] calldata _connectorsAmount,
-    bytes memory _additionalData)
+    uint256[] calldata _connectorsAmount
+  )
     private
-    returns(uint256 poolAmountReceive)
   {
-    // TODO
+    // get converter as contract
+    BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+    // buy relay from converter
+    if(etherAmount > 0){
+      // payable
+      converter.addLiquidity.value(etherAmount)(_connectorsAddress[0], _connectorsAmount[0]);
+    }else{
+      // non payable
+      converter.addLiquidity(_connectorsAddress[0], _connectorsAmount[0]);
+    }
   }
 
-  // helper for buying bancor pool v1 and v2 functions
-  // approved connectors from sender to converter
-  function approveBancorConnectors(
+
+  // helper for buying bancor pools
+  // dev: approved connectors from sender to converter
+  function approveBancorConnectorsToConverter(
     address[] memory connectorsAddress,
     uint256[] memory connectorsAmount,
     address converterAddress
@@ -367,8 +342,8 @@ contract PoolPortal is Ownable{
     }
   }
 
-  // helper for buying bancor pool v1 and v2 functions
-  // transfer remains assets after bying pool
+  // helper for buying bancor pools
+  // dev: transfer remains assets after bying pool
   function transferBancorRemains(address[] memory connectorsAddress) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
@@ -422,22 +397,19 @@ contract PoolPortal is Ownable{
       uint256 poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
         1,
         _erc20Amount,
-        deadline);
-
+        deadline
+      );
       // reset approve (some ERC20 not allow do new approve if already approved)
       IERC20(_tokenAddress).approve(_poolToken, 0);
-
       // addition check
       require(poolAmountReceive > 0, "UNI pool received amount can not be zerro");
-
       // transfer pool token back to smart fund
       IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
-
       // transfer remains ERC20
       uint256 remainsERC = IERC20(_tokenAddress).balanceOf(address(this));
       if(remainsERC > 0)
           IERC20(_tokenAddress).transfer(msg.sender, remainsERC);
-
+      // Set token type
       setTokenType(_poolToken, "UNISWAP_POOL");
     }else{
       // throw if such pool not Exist in Uniswap network
