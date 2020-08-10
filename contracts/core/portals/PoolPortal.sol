@@ -64,27 +64,27 @@ contract PoolPortal is Ownable{
   /**
   * @dev buy Bancor or Uniswap pool
   *
-  * @param _amount          amount of pool token
-  * @param _type            pool type
-  * @param _poolToken       pool token address
-  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionalData    for provide any additional data, if not used just set "0x"
+  * @param _amount             amount of pool token
+  * @param _type               pool type
+  * @param _poolToken          pool token address
+  * @param _connectorsAddress  address of pool connectors (can be [] for bancor v1)
+  * @param _connectorsAmount   amount of pool connectors  (can be [] for bancor v1)
+  * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
+  * @param _additionalData     for provide any additional data, if not used just set "0x"
   */
   function buyPool
   (
     uint256 _amount,
     uint _type,
     IERC20 _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
     bytes calldata _additionalData
   )
   external
   payable
-  returns(
-    address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    uint256 poolAmountReceive
-  )
+  returns(uint256 poolAmountReceive)
   {
     if(_type == uint(PortalType.Bancor)){
       // get bancor pool version and type from additional params
@@ -95,22 +95,26 @@ contract PoolPortal is Ownable{
       if(bancorPoolVersion >= 28){
         // buy Bancor v2
         if(converterType == 2){
-          (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV2(
+          (poolAmountReceive) = buyBancorPoolV2(
             _poolToken,
+            _connectorsAddress,
+            _connectorsAmount,
             _additionalData
           );
         }
         // buy Bancor new v1
         else{
-          (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV1(
+          (poolAmountReceive) = buyBancorPoolV1(
             _poolToken,
+            _connectorsAddress,
+            _connectorsAmount,
             _additionalData
           );
         }
       }
       // buy Bancor v0
       else {
-        (connectorsAddress, connectorsAmount, poolAmountReceive) = buyBancorPoolV0(
+        (poolAmountReceive) = buyBancorPoolV0(
           _poolToken,
           _amount
         );
@@ -119,7 +123,7 @@ contract PoolPortal is Ownable{
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
-       (connectorsAddress, connectorsAmount, poolAmountReceive) = buyUniswapPool(
+       (poolAmountReceive) = buyUniswapPool(
          address(_poolToken),
          _amount);
     }
@@ -128,7 +132,7 @@ contract PoolPortal is Ownable{
       revert();
     }
 
-    emit BuyPool(address(_poolToken), _amount, msg.sender);
+    emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
   }
 
   /**
@@ -200,18 +204,15 @@ contract PoolPortal is Ownable{
   */
   function buyBancorPoolV0(IERC20 _poolToken, uint256 _amount)
    private
-   returns(
-     address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
-     uint256 poolAmountReceive
-   )
+   returns(uint256 poolAmountReceive)
   {
     // get Bancor converter
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // get converter as contract
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-    // get connectors and amount
-    (connectorsAddress, connectorsAmount) = getDataForBuyingPool(_poolToken, 0, _amount);
+    // get connectors and amount by pool amount input
+    (address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount) = getDataForBuyingPool(_poolToken, 0, _amount);
 
     // transfer from sender and approve to converter
     // for detect if there are ETH in connectors or not we use etherAmount
@@ -246,11 +247,13 @@ contract PoolPortal is Ownable{
   * @param _poolToken         address of bancor converter
   * @param _additionalData    bytes data
   */
-  function buyBancorPoolV1(IERC20 _poolToken, bytes memory _additionalData)
+  function buyBancorPoolV1(
+    IERC20 _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
+    bytes memory _additionalData)
     private
     returns(
-    address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
     uint256 poolAmountReceive
   )
   {
@@ -258,32 +261,29 @@ contract PoolPortal is Ownable{
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     BancorConverterInterfaceV1 converter = BancorConverterInterfaceV1(converterAddress);
 
-    uint256 minReturn;
-    // get connetor tokens
-    (connectorsAddress,
-     connectorsAmount,
-     minReturn) = abi.decode(_additionalData, (address[], uint256[], uint256));
+    // get additional data
+    (uint256 minReturn) = abi.decode(_additionalData, (uint256));
 
     // transfer from sender and approve to converter
     // for detect if there are ETH in connectors or not we use etherAmount
     uint256 etherAmount = approveBancorConnectors(
-      connectorsAddress,
-      connectorsAmount,
+      _connectorsAddress,
+      _connectorsAmount,
       converterAddress);
 
-    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
+    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(_connectorsAddress);
 
     // buy relay from converter
     if(etherAmount > 0){
       // payable
-      converter.addLiquidity.value(etherAmount)(IERC20Tokens, connectorsAmount, minReturn);
+      converter.addLiquidity.value(etherAmount)(IERC20Tokens, _connectorsAmount, minReturn);
     }else{
       // non payable
-      converter.addLiquidity(IERC20Tokens, connectorsAmount, minReturn);
+      converter.addLiquidity(IERC20Tokens, _connectorsAmount, minReturn);
     }
 
     // transfer remains back to fund
-    transferBancorRemains(connectorsAddress);
+    transferBancorRemains(_connectorsAddress);
     // get pool amount
     poolAmountReceive = _poolToken.balanceOf(address(this));
     // additional check
@@ -301,13 +301,13 @@ contract PoolPortal is Ownable{
   * @param _poolToken         address of bancor converter
   * @param _additionalData    bytes data
   */
-  function buyBancorPoolV2(IERC20 _poolToken, bytes memory _additionalData)
+  function buyBancorPoolV2(
+    IERC20 _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
+    bytes memory _additionalData)
     private
-    returns(
-    address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    uint256 poolAmountReceive
-  )
+    returns(uint256 poolAmountReceive)
   {
     // TODO
   }
@@ -372,11 +372,7 @@ contract PoolPortal is Ownable{
   */
   function buyUniswapPool(address _poolToken, uint256 _ethAmount)
    private
-   returns(
-     address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
-     uint256 poolAmountReceive
-   )
+   returns(uint256 poolAmountReceive)
   {
     // get token address
     address tokenAddress = uniswapFactory.getToken(_poolToken);
@@ -390,7 +386,7 @@ contract PoolPortal is Ownable{
       // set deadline
       uint256 deadline = now + 15 minutes;
       // buy pool
-      uint256 poolAmount = exchange.addLiquidity.value(_ethAmount)(
+      uint256 poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
         1,
         erc20Amount,
         deadline);
@@ -399,19 +395,10 @@ contract PoolPortal is Ownable{
       IERC20(tokenAddress).approve(_poolToken, 0);
 
       // addition check
-      require(poolAmount > 0, "UNI pool received amount can not be zerro");
-
-      // return data
-      connectorsAddress = new address[](2);
-      connectorsAmount = new uint256[](2);
-      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
-      connectorsAddress[1] = tokenAddress;
-      connectorsAmount[0] = _ethAmount;
-      connectorsAmount[1] = erc20Amount;
-      poolAmountReceive = poolAmount;
+      require(poolAmountReceive > 0, "UNI pool received amount can not be zerro");
 
       // transfer pool token back to smart fund
-      IERC20(_poolToken).transfer(msg.sender, poolAmount);
+      IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
 
       // transfer remains ERC20
       uint256 remainsERC = IERC20(tokenAddress).balanceOf(address(this));
