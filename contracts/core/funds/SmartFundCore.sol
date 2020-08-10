@@ -88,9 +88,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // addresses to be able to invest in their fund
   mapping (address => bool) public whitelist;
 
-  // mapping for check certain token is relay or not
-  mapping(address => bool) public isRelay;
-
   uint public version = 7;
 
   // the total number of shares in the fund
@@ -454,6 +451,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   )
   external onlyOwner {
    uint256 poolAmountReceive;
+
    // approve connectors
    uint256 etherAmount = 0;
    for(uint8 i = 0; i < _connectorsAddress.length; i++){
@@ -472,35 +470,36 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      }
    }
 
-   // buy pool via ERC20 and ETH
+   // buy pool via ERC20 and ETH (payable case)
    if(etherAmount > 0){
-    (,,poolAmountReceive) = poolPortal.buyPool.value(etherAmount)(
+    (poolAmountReceive) = poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
      _poolToken,
+     _connectorsAddress,
+     _connectorsAmount,
      _additionalArgs,
      _additionData
      );
    }
-   // buy pool only via ERC20 (not payable)
+   // buy pool only via ERC20 (non payable case)
    else{
-     (,,poolAmountReceive) = poolPortal.buyPool(
+     (poolAmountReceive) = poolPortal.buyPool(
       _amount,
       _type,
      _poolToken,
+     _connectorsAddress,
+     _connectorsAmount,
      _additionalArgs,
      _additionData
      );
    }
 
-   // make sure fund receive pool
-   require(_poolToken.balanceOf(address(this)) >= poolAmountReceive,
-   "fund should receive pool");
+   // make sure fund receive pool token
+   require(poolAmountReceive > 0, "not received pool");
 
    // Add pool as ERC20 for withdraw
    _addToken(address(_poolToken));
-   // Mark this pool token as relay
-   _markAsRelay(address(_poolToken));
 
    // emit event
    emit BuyPool(
@@ -554,14 +553,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       _amount,
       connectorsAddress,
       connectorsAmount);
-  }
-
-  /**
-  * @dev mark ERC20 as relay
-  * @param _token   The token address to mark as relay
-  */
-  function _markAsRelay(address _token) internal {
-    isRelay[_token] = true;
   }
 
 
