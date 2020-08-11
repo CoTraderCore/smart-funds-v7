@@ -1,7 +1,7 @@
 // This contract need only for Ropsten tests!!!
 // This contract Mock 1 inch and Paraswap aggregators with Bancor network
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 
 import "../contracts/zeppelin-solidity/contracts/access/Ownable.sol";

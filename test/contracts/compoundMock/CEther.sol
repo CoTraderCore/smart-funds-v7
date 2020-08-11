@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 import "../tokens/Token.sol";
 
@@ -8,7 +8,7 @@ contract CEther is Token{
     Token(_name, _symbol, _decimals, _totalSupply)
     public
   {
-    // send all tokens from sender to this contract 
+    // send all tokens from sender to this contract
     balances[msg.sender] = 0;
     balances[address(this)] = _totalSupply;
   }

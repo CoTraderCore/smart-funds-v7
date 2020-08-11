@@ -1,5 +1,5 @@
 // This contract sell/buy UNI and BNT Pool relays for DAI mock token
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 import "../../../contracts/core/interfaces/ITokensTypeStorage.sol";
 import "../../../contracts/zeppelin-solidity/contracts/math/SafeMath.sol";
@@ -92,7 +92,7 @@ contract PoolPortalMock {
       revert("unknown portal type");
     }
   }
-  
+
 
   function getBancorConnectorsByRelay(address relay)
   public

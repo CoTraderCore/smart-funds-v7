@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 /**
 * Logic: Permitetd addresses can write to this contract types of converted tokens

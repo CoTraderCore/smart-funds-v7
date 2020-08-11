@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 import "../../../contracts/zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../../contracts/core/interfaces/ITokensTypeStorage.sol";

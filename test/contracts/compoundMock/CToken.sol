@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 import "../tokens/Token.sol";
 
@@ -12,7 +12,7 @@ contract CToken is Token {
     // send all tokens from sender to this contract
     balances[msg.sender] = 0;
     balances[address(this)] = _totalSupply;
-    
+
     // Initial ERC underlying
     underlying = _underlying;
   }

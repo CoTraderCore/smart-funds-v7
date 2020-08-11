@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 /*
 * This contract allow buy/sell pool for Bancor and Uniswap assets
@@ -632,7 +632,7 @@ contract PoolPortal is Ownable{
         received = address(this).balance;
         connectorsAmount[i] = received;
         // tarnsfer ETH
-        if(recieved > 0)
+        if(received > 0)
           payable(msg.sender).transfer(received);
       }
       // ERC20 case

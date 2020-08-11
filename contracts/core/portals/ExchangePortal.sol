@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 /*
 * This contract do swap for ERC20 via Paraswap, 1inch, and (between synth assest),

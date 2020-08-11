@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 /**
 * This contract convert source ERC20 token to destanation token

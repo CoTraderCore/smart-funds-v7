@@ -1,4 +1,4 @@
-pragma solidity ^0.6.0;
+pragma solidity ^0.6.12;
 
 /*
   The SmartFund contract is what holds all the tokens and ether, and contains all the logic
@@ -436,7 +436,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _type               type of pool (0 - Bancor, 1 - Uniswap)
   * @param _poolToken          address of relay for Bancor and exchange for Uniswap
   * @param _connectorsAddress  address of pool connectors
-  * @param _connectorsAmount   amount of pool connectors 
+  * @param _connectorsAmount   amount of pool connectors
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
   * @param _additionData       for provide any additional data, if not used just set "0x"
   */
