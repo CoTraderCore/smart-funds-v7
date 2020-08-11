@@ -41,6 +41,7 @@ contract PoolPortal is Ownable{
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
 
+
   /**
   * @dev contructor
   *
@@ -64,7 +65,7 @@ contract PoolPortal is Ownable{
   /**
   * @dev this function provide necessary data for buy a old BNT and UNI v1 pools by input amount
   *
-  * @param _amount     amount of pool token (or ETH for Uniswap)
+  * @param _amount     amount of pool token (NOTE: amount of ETH for Uniswap)
   * @param _type       pool type
   * @param _poolToken  pool token address
   */
@@ -127,7 +128,7 @@ contract PoolPortal is Ownable{
   * @param _amount             amount of pool token
   * @param _type               pool type
   * @param _poolToken          pool token address
-  * @param _connectorsAddress  address of pool connectors
+  * @param _connectorsAddress  address of pool connectors (NOTE: for Uniswap ETH should be pass in [0], ERC20 in [1])
   * @param _connectorsAmount   amount of pool connectors
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
   * @param _additionalData     for provide any additional data, if not used just set "0x",
@@ -165,7 +166,7 @@ contract PoolPortal is Ownable{
        (poolAmountReceive) = buyUniswapPool(
          address(_poolToken),
          _connectorsAddress[1], // connector token address
-         _connectorsAmount[1],  // conenctor token amount
+         _connectorsAmount[1],  // connector token amount
          _amount);
     }
     else{
@@ -176,8 +177,11 @@ contract PoolPortal is Ownable{
     emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
   }
 
-  // helper for buying Bancor pool token by a certain converter version and type
-  // Bancor has 3 cases for different converter version and type
+
+  /**
+  * @dev helper for buying Bancor pool token by a certain converter version and converter type
+  * Bancor has 3 cases for different converter version and type
+  */
   function buyBancorPool(
     uint256 _amount,
     IERC20 _poolToken,
@@ -316,8 +320,9 @@ contract PoolPortal is Ownable{
   }
 
 
-  // helper for buying bancor pools
-  // dev: approved connectors from sender to converter
+  /**
+  * @dev helper for buying bancor pools, approve connectors from sender to converter address
+  */
   function approveBancorConnectorsToConverter(
     address[] memory connectorsAddress,
     uint256[] memory connectorsAmount,
@@ -342,8 +347,9 @@ contract PoolPortal is Ownable{
     }
   }
 
-  // helper for buying bancor pools
-  // dev: transfer remains ERC20 assets after bying pool
+  /**
+  * @dev helper for buying bancor pools, transfer remains ERC20 assets after bying pool
+  */
   function transferBancorRemains(address[] memory connectorsAddress) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
@@ -354,8 +360,9 @@ contract PoolPortal is Ownable{
     }
   }
 
-  // helper for buying bancor pool v2 functions
-  // convert address type to IERC20 type
+  /**
+  * @dev helper for buying bancor pools, convert address type to IERC20 type
+  */
   function convertFromAddressToIERC20(address[] memory _addresses)
    private
    pure
@@ -418,10 +425,10 @@ contract PoolPortal is Ownable{
   }
 
   /**
-  * @dev return token amount by ETH input ratio
+  * @dev return token ration in ETH in Uniswap network
   *
   * @param _token     address of ERC20 token
-  * @param _amount    ETH amount (in wei)
+  * @param _amount    ETH amount
   */
   function getUniswapTokenAmountByETH(address _token, uint256 _amount)
     public
@@ -438,10 +445,10 @@ contract PoolPortal is Ownable{
   /**
   * @dev sell Bancor or Uniswap pool
   *
-  * @param _amount     amount of pool token
-  * @param _type       pool type
-  * @param _poolToken  pool token address
-  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
+  * @param _amount            amount of pool token
+  * @param _type              pool type
+  * @param _poolToken         pool token address
+  * @param _additionalArgs    bytes32 array for case if need pass some extra params, can be empty
   * @param _additionalData    for provide any additional data, if not used just set "0x"
   */
   function sellPool
@@ -465,9 +472,9 @@ contract PoolPortal is Ownable{
       // get Bancor converter version and type
       uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
       uint256 bancorConverterType = uint256(_additionalArgs[1]);
-
+      // sell according converter version and type
       if(bancorPoolVersion >= 28){
-        // sell Bancor v2 pool
+        // sell new Bancor v2 pool
         if(bancorConverterType == 2){
           (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaBancorV2(
             _poolToken,
@@ -489,7 +496,7 @@ contract PoolPortal is Ownable{
          poolAmountSent) = sellPoolViaBancorOldV(_poolToken, _amount);
       }
     }
-    // Sell Uniswap pool
+    // sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
       (connectorsAddress,
        connectorsAmount,
@@ -604,10 +611,11 @@ contract PoolPortal is Ownable{
     poolAmountSent = _amount;
   }
 
-
-  // helper for sell Bancor pool
-  // transfer pool connectors from sold pool back to sender
-  // return array with amount of recieved connectors
+  /**
+  * @dev helper for sell Bancor pool
+  * transfer pool connectors from sold pool back to sender
+  * return array with amount of recieved connectors
+  */
   function transferConnectorsToSender(address[] memory connectorsAddress)
     private
     returns(uint256[] memory connectorsAmount)
