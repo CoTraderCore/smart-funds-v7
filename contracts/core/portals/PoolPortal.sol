@@ -343,7 +343,7 @@ contract PoolPortal is Ownable{
   }
 
   // helper for buying bancor pools
-  // dev: transfer remains assets after bying pool
+  // dev: transfer remains ERC20 assets after bying pool
   function transferBancorRemains(address[] memory connectorsAddress) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
@@ -606,7 +606,7 @@ contract PoolPortal is Ownable{
 
 
   // helper for sell Bancor pool
-  // transfer reserve from sold pool share back to sender
+  // transfer pool connectors from sold pool back to sender
   // return array with amount of recieved connectors
   function transferConnectorsToSender(address[] memory connectorsAddress)
     private
@@ -614,19 +614,27 @@ contract PoolPortal is Ownable{
   {
     // define connectors amount length
     connectorsAmount = new uint256[](connectorsAddress.length);
-    // transfer connectors back to fund
+
     uint256 received = 0;
+    // transfer connectors back to fund
     for(uint8 i = 0; i < connectorsAddress.length; i++){
+      // ETH case
       if(connectorsAddress[i] == address(ETH_TOKEN_ADDRESS)){
-        // tarnsfer ETH
+        // update ETH data
         received = address(this).balance;
-        payable(msg.sender).transfer(received);
         connectorsAmount[i] = received;
-      }else{
-        // transfer ERC20
+        // tarnsfer ETH
+        if(recieved > 0)
+          payable(msg.sender).transfer(received);
+      }
+      // ERC20 case
+      else{
+        // update ERC20 data
         received = IERC20(connectorsAddress[i]).balanceOf(address(this));
-        IERC20(connectorsAddress[i]).transfer(msg.sender, received);
         connectorsAmount[i] = received;
+        // transfer ERC20
+        if(received > 0)
+          IERC20(connectorsAddress[i]).transfer(msg.sender, received);
       }
     }
   }
