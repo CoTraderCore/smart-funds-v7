@@ -401,7 +401,7 @@ contract PoolPortal is Ownable{
       // set deadline
       uint256 deadline = now + 15 minutes;
       // buy pool
-      uint256 poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
+      poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
         1,
         _erc20Amount,
         deadline
