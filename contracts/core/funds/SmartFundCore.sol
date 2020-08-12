@@ -15,11 +15,9 @@ pragma solidity ^0.6.12;
 
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
-import "../interfaces/ConvertPortalInterface.sol";
 
 import "../interfaces/PermittedExchangesInterface.sol";
 import "../interfaces/PermittedPoolsInterface.sol";
-import "../interfaces/PermittedConvertsInterface.sol";
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
@@ -42,17 +40,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // The Interface of pool portall
   PoolPortalInterface public poolPortal;
 
-  // The Interface of convert portal
-  ConvertPortalInterface public convertPortal;
-
   // The Smart Contract which stores the addresses of all the authorized Exchange Portals
   PermittedExchangesInterface public permittedExchanges;
 
   // The Smart Contract which stores the addresses of all the authorized Pools Portals
   PermittedPoolsInterface public permittedPools;
-
-  // The Smart Contract which stores the addresses of all the authorized Converts Portals
-  PermittedConvertsInterface public permittedConverts;
 
   // portals recognizes ETH by this address
   IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
@@ -157,10 +149,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     address _permittedExchangesAddress,
     address _permittedPoolsAddress,
     address _poolPortalAddress,
-    address _convertPortalAddress,
     address _cEther,
-    address _coreFundAsset,
-    address _permittedConvertsAddress
+    address _coreFundAsset
   )public{
     // never allow a 100% fee
     require(_successFee < TOTAL_PERCENTAGE);
@@ -192,8 +182,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
     permittedPools = PermittedPoolsInterface(_permittedPoolsAddress);
     poolPortal = PoolPortalInterface(_poolPortalAddress);
-    convertPortal = ConvertPortalInterface(_convertPortalAddress);
-    permittedConverts = PermittedConvertsInterface(_permittedConvertsAddress);
 
     cEther = _cEther;
     coreFundAsset = _coreFundAsset;
@@ -213,7 +201,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _mul                The numerator
   * @param _div                The denominator
   * @param _withdrawAddress    Address to send the tokens/ether to
-  * @param _convert            if true, convert assets to base asset
   *
   * NOTE: _withdrawAddress changed from address to address[] arrays because balance calculation should be performed
   * once for all usesr who wants to withdraw from the current balance.
@@ -222,8 +209,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   function _withdraw(
     uint256[] memory _mul,
     uint256[] memory _div,
-    address[] memory _withdrawAddress,
-    bool _convert
+    address[] memory _withdrawAddress
     )
     internal
     returns (uint256)
@@ -237,19 +223,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       for(uint8 j = 0; j < _withdrawAddress.length; j++){
         // calculate withdraw ERC20 share
         uint256 payoutAmount = fundAmount.mul(_mul[j]).div(_div[j]);
-        // Check if need convert ERC20 to fund core asset
-        if(_convert){
-          // Convert ERC20
-          tryConvertToCoreAsset(
-            address(token),
-            payoutAmount,
-            coreFundAsset,
-            _withdrawAddress[j]
-          );
-        }else{
-          // Just withdarw ERC20
-          token.transfer(_withdrawAddress[j], payoutAmount);
-        }
+        token.transfer(_withdrawAddress[j], payoutAmount);
       }
     }
     // Transfer ETH to _withdrawAddress
@@ -257,58 +231,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     for(uint8 k = 0; k < _withdrawAddress.length; k++){
       // calculate withdraw ETH share
       uint256 etherPayoutAmount = (etherBalance).mul(_mul[k]).div(_div[k]);
-
-      // Check if need convert ETH to fund core asset
-      if(_convert && coreFundAsset != address(ETH_TOKEN_ADDRESS)){
-        // Convert ETH
-        tryConvertToCoreAsset(
-         address(ETH_TOKEN_ADDRESS),
-         etherPayoutAmount,
-         coreFundAsset,
-         _withdrawAddress[k]
-        );
-      }else{
-        // Just withdarw ETH
-        payable(_withdrawAddress[k]).transfer(etherPayoutAmount);
-      }
+      payable(_withdrawAddress[k]).transfer(etherPayoutAmount);
     }
   }
-
-  // helper which try convert input asset to core fund asset (ETH or USD)
-  function tryConvertToCoreAsset(
-    address _source,
-    uint256 _amount,
-    address _destanation,
-    address _receiver
-  )
-    private
-  {
-    if(_source == address(ETH_TOKEN_ADDRESS)){
-      try convertPortal.convert.value(_amount)(
-        _source,
-        _amount,
-        _destanation,
-        _receiver)
-       {}
-       catch{
-        // if can't convert send ETH without convert
-        payable(_receiver).transfer(_amount);
-       }
-    }
-    else{
-      IERC20(_source).approve(address(convertPortal), _amount);
-      try convertPortal.convert(
-        _source,
-        _amount,
-        _destanation,
-        _receiver)
-      {}
-      catch{
-        // if can't convert send ERC20 without convert
-        IERC20(_source).transfer(_receiver, _amount);
-      }
-    }
- }
 
   /**
   * @dev Withdraws users fund holdings, sends (userShares/totalShares) of every held token
@@ -316,7 +241,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   *
   * @param _percentageWithdraw    The percentage of the users shares to withdraw.
   */
-  function withdraw(uint256 _percentageWithdraw, bool _convert) external {
+  function withdraw(uint256 _percentageWithdraw) external {
     require(totalShares != 0);
 
     uint256 percentageWithdraw = (_percentageWithdraw == 0) ? TOTAL_PERCENTAGE : _percentageWithdraw;
@@ -344,7 +269,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     cut[0] = withdrawShares;
 
     // do withdraw
-    _withdraw(cut, value, spenders,_convert);
+    _withdraw(cut, value, spenders);
 
     // Store the value we are withdrawing in ether
     uint256 valueWithdrawn = fundValue.mul(withdrawShares).div(totalShares);
@@ -757,7 +682,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev Allows the fund manager to withdraw their cut of the funds profit
   */
-  function fundManagerWithdraw(bool _convert) public onlyOwner {
+  function fundManagerWithdraw() public onlyOwner {
     uint256 fundManagerCut;
     uint256 fundValue;
 
@@ -779,7 +704,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     cut[1] = fundManagerCut - platformCut;
 
     // do withdraw
-    _withdraw(cut, value, spenders, _convert);
+    _withdraw(cut, value, spenders);
 
     // add report
     fundManagerCashedOut = fundManagerCashedOut.add(fundManagerCut);
@@ -850,18 +775,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     require(permittedExchanges.permittedAddresses(_newExchangePortalAddress));
 
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
-  }
-
-  /**
-  * @dev Allows the fund manager to connect to a new convert portal
-  *
-  * @param _newConvertPortalAddress    The address of the new convert portal to use
-  */
-  function setNewConvertPortal(address _newConvertPortalAddress) public onlyOwner {
-    // Require that the new exchange portal is permitted by permittedConverts
-    require(permittedConverts.permittedAddresses(_newConvertPortalAddress));
-
-    convertPortal = ConvertPortalInterface(_newConvertPortalAddress);
   }
 
   /**

@@ -22,9 +22,7 @@ contract SmartFundETH is SmartFundCore {
   * @param _permittedExchangesAddress    Address of PermittedExchanges contract
   * @param _permittedPoolsAddress        Address of PermittedPools contract
   * @param _poolPortalAddress            Address of initial pool portal
-  * @param _convertPortalAddress         Address of the convert portal
   * @param _cEther                       Address of the cEther
-  * @param _permittedConvertsAddress     Address of the permitted Converts portal
   */
   constructor(
     address _owner,
@@ -36,9 +34,7 @@ contract SmartFundETH is SmartFundCore {
     address _permittedExchangesAddress,
     address _permittedPoolsAddress,
     address _poolPortalAddress,
-    address _convertPortalAddress,
-    address _cEther,
-    address _permittedConvertsAddress
+    address _cEther
   )
   SmartFundCore(
     _owner,
@@ -50,10 +46,8 @@ contract SmartFundETH is SmartFundCore {
     _permittedExchangesAddress,
     _permittedPoolsAddress,
     _poolPortalAddress,
-    _convertPortalAddress,
     _cEther,
-    address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee),
-    _permittedConvertsAddress
+    address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
   )
   public{}
 

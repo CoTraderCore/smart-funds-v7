@@ -41,11 +41,9 @@ const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
 // real contracts
 const SmartFundUSD = artifacts.require('./core/funds/SmartFundUSD.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
-const ConvertPortal = artifacts.require('./core/portals/ConvertPortal.sol')
 const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
 const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
 const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
-const PermittedConverts = artifacts.require('./core/verification/PermittedConverts.sol')
 const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')
 
 // mock contracts
@@ -80,8 +78,6 @@ let xxxERC,
     sETH,
     sUSD,
     tokensType,
-    convertPortal,
-    permittedConverts,
     permittedExchanges,
     permittedPools,
     permittedStables,
@@ -210,18 +206,6 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     permittedStables = await PermittedStables.new(DAI.address)
 
 
-    convertPortal = await ConvertPortal.new(
-      exchangePortal.address,
-      poolPortal.address,
-      permittedExchanges.address,
-      permittedPools.address,
-      tokensType.address,
-      cEther.address,
-      oneInch.address
-    )
-
-    permittedConverts = await PermittedConverts.new(convertPortal.address)
-
     // Deploy USD fund
     smartFundUSD = await SmartFundUSD.new(
       '0x0000000000000000000000000000000000000000', // address _owner,
@@ -235,9 +219,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       permittedStables.address,                     // address _permittedStabels
       poolPortal.address,                           // address _poolPortalAddress,
       DAI.address,                                  // address_stableCoinAddress
-      convertPortal.address,                        // address of convert portal
-      cEther.address,                               // address _cEther
-      permittedConverts.address                     // address _perrmittedConverts
+      cEther.address                                // address _cEther
     )
 
     // send all BNT and UNI pools to portal
@@ -573,7 +555,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         assert.equal(fromWei(totalWeiDeposited), 1)
 
         // user1 now withdraws 190 DAI, 90 of which are profit
-        await smartFundUSD.withdraw(0, false, { from: userOne })
+        await smartFundUSD.withdraw(0, { from: userOne })
 
         const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
         assert.equal(fromWei(totalWeiWithdrawn), 1.9)
@@ -596,7 +578,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
           // // FM now withdraws their profit
-        await smartFundUSD.fundManagerWithdraw(false, { from: userOne })
+        await smartFundUSD.fundManagerWithdraw({ from: userOne })
         // Manager, can get his 10%, and remains 0.0001996 it's  platform commision
         assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
       })
@@ -659,12 +641,12 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(2)))
 
         // user1 now withdraws 190 ether, 90 of which are profit
-        await smartFundUSD.withdraw(0, false, { from: userOne })
+        await smartFundUSD.withdraw(0, { from: userOne })
 
         assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(0.1)))
 
         // FM now withdraws their profit
-        await smartFundUSD.fundManagerWithdraw(false, { from: userOne })
+        await smartFundUSD.fundManagerWithdraw({ from: userOne })
         assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
 
         // provide user2 with some DAI
@@ -742,7 +724,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       totalShares = await smartFundUSD.totalShares()
       assert.equal(totalShares, toWei(String(1)))
 
-      await smartFundUSD.withdraw(0, false, { from: userOne })
+      await smartFundUSD.withdraw(0, { from: userOne })
       assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
     })
 
@@ -757,7 +739,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
       totalShares = await smartFundUSD.totalShares()
 
-      await smartFundUSD.withdraw(5000, false, { from: userOne }) // 50.00%
+      await smartFundUSD.withdraw(5000, { from: userOne }) // 50.00%
 
       assert.equal(await smartFundUSD.totalShares(), totalShares / 2)
     })
@@ -782,12 +764,12 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       sfBalance = await DAI.balanceOf(smartFundUSD.address)
       assert.equal(sfBalance, 200)
 
-      await smartFundUSD.withdraw(0, false, { from: userOne })
+      await smartFundUSD.withdraw(0,{ from: userOne })
       sfBalance = await DAI.balanceOf(smartFundUSD.address)
 
       assert.equal(sfBalance, 100)
 
-      await smartFundUSD.withdraw(0, false, { from: userTwo })
+      await smartFundUSD.withdraw(0, { from: userTwo })
       sfBalance = await DAI.balanceOf(smartFundUSD.address)
       assert.equal(sfBalance, 0)
     })
@@ -868,7 +850,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await deployContracts(2000)
       await fundManagerTest(20)
 
-      await smartFundUSD.fundManagerWithdraw(false, { from: userOne })
+      await smartFundUSD.fundManagerWithdraw({ from: userOne })
 
       const {
         fundManagerRemainingCut,
@@ -939,9 +921,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         }
       )
 
-      await smartFundUSD.fundManagerWithdraw(false)
+      await smartFundUSD.fundManagerWithdraw()
 
-      await smartFundUSD.withdraw(0, false, { from: userTwo })
+      await smartFundUSD.withdraw(0, { from: userTwo })
 
       const xxxUserTwo = await xxxERC.balanceOf(userTwo)
 
@@ -1176,7 +1158,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // Total should be the same
       assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(3)))
 
-      await smartFundUSD.withdraw(0, false)
+      await smartFundUSD.withdraw(0)
 
       // check balance
       assert.equal(await web3.eth.getBalance(smartFundUSD.address), 0)
@@ -1232,7 +1214,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const ownerDAIBalanceBefore = await DAI.balanceOf(userOne)
 
       // withdarw
-      await smartFundUSD.withdraw(0, false)
+      await smartFundUSD.withdraw(0)
 
       // check asset allocation in fund after withdraw
       assert.equal(await cEther.balanceOf(smartFundUSD.address), 0)
@@ -1568,7 +1550,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // Buy BNT Pool
       await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
 
-      await smartFundUSD.withdraw(0, false)
+      await smartFundUSD.withdraw(0)
 
       // investor get his BNT and UNI pools
       assert.equal(await DAIBNT.balanceOf(userOne), toWei(String(2)))
@@ -1620,7 +1602,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(fromWei(totalWeiDeposited), 1)
 
       // user1 now withdraws 190 ether, 90 of which are profit
-      await smartFundUSD.withdraw(0, false, { from: userOne })
+      await smartFundUSD.withdraw(0, { from: userOne })
 
       const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
       assert.equal(fromWei(totalWeiWithdrawn), 1.9)
@@ -1639,7 +1621,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
       // // FM now withdraws their profit
-      await smartFundUSD.fundManagerWithdraw(false, { from: userOne })
+      await smartFundUSD.fundManagerWithdraw({ from: userOne })
 
       // Platform get 10%
       assert.equal(fromWei(await web3.eth.getBalance(COT_DAO_WALLET.address)), 0.01)
@@ -1698,7 +1680,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(fromWei(totalWeiDeposited), 1)
 
       // user1 now withdraws 190 ether, 90 of which are profit
-      await smartFundUSD.withdraw(0, false, { from: userOne })
+      await smartFundUSD.withdraw(0, { from: userOne })
 
       const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
       assert.equal(fromWei(totalWeiWithdrawn), 1.9)
@@ -1717,7 +1699,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
       // // FM now withdraws their profit
-      await smartFundUSD.fundManagerWithdraw(false, { from: userOne })
+      await smartFundUSD.fundManagerWithdraw({ from: userOne })
 
       // Platform get 10%
       // 0.005 xxx = 0.01 ETH
@@ -1750,7 +1732,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await smartFundUSD.deposit(100, { from: userTwo })
       await smartFundUSD.transfer(userThree, toWei(String(1)), { from: userTwo })
       assert.equal(await smartFundUSD.balanceOf(userThree), toWei(String(1)))
-      await smartFundUSD.withdraw(0, false, { from: userThree })
+      await smartFundUSD.withdraw(0, { from: userThree })
       assert.equal(await smartFundUSD.balanceOf(userThree), 0)
     })
   })
@@ -1804,239 +1786,6 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
   })
 
 
-  describe('Convert withdarwed assets to core fund asset', function() {
-
-   it('correct convert CRYPTOCURRENCY', async function() {
-      // deploy smartFund with 10% success fee
-      await deployContracts(1000)
-      // give exchange portal contract some money
-      await xxxERC.transfer(exchangePortal.address, toWei(String(1)))
-
-      // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
-
-      // get proof and position for dest token
-      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
-      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
-
-      await smartFundUSD.trade(
-        DAI.address,
-        toWei(String(1)),
-        xxxERC.address,
-        0,
-        proofXXX,
-        positionXXX,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
-        toWei(String(1)),
-        {
-          from: userOne,
-        }
-      )
-
-      assert.equal(await tokensType.getType(xxxERC.address), TOKEN_KEY_CRYPTOCURRENCY)
-
-      assert.equal(fromWei(await DAI.balanceOf(exchangePortal.address)), 1)
-      const userXXXBalanceBeforeWithdarw = await xxxERC.balanceOf(userOne)
-      const userUSDBalanceBeforeWithdarw = await DAI.balanceOf(userOne)
-
-      await smartFundUSD.withdraw(0, true)
-
-      assert.equal(await xxxERC.balanceOf(smartFundUSD.address), 0)
-
-      const userUSDBalanceAfterWithdarw = await DAI.balanceOf(userOne)
-      const userXXXBalanceAfterWithdarw = await xxxERC.balanceOf(userOne)
-
-      // user should receive his USD back
-      assert.isTrue(
-        Number(fromWei(userUSDBalanceAfterWithdarw)) >
-        Number(fromWei(userUSDBalanceBeforeWithdarw))
-      )
-      // user should NOT receive xxx token
-      assert.equal(fromWei(userXXXBalanceBeforeWithdarw), fromWei(userXXXBalanceAfterWithdarw))
-    })
-
-
-   it('correct convert UNI pool', async function() {
-      // send some assets to exchange portal
-      await exchangePortal.pay({ from: userOne, value: toWei(String(10))})
-      await DAI.transfer(exchangePortal.address, toWei(String(10)))
-
-      await DAI.approve(smartFundUSD.address, toWei(String(2)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(2)), { from: userOne })
-
-      // get proof and position for dest token
-      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
-      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
-
-      // get 1 ETH from exchange portal
-      await smartFundUSD.trade(
-        DAI.address,
-        toWei(String(1)),
-        ETH_TOKEN_ADDRESS,
-        0,
-        proofETH,
-        positionETH,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
-        1,
-        {
-          from: userOne,
-        }
-      )
-
-      // Check balance before buy pool
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), 0)
-
-      // get pool addresses and connectors
-      const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
-        DAIUNI.address,
-        1,
-        toWei(String(1)))
-
-      // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddress, connectorsAmount, [], "0x")
-
-      assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
-      assert.equal(await tokensType.getType(DAI.address), TOKEN_KEY_CRYPTOCURRENCY)
-      assert.equal(await tokensType.getType(ETH_TOKEN_ADDRESS), TOKEN_KEY_CRYPTOCURRENCY)
-
-      const userDAIUNIBalanceBeforeWithdarw = await DAIUNI.balanceOf(userOne)
-      const userUSDBalanceBeforeWithdarw = await DAI.balanceOf(userOne)
-
-      await smartFundUSD.withdraw(0, true)
-
-      // fund sent asset
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), 0)
-
-      assert.equal(await DAIUNI.balanceOf(userOne), 0)
-
-      const userUSDBalanceAfterWithdarw = await DAI.balanceOf(userOne)
-      const userDAIUNIBalanceAfterWithdarw = await DAIUNI.balanceOf(userOne)
-
-      // user should receive his USD back
-      assert.isTrue(fromWei(userUSDBalanceAfterWithdarw) > fromWei(userUSDBalanceBeforeWithdarw))
-      // user should NOT receive DAIUNI token
-      assert.equal(fromWei(userDAIUNIBalanceBeforeWithdarw), fromWei(userDAIUNIBalanceAfterWithdarw))
-  })
-
-  it('correct convert Bancor pool', async function() {
-    assert.equal(fromWei(await DAIBNT.balanceOf(userOne)), 0)
-    // send some assets to exchange portal
-    await BNT.transfer(exchangePortal.address, toWei(String(10)))
-    await DAI.transfer(exchangePortal.address, toWei(String(10)))
-
-    // deposit
-    await DAI.approve(smartFundUSD.address, toWei(String(2)), { from: userOne })
-    await smartFundUSD.deposit(toWei(String(2)), { from: userOne })
-
-    // get proof and position for dest token
-    const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
-    const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
-
-    // get 1 BNT from exchange portal
-    await smartFundUSD.trade(
-      DAI.address,
-      toWei(String(1)),
-      BNT.address,
-      2,
-      proofBNT,
-      positionBNT,
-      ONEINCH_MOCK_ADDITIONAL_PARAMS,
-      1,
-      {
-        from: userOne,
-      }
-    )
-
-    // Check balance before buy pool
-    assert.equal(await BNT.balanceOf(smartFundUSD.address), toWei(String(1)))
-    assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-    assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
-
-    // get pool addresses and connectors
-    const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
-      DAIBNT.address,
-      0,
-      toWei(String(1)))
-
-    // buy BNT pool
-    await smartFundUSD.buyPool(toWei(String(1)), 0, DAIBNT.address, connectorsAddress, connectorsAmount, [], "0x")
-
-    // fund receive asset
-    assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(1)))
-
-    // after buy BNT pool recieved asset should be marked as BANCOR POOL
-    assert.equal(await tokensType.getType(BNT.address), TOKEN_KEY_CRYPTOCURRENCY)
-    assert.equal(await tokensType.getType(DAI.address), TOKEN_KEY_CRYPTOCURRENCY)
-    assert.equal(await tokensType.getType(DAIBNT.address), TOKEN_KEY_BANCOR_POOL)
-
-    const userUSDBalanceBeforeWithdarw = await DAI.balanceOf(userOne)
-
-    await smartFundUSD.withdraw(0, true)
-
-    // fund sent asset
-    assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
-
-    const userUSDBalanceAfterWithdarw = await DAI.balanceOf(userOne)
-
-    // user should receive his USD back
-    assert.isTrue(
-      Number(fromWei(userUSDBalanceAfterWithdarw))
-      >
-      Number(fromWei(userUSDBalanceBeforeWithdarw))
-    )
-    // user should NOT receive DAIBNT token directly
-    assert.equal(fromWei(await DAIBNT.balanceOf(userOne)), 0)
-  })
-
-  it('Correct convert CToken', async function() {
-    assert.equal(await cToken.balanceOf(smartFundUSD.address),  0)
-
-    // deposit
-    await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-    await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
-
-    // mint cToken
-    await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
-
-    // fund recieve compound USD token
-    assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(1)))
-
-    // after mint recieved assets should be marked as COMPOUND
-    assert.equal(await tokensType.getType(cToken.address), TOKEN_KEY_COMPOUND)
-
-    // check balance before
-    const userCompoundUSDBalanceBeforeWithdarw = await cToken.balanceOf(userOne)
-    const userUSDBalanceBeforeWithdarw = await DAI.balanceOf(userOne)
-
-    // withdarw
-    await smartFundUSD.withdraw(0, true)
-
-    // check balance after
-    const userUSDBalanceAfterWithdarw = await DAI.balanceOf(userOne)
-    const userCompoundUSDBalanceAfterWithdarw = await cToken.balanceOf(userOne)
-
-    // fund sent assets
-    assert.equal(fromWei(await cToken.balanceOf(smartFundUSD.address)), 0)
-    assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
-
-    // user should receive his USD back
-    assert.isTrue(
-      Number(fromWei(userUSDBalanceAfterWithdarw))
-      >
-      Number(fromWei(userUSDBalanceBeforeWithdarw))
-    )
-
-    // user should NOT receive CompoundEther token directly
-    assert.equal(
-      fromWei(userCompoundUSDBalanceBeforeWithdarw),
-      fromWei(userCompoundUSDBalanceAfterWithdarw)
-    )
-    })
-  })
-
   describe('Permitted', function() {
     const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
 
@@ -2077,20 +1826,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       .should.be.rejectedWith(EVMRevert)
     })
 
-    it('Should not be able change non permitted convert portal address', async function() {
-      await smartFundUSD.setNewConvertPortal(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted convert portal address', async function() {
-      await permittedConverts.addNewConvertAddress(testAddress)
-      await smartFundUSD.setNewConvertPortal(testAddress).should.be.fulfilled
-    })
-
     it('Not owner can not change portals addresses', async function() {
       await permittedExchanges.addNewExchangeAddress(testAddress)
       await permittedPools.addNewPoolAddress(testAddress)
       await permittedStables.addNewStableAddress(testAddress)
-      await permittedConverts.addNewConvertAddress(testAddress)
 
       await smartFundUSD.setNewExchangePortal(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
@@ -2099,9 +1838,6 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       .should.be.rejectedWith(EVMRevert)
 
       await smartFundUSD.changeStableCoinAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await smartFundUSD.setNewConvertPortal(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
     })
   })

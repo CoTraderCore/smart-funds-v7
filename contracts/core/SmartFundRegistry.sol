@@ -20,13 +20,10 @@ contract SmartFundRegistry is Ownable {
   PermittedPoolsInterface public permittedPools;
   // The Smart Contract which stores the addresses of all the authorized stable coins
   PermittedStablesInterface public permittedStables;
-  // The Smart Contract which stores the addresses of all the authorized Converts portal
-  PermittedConvertsInterface public permittedConverts;
 
   // Addresses of portals
   address public poolPortalAddress;
   address public exchangePortalAddress;
-  address public convertPortalAddress;
 
   // Default maximum success fee is 3000/30%
   uint256 public maximumSuccessFee = 3000;
@@ -46,7 +43,6 @@ contract SmartFundRegistry is Ownable {
   /**
   * @dev contructor
   *
-  * @param _convertPortalAddress         address of convert portal contract
   * @param _permittedExchangesAddress    Address of the permittedExchanges contract
   * @param _exchangePortalAddress        Address of the initial ExchangePortal contract
   * @param _permittedPoolAddress         Address of the permittedPool contract
@@ -56,10 +52,8 @@ contract SmartFundRegistry is Ownable {
   * @param _smartFundETHFactory          Address of smartFund ETH factory
   * @param _smartFundUSDFactory          Address of smartFund USD factory
   * @param _cEther                       Address of Compound ETH wrapper
-  * @param _permittedConvertsAddress     Address of the permittedConverts contract
   */
   constructor(
-    address _convertPortalAddress,
     address _permittedExchangesAddress,
     address _exchangePortalAddress,
     address _permittedPoolAddress,
@@ -68,10 +62,8 @@ contract SmartFundRegistry is Ownable {
     address _stableCoinAddress,
     address _smartFundETHFactory,
     address _smartFundUSDFactory,
-    address _cEther,
-    address _permittedConvertsAddress
+    address _cEther
   ) public {
-    convertPortalAddress = _convertPortalAddress;
     exchangePortalAddress = _exchangePortalAddress;
     permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
     permittedPools = PermittedPoolsInterface(_permittedPoolAddress);
@@ -81,7 +73,6 @@ contract SmartFundRegistry is Ownable {
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
     smartFundUSDFactory = SmartFundUSDFactoryInterface(_smartFundUSDFactory);
     cEther = _cEther;
-    permittedConverts = PermittedConvertsInterface(_permittedConvertsAddress);
   }
 
   /**
@@ -115,9 +106,7 @@ contract SmartFundRegistry is Ownable {
         address(permittedStables),
         poolPortalAddress,
         stableCoinAddress,
-        convertPortalAddress,
-        cEther,
-        address(permittedConverts)
+        cEther
       );
     }else{
       // Create ETH Fund
@@ -130,9 +119,7 @@ contract SmartFundRegistry is Ownable {
         address(permittedExchanges),
         address(permittedPools),
         poolPortalAddress,
-        convertPortalAddress,
-        cEther,
-        address(permittedConverts)
+        cEther
       );
     }
 
@@ -176,19 +163,6 @@ contract SmartFundRegistry is Ownable {
     require(permittedPools.permittedAddresses(_poolPortalAddress));
 
     poolPortalAddress = _poolPortalAddress;
-  }
-
-
-  /**
-  * @dev Sets a new default Convert Portal address
-  *
-  * @param _convertPortalAddress    Address of the new convert portal to be set
-  */
-  function setConvertPortalAddress(address _convertPortalAddress) external onlyOwner {
-    // Require that the new convert portal is permitted by permittedConverts
-    require(permittedConverts.permittedAddresses(_convertPortalAddress));
-
-    convertPortalAddress = _convertPortalAddress;
   }
 
   /**

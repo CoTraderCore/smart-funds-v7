@@ -21,9 +21,7 @@ contract SmartFundUSDFactory {
     address _permittedStables,
     address _poolPortalAddress,
     address _stableCoinAddress,
-    address _convertPortalAddress,
-    address _cEther,
-    address _permittedConvertsAddress
+    address _cEther
     )
   public
   returns(address)
@@ -40,9 +38,7 @@ contract SmartFundUSDFactory {
       _permittedStables,
       _poolPortalAddress,
       _stableCoinAddress,
-      _convertPortalAddress,
-      _cEther,
-      _permittedConvertsAddress
+      _cEther
     );
 
     return address(smartFundUSD);

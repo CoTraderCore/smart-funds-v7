@@ -19,7 +19,6 @@ const SmartFundRegistry = artifacts.require('./core/SmartFundRegistry.sol')
 const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
 const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
 const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
-const PermittedConverts = artifacts.require('./core/verification/PermittedConverts.sol')
 
 // mock
 const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
@@ -35,10 +34,8 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
     this.permittedStables = await PermittedStables.new('0x0000000000000000000000000000000000000000')
     this.permittedExchanges = await PermittedExchanges.new('0x0000000000000000000000000000000000000000')
     this.permittedPools = await PermittedPools.new('0x0000000000000000000000000000000000000000')
-    this.permittedConverts = await PermittedConverts.new('0x0000000000000000000000000000000000000000')
 
     this.registry = await SmartFundRegistry.new(
-      '0x0000000000000000000000000000000000000000', //   Convert portal address
       this.permittedExchanges.address ,             //   PermittedExchanges.address,
       '0x0000000000000000000000000000000000000000', //   ExchangePortal.address,
       this.permittedPools.address ,                 //   PermittedPools.address,
@@ -47,8 +44,7 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       '0x0000000000000000000000000000000000000000', //   STABLE_COIN_ADDRESS,
       this.smartFundETHFactory.address,             //   SmartFundETHFactory.address,
       this.smartFundUSDFactory.address,             //   SmartFundUSDFactory.address,
-      '0x0000000000000000000000000000000000000000', //   COMPOUND_CETHER
-      this.permittedConverts.address                //   Permitted converts address
+      '0x0000000000000000000000000000000000000000'  //   COMPOUND_CETHER
     )
   })
 
@@ -101,20 +97,11 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       await this.registry.setStableCoinAddress(testAddress).should.be.fulfilled
     })
 
-    it('Should not be able change non permitted convert portal address', async function() {
-      await this.registry.setConvertPortalAddress(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted stable convert address', async function() {
-      await this.permittedConverts.addNewConvertAddress(testAddress)
-      await this.registry.setConvertPortalAddress(testAddress).should.be.fulfilled
-    })
 
     it('Not owner can not change portals addresses', async function() {
       await this.permittedExchanges.addNewExchangeAddress(testAddress)
       await this.permittedPools.addNewPoolAddress(testAddress)
       await this.permittedStables.addNewStableAddress(testAddress)
-      await this.permittedConverts.addNewConvertAddress(testAddress)
 
       await this.registry.setExchangePortalAddress(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
@@ -123,9 +110,6 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       .should.be.rejectedWith(EVMRevert)
 
       await this.registry.setStableCoinAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.registry.setConvertPortalAddress(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
     })
 
@@ -137,9 +121,6 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       .should.be.rejectedWith(EVMRevert)
 
       await this.permittedStables.addNewStableAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.permittedConverts.addNewConvertAddress(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
     })
   })
