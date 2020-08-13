@@ -213,7 +213,8 @@ contract PoolPortal is Ownable{
           converterAddress,
           etherAmount,
           _connectorsAddress,
-          _connectorsAmount
+          _connectorsAmount,
+          _additionalData
         );
       } else{
         // buy Bancor v1 case
@@ -285,14 +286,13 @@ contract PoolPortal is Ownable{
     BancorConverterInterfaceV1 converter = BancorConverterInterfaceV1(converterAddress);
     // get additional data
     (uint256 minReturn) = abi.decode(_additionalData, (uint256));
-    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(_connectorsAddress);
     // buy relay from converter
     if(etherAmount > 0){
       // payable
-      converter.addLiquidity.value(etherAmount)(IERC20Tokens, _connectorsAmount, minReturn);
+      converter.addLiquidity.value(etherAmount)(_connectorsAddress, _connectorsAmount, minReturn);
     }else{
       // non payable
-      converter.addLiquidity(IERC20Tokens, _connectorsAmount, minReturn);
+      converter.addLiquidity(_connectorsAddress, _connectorsAmount, minReturn);
     }
   }
 
@@ -303,19 +303,23 @@ contract PoolPortal is Ownable{
     address converterAddress,
     uint256 etherAmount,
     address[] calldata _connectorsAddress,
-    uint256[] calldata _connectorsAmount
+    uint256[] calldata _connectorsAmount,
+    bytes memory _additionalData
   )
     private
   {
     // get converter as contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
+    // get additional data
+    (uint256 minReturn) = abi.decode(_additionalData, (uint256));
+
     // buy relay from converter
     if(etherAmount > 0){
       // payable
-      converter.addLiquidity.value(etherAmount)(_connectorsAddress[0], _connectorsAmount[0]);
+      converter.addLiquidity.value(etherAmount)(_connectorsAddress[0], _connectorsAmount[0], minReturn);
     }else{
       // non payable
-      converter.addLiquidity(_connectorsAddress[0], _connectorsAmount[0]);
+      converter.addLiquidity(_connectorsAddress[0], _connectorsAmount[0], minReturn);
     }
   }
 
@@ -359,20 +363,6 @@ contract PoolPortal is Ownable{
          IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
     }
   }
-
-  /**
-  * @dev helper for buying bancor pools, convert address type to IERC20 type
-  */
-  function convertFromAddressToIERC20(address[] memory _addresses)
-   private
-   pure
-   returns(IERC20[] memory IERC20Tokens)
-   {
-     IERC20Tokens = new IERC20[](_addresses.length);
-     for(uint8 i = 0; i < _addresses.length; i ++){
-       IERC20Tokens[i] = IERC20(_addresses[i]);
-     }
-   }
 
 
   /**
@@ -565,12 +555,10 @@ contract PoolPortal is Ownable{
     uint256[] memory reserveMinReturnAmounts;
     // get connetor tokens data for remove liquidity
     (connectorsAddress, reserveMinReturnAmounts) = abi.decode(_additionalData, (address[], uint256[]));
-    // convert tokens from address to IERC20 type
-    IERC20[] memory IERC20Tokens = convertFromAddressToIERC20(connectorsAddress);
     // get coneverter v1 contract
     BancorConverterInterfaceV1 converter = BancorConverterInterfaceV1(converterAddress);
     // remove liquidity (v1)
-    converter.removeLiquidity(_amount, IERC20Tokens, reserveMinReturnAmounts);
+    converter.removeLiquidity(_amount, connectorsAddress, reserveMinReturnAmounts);
     // transfer conectors back to sender
     connectorsAmount = transferConnectorsToSender(connectorsAddress);
     //return pool amount
@@ -601,10 +589,12 @@ contract PoolPortal is Ownable{
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // get converter v2 contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
-    // remove liquidity (v2)
-    converter.removeLiquidity(address(_poolToken), _amount);
+    // get additional data
+    uint256 minReturn;
     // get pool connectors
-    (connectorsAddress) = abi.decode(_additionalData, (address[]));
+    (connectorsAddress, minReturn) = abi.decode(_additionalData, (address[], uint256));
+    // remove liquidity (v2)
+    converter.removeLiquidity(address(_poolToken), _amount, minReturn);
     // transfer pool connectors back to fund
     connectorsAmount = transferConnectorsToSender(connectorsAddress);
     // return pool amount
