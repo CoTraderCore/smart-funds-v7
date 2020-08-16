@@ -179,7 +179,7 @@ contract PoolPortal is Ownable{
     }
     else{
       // unknown portal type
-      revert();
+      revert("Unknown portal type");
     }
 
     emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
@@ -549,7 +549,6 @@ contract PoolPortal is Ownable{
     bytes calldata _additionalData
   )
   external
-  payable
   returns(
     address[] memory connectorsAddress,
     uint256[] memory connectorsAmount,
@@ -558,32 +557,11 @@ contract PoolPortal is Ownable{
   {
     // Sell Bancor Pool
     if(_type == uint(PortalType.Bancor)){
-      // get Bancor converter version and type
-      uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
-      uint256 bancorConverterType = uint256(_additionalArgs[1]);
-      // sell according converter version and type
-      if(bancorPoolVersion >= 28){
-        // sell new Bancor v2 pool
-        if(bancorConverterType == 2){
-          (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaBancorV2(
-            _poolToken,
-            _amount,
-            _additionalData
-          );
-        }
-        // sell new Bancor v1 pool
-        else{
-          (connectorsAddress,
-           connectorsAmount,
-            poolAmountSent) = sellPoolViaBancorV1(_poolToken, _amount, _additionalData);
-        }
-      }
-      // sell old Bancor pool
-      else{
-        (connectorsAddress,
-         connectorsAmount,
-         poolAmountSent) = sellPoolViaBancorOldV(_poolToken, _amount);
-      }
+      (connectorsAddress, connectorsAmount, poolAmountSent) = sellBancorPool(
+         _amount,
+         _poolToken,
+        _additionalArgs,
+        _additionalData);
     }
     // sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
@@ -598,6 +576,60 @@ contract PoolPortal is Ownable{
     emit SellPool(address(_poolToken), _amount, msg.sender);
   }
 
+
+
+  /**
+  * @dev helper for sell pool in Bancor network dependse of converter version and type
+  */
+  function sellBancorPool(
+    uint256 _amount,
+    IERC20 _poolToken,
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionalData
+  )
+  private
+  returns(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
+    uint256 poolAmountSent
+  )
+  {
+    // transfer pool from fund
+    _poolToken.transferFrom(msg.sender, address(this), _amount);
+
+    // get Bancor converter version and type
+    uint256 bancorPoolVersion = uint256(_additionalArgs[0]);
+    uint256 bancorConverterType = uint256(_additionalArgs[1]);
+
+    // sell pool according converter version and type
+    if(bancorPoolVersion >= 28){
+      // sell new Bancor v2 pool
+      if(bancorConverterType == 2){
+        (connectorsAddress,
+          poolAmountSent) = sellPoolViaBancorV2(
+          _poolToken,
+          _amount,
+          _additionalData
+        );
+      }
+      // sell new Bancor v1 pool
+      else{
+        (connectorsAddress,
+          poolAmountSent) = sellPoolViaBancorV1(_poolToken, _amount, _additionalData);
+      }
+    }
+    // sell old Bancor pool
+    else{
+      (connectorsAddress,
+       poolAmountSent) = sellPoolViaBancorOldV(_poolToken, _amount);
+    }
+
+    // transfer pool connectors back to fund
+    connectorsAmount = transferConnectorsToSender(connectorsAddress);
+    // return pool amount
+    poolAmountSent = _amount;
+  }
+
   /**
   * @dev helper for sell pool in Bancor network for old converter version
   *
@@ -608,31 +640,20 @@ contract PoolPortal is Ownable{
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
      uint256 poolAmountSent
    )
   {
-    // transfer pool from fund
-    _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // liquidate relay
     BancorConverterInterface(converterAddress).liquidate(_amount);
     // get connectors
     (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
-    // transfer conectors back to sender
-    connectorsAmount = transferConnectorsToSender(connectorsAddress);
-    // return pool amount
-    poolAmountSent = _amount;
   }
 
 
   /**
   * @dev helper for sell pool in Bancor network converter type v1
-  *
-  * @param _poolToken        address of bancor relay
-  * @param _amount           amount of bancor relay
-  * @param _additionalData   for any additional data
   */
   function sellPoolViaBancorV1(
     IERC20 _poolToken,
@@ -642,12 +663,9 @@ contract PoolPortal is Ownable{
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
      uint256 poolAmountSent
    )
   {
-    // transfer pool from fund
-    _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // get min returns
@@ -658,17 +676,10 @@ contract PoolPortal is Ownable{
     BancorConverterInterfaceV1 converter = BancorConverterInterfaceV1(converterAddress);
     // remove liquidity (v1)
     converter.removeLiquidity(_amount, connectorsAddress, reserveMinReturnAmounts);
-    // transfer conectors back to sender
-    connectorsAmount = transferConnectorsToSender(connectorsAddress);
-    //return pool amount
-    poolAmountSent = _amount;
   }
 
   /**
   * @dev helper for sell pool in Bancor network converter type v2
-  *
-  * @param _poolToken        address of bancor relay
-  * @param _amount           amount of bancor relay
   */
   function sellPoolViaBancorV2(
     IERC20 _poolToken,
@@ -678,12 +689,9 @@ contract PoolPortal is Ownable{
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
      uint256 poolAmountSent
    )
   {
-    // transfer pool from fund
-    _poolToken.transferFrom(msg.sender, address(this), _amount);
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // get converter v2 contract
@@ -694,11 +702,8 @@ contract PoolPortal is Ownable{
     (connectorsAddress, minReturn) = abi.decode(_additionalData, (address[], uint256));
     // remove liquidity (v2)
     converter.removeLiquidity(address(_poolToken), _amount, minReturn);
-    // transfer pool connectors back to fund
-    connectorsAmount = transferConnectorsToSender(connectorsAddress);
-    // return pool amount
-    poolAmountSent = _amount;
   }
+
 
   /**
   * @dev helper for sell Bancor pool
