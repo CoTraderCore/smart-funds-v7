@@ -134,7 +134,7 @@ contract PoolPortal is Ownable{
   * @param _type               pool type
   * @param _poolToken          pool token address
   * @param _connectorsAddress  address of pool connectors (NOTE: for Uniswap ETH should be pass in [0], ERC20 in [1])
-  * @param _connectorsAmount   amount of pool connectors
+  * @param _connectorsAmount   amount of pool connectors (NOTE: for Uniswap ETH amount should be pass in [0])
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
   * @param _additionalData     for provide any additional data, if not used just set "0x",
   * for Bancor _additionalData[0] should be converterVersion and _additionalData[1] should be converterType
@@ -170,7 +170,7 @@ contract PoolPortal is Ownable{
       buyUniswapPool(
         _amount,
         _type,
-        _poolToken,
+        address(_poolToken),
         _connectorsAddress,
         _connectorsAmount,
         _additionalArgs,
@@ -205,7 +205,7 @@ contract PoolPortal is Ownable{
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // transfer from sender and approve to converter
     // for detect if there are ETH in connectors or not we use etherAmount
-    uint256 etherAmount = approveBancorConnectorsToConverter(
+    uint256 etherAmount = _approvePoolConnectors(
       _connectorsAddress,
       _connectorsAmount,
       converterAddress
@@ -217,7 +217,7 @@ contract PoolPortal is Ownable{
       // encode and compare converter type
       if(uint256(_additionalArgs[1]) == 2) {
         // buy Bancor v2 case
-        buyBancorPoolV2(
+        _buyBancorPoolV2(
           converterAddress,
           etherAmount,
           _connectorsAddress,
@@ -226,7 +226,7 @@ contract PoolPortal is Ownable{
         );
       } else{
         // buy Bancor v1 case
-        buyBancorPoolV1(
+        _buyBancorPoolV1(
           converterAddress,
           etherAmount,
           _connectorsAddress,
@@ -237,7 +237,7 @@ contract PoolPortal is Ownable{
     }
     else {
       // buy Bancor old v0 case
-      buyBancorPoolOldV(
+      _buyBancorPoolOldV(
         converterAddress,
         etherAmount,
         _amount
@@ -249,7 +249,7 @@ contract PoolPortal is Ownable{
     // addition check
     require(poolAmountReceive > 0, "Recieved amount can not be zerro");
     // transfer connectors remains
-    transferBancorRemains(_connectorsAddress);
+    _transferPoolERC20ConnectorsRemains(_connectorsAddress);
     // transfer pool token back to smart fund
     _poolToken.transfer(msg.sender, poolAmountReceive);
     // set token type for this asset
@@ -260,7 +260,7 @@ contract PoolPortal is Ownable{
   /**
   * @dev helper for buy pool in Bancor network for old converter version
   */
-  function buyBancorPoolOldV(
+  function _buyBancorPoolOldV(
     address converterAddress,
     uint256 etherAmount,
     uint256 _amount)
@@ -282,7 +282,7 @@ contract PoolPortal is Ownable{
   /**
   * @dev helper for buy pool in Bancor network for new converter type 1
   */
-  function buyBancorPoolV1(
+  function _buyBancorPoolV1(
     address converterAddress,
     uint256 etherAmount,
     address[] calldata _connectorsAddress,
@@ -307,7 +307,7 @@ contract PoolPortal is Ownable{
   /**
   * @dev helper for buy pool in Bancor network for new converter type 2
   */
-  function buyBancorPoolV2(
+  function _buyBancorPoolV2(
     address converterAddress,
     uint256 etherAmount,
     address[] calldata _connectorsAddress,
@@ -333,53 +333,12 @@ contract PoolPortal is Ownable{
 
 
   /**
-  * @dev helper for buying bancor pools, approve connectors from sender to converter address
-  */
-  function approveBancorConnectorsToConverter(
-    address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    address converterAddress
-  )
-    private
-    returns(uint256 etherAmount)
-  {
-    // approve from portal to converter
-    for(uint8 i = 0; i < connectorsAddress.length; i++){
-      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
-        // reset approve (some ERC20 not allow do new approve if already approved)
-        IERC20(connectorsAddress[i]).approve(converterAddress, 0);
-        // transfer from msg.sender and approve to
-        _transferFromSenderAndApproveTo(
-          IERC20(connectorsAddress[i]),
-          connectorsAmount[i],
-          converterAddress);
-      }else{
-        etherAmount = connectorsAmount[i];
-      }
-    }
-  }
-
-  /**
-  * @dev helper for buying bancor pools, transfer remains ERC20 assets after bying pool
-  */
-  function transferBancorRemains(address[] memory connectorsAddress) private {
-    // transfer connectors back to fund if some amount remains
-    uint256 remains = 0;
-    for(uint8 j = 0; j < connectorsAddress.length; j++){
-      remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
-      if(remains > 0)
-         IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
-    }
-  }
-
-
-  /**
   * @dev helper for buying Uniswap v1 or v2 pool
   */
   function buyUniswapPool(
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -388,14 +347,18 @@ contract PoolPortal is Ownable{
    private
    returns(uint256 poolAmountReceive)
   {
+    // approve pool tokens to Uni pool exchange
+    _approvePoolConnectors(_connectorsAddress, _connectorsAmount, _poolToken);
+
+    // Buy Uni pool dependse of version
     if(uint256(_additionalArgs[0]) == 1){
-      (poolAmountReceive) = buyUniswapPoolV1(
-        address(_poolToken),
-        _connectorsAddress[1], // connector token address
-        _connectorsAmount[1],  // connector token amount
+      (poolAmountReceive) = _buyUniswapPoolV1(
+        _poolToken,
+        _connectorsAddress[1], // connector ERC20 token address
+        _connectorsAmount[1],  // connector ERC20 token amount
         _amount);
     }else{
-      (poolAmountReceive) = buyUniswapPoolV2(
+      (poolAmountReceive) = _buyUniswapPoolV2(
         _amount,
         _poolToken,
         _connectorsAddress,
@@ -403,6 +366,13 @@ contract PoolPortal is Ownable{
         _additionalData
         );
     }
+
+    // check if we recieved pool token
+    require(poolAmountReceive >= 0, "UNI pool received amount can not be zerro");
+    // transfer pool token back to smart fund
+    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
+    // transfer ERC20 remains if for a some reason pool not spend all approved tokens
+    _transferPoolERC20ConnectorsRemains(_connectorsAddress);
   }
 
 
@@ -414,7 +384,7 @@ contract PoolPortal is Ownable{
   * @param _erc20Amount      amount of ERC20 connector
   * @param _ethAmount        ETH amount (in wei)
   */
-  function buyUniswapPoolV1(
+  function _buyUniswapPoolV1(
     address _poolToken,
     address _tokenAddress,
     uint256 _erc20Amount,
@@ -426,8 +396,6 @@ contract PoolPortal is Ownable{
     // check if such a pool exist
     if(_tokenAddress != address(0x0000000000000000000000000000000000000000)){
       require(_ethAmount == msg.value, "Not enough ETH");
-      // transfer ERC20 connector from sender and approve to UNI pool token
-      _transferFromSenderAndApproveTo(IERC20(_tokenAddress), _erc20Amount, _poolToken);
       // get exchange contract
       UniswapExchangeInterface exchange = UniswapExchangeInterface(_poolToken);
       // set deadline
@@ -438,16 +406,6 @@ contract PoolPortal is Ownable{
         _erc20Amount,
         deadline
       );
-      // reset approve (some ERC20 not allow do new approve if already approved)
-      IERC20(_tokenAddress).approve(_poolToken, 0);
-      // addition check
-      require(poolAmountReceive > 0, "UNI pool received amount can not be zerro");
-      // transfer pool token back to smart fund
-      IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
-      // transfer remains ERC20
-      uint256 remainsERC = IERC20(_tokenAddress).balanceOf(address(this));
-      if(remainsERC > 0)
-          IERC20(_tokenAddress).transfer(msg.sender, remainsERC);
       // Set token type
       setTokenType(_poolToken, "UNISWAP_POOL");
     }else{
@@ -460,9 +418,9 @@ contract PoolPortal is Ownable{
   /**
   * @dev helper for buy pool in Uniswap network v2
   */
-  function buyUniswapPoolV2(
+  function _buyUniswapPoolV2(
     uint256 _amount,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes calldata _additionalData
@@ -475,8 +433,6 @@ contract PoolPortal is Ownable{
     // get additional data
     (uint256 amountAMinReturn,
       uint256 amountBMinReturn) = abi.decode(_additionalData, (uint256, uint256));
-
-    // TODO approve ERC20
 
     // Buy pool
     // ETH connector case
@@ -505,10 +461,56 @@ contract PoolPortal is Ownable{
       );
     }
 
-    // Transfer pool tokens
     // Todo transfer remains
     // Set token type
-    setTokenType(address(_poolToken), "UNISWAP_POOL_V2");
+    setTokenType(_poolToken, "UNISWAP_POOL_V2");
+  }
+
+  /**
+  * @dev helper for buying BNT or UNI pools, approve connectors from msg.sender to spender address
+  * return ETH amount if connectorsAddress contains ETH address
+  */
+  function _approvePoolConnectors(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount,
+    address spender
+  )
+    private
+    returns(uint256 etherAmount)
+  {
+    // approve from portal to spender
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
+      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
+        // reset approve (some ERC20 not allow do new approve if already approved)
+        IERC20(connectorsAddress[i]).approve(spender, 0);
+        // transfer from msg.sender and approve to
+        _transferFromSenderAndApproveTo(
+          IERC20(connectorsAddress[i]),
+          connectorsAmount[i],
+          spender);
+      }else{
+        etherAmount = connectorsAmount[i];
+      }
+    }
+  }
+
+  /**
+  * @dev helper for buying BNT or UNI pools, transfer ERC20 tokens remains assets after bying pool,
+  * if the balance is positive on this contract
+  */
+  function _transferPoolERC20ConnectorsRemains(address[] memory connectorsAddress) private {
+    // transfer connectors back to fund if some amount remains
+    uint256 remains;
+    for(uint8 j = 0; j < connectorsAddress.length; j++){
+      // if current token address != ETH
+      if(connectorsAddress[j] != address(ETH_TOKEN_ADDRESS)){
+        // check balance
+        remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
+        // transfer
+        if(remains > 0)
+           IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
+      }
+    }
   }
 
   /**
