@@ -727,7 +727,7 @@ contract PoolPortal is Ownable{
     if(uint256(_additionalArgs[0]) == 1){
       (connectorsAddress) = sellPoolViaUniswapV1(_poolToken, _amount);
     }else{
-      (connectorsAddress) = sellPoolViaUniswapV2(_poolToken, _amount, _additionalData);
+      (connectorsAddress) = sellPoolViaUniswapV2(_amount, _additionalData);
     }
 
     // transfer pool connectors back to fund
@@ -782,14 +782,47 @@ contract PoolPortal is Ownable{
   * @dev helper for sell pool in Uniswap network v2
   */
   function sellPoolViaUniswapV2(
-    IERC20 _poolToken,
     uint256 _amount,
     bytes calldata _additionalData
   )
     private
     returns(address[] memory connectorsAddress)
   {
-    return connectorsAddress;
+    // get additional data
+    uint256 minReturnA;
+    uint256 minReturnB;
+
+    // get connectors and min return from bytes
+    (connectorsAddress,
+      minReturnA,
+      minReturnB) = abi.decode(_additionalData, (address[], uint256, uint256));
+
+    // get deadline
+    uint256 deadline = now + 15 minutes;
+
+    // sell pool with include eth connector
+    if(connectorsAddress[0] == address(ETH_TOKEN_ADDRESS)){
+      uniswapV2Router.removeLiquidityETH(
+          connectorsAddress[1],
+          _amount,
+          minReturnB,
+          minReturnA,
+          address(this),
+          deadline
+      );
+    }
+    // sell pool only with erc20 connectors
+    else{
+      uniswapV2Router.removeLiquidity(
+          connectorsAddress[0],
+          connectorsAddress[1],
+          _amount,
+          minReturnA,
+          minReturnB,
+          address(this),
+          deadline
+      );
+    }
   }
 
   /**

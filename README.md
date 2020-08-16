@@ -45,12 +45,14 @@ for case if Bancor will update some method.
 for reduce gas cost.
 
 13) Remove Convert portal.
+
+14) Add Uniswap v2 pools.
 ```
 
 # Todo
 ```
-1) Add Uniswap v2 pools
-2) Test Bancor pool v >= 28 and type 2
+1) Fix Bancor pool v >= 28 && type == 2
+2) Test UNI v2 pool
 ```
 
 # Possible issue
