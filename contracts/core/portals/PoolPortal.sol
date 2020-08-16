@@ -17,7 +17,8 @@ import "../../bancor/interfaces/SmartTokenInterface.sol";
 import "../../bancor/interfaces/IBancorFormula.sol";
 
 import "../../uniswap/interfaces/UniswapExchangeInterface.sol";
-import "../../uniswap/interfaces/UniswapFactoryInterface.sol";
+import "../../uniswap/interfaces/UniswapFactoryInterfaceV1.sol";
+import "../../uniswap/interfaces/IUniswapV2Router.sol";
 
 import "../interfaces/ITokensTypeStorage.sol";
 
@@ -25,7 +26,8 @@ contract PoolPortal is Ownable{
   using SafeMath for uint256;
 
   IGetBancorData public bancorData;
-  UniswapFactoryInterface public uniswapFactory;
+  UniswapFactoryInterfaceV1 public uniswapFactoryV1;
+  IUniswapV2Router public uniswapV2Router;
 
   // CoTrader platform recognize ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -45,20 +47,23 @@ contract PoolPortal is Ownable{
   /**
   * @dev contructor
   *
-  * @param _bancorData             address of helper contract GetBancorData
-  * @param _uniswapFactory         address of Uniswap factory contract
-  * @param _tokensTypes            address of the ITokensTypeStorage
+  * @param _bancorData               address of helper contract GetBancorData
+  * @param _uniswapFactoryV1         address of Uniswap V1 factory contract
+  * @param _uniswapV2Router          address of Uniswap V2 router
+  * @param _tokensTypes              address of the ITokensTypeStorage
   */
   constructor(
     address _bancorData,
-    address _uniswapFactory,
+    address _uniswapFactoryV1,
+    address _uniswapV2Router,
     address _tokensTypes
 
   )
   public
   {
     bancorData = IGetBancorData(_bancorData);
-    uniswapFactory = UniswapFactoryInterface(_uniswapFactory);
+    uniswapFactoryV1 = UniswapFactoryInterfaceV1(_uniswapFactoryV1);
+    uniswapV2Router = IUniswapV2Router(_uniswapV2Router);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
 
@@ -103,7 +108,7 @@ contract PoolPortal is Ownable{
     // Buy Uniswap pool
     else if(_type == uint(PortalType.Uniswap)){
       // get token address
-      address tokenAddress = uniswapFactory.getToken(address(_poolToken));
+      address tokenAddress = uniswapFactoryV1.getToken(address(_poolToken));
       // get tokens amd approve to exchange
       uint256 erc20Amount = getUniswapTokenAmountByETH(tokenAddress, _amount);
 
@@ -162,12 +167,15 @@ contract PoolPortal is Ownable{
     }
     // Buy Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
-      require(_amount == msg.value, "Not enough ETH");
-       (poolAmountReceive) = buyUniswapPool(
-         address(_poolToken),
-         _connectorsAddress[1], // connector token address
-         _connectorsAmount[1],  // connector token amount
-         _amount);
+      buyUniswapPool(
+        _amount,
+        _type,
+        _poolToken,
+        _connectorsAddress,
+        _connectorsAmount,
+        _additionalArgs,
+        _additionalData
+      );
     }
     else{
       // unknown portal type
@@ -366,14 +374,47 @@ contract PoolPortal is Ownable{
 
 
   /**
-  * @dev helper for buy pool in Uniswap network
+  * @dev helper for buying Uniswap v1 or v2 pool
+  */
+  function buyUniswapPool(
+    uint256 _amount,
+    uint _type,
+    IERC20 _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionalData
+  )
+   private
+   returns(uint256 poolAmountReceive)
+  {
+    if(uint256(_additionalArgs[0]) == 1){
+      (poolAmountReceive) = buyUniswapPoolV1(
+        address(_poolToken),
+        _connectorsAddress[1], // connector token address
+        _connectorsAmount[1],  // connector token amount
+        _amount);
+    }else{
+      (poolAmountReceive) = buyUniswapPoolV2(
+        _amount,
+        _poolToken,
+        _connectorsAddress,
+        _connectorsAmount,
+        _additionalData
+        );
+    }
+  }
+
+
+  /**
+  * @dev helper for buy pool in Uniswap network v1
   *
   * @param _poolToken        address of Uniswap exchange
   * @param _tokenAddress     address of ERC20 conenctor
   * @param _erc20Amount      amount of ERC20 connector
   * @param _ethAmount        ETH amount (in wei)
   */
-  function buyUniswapPool(
+  function buyUniswapPoolV1(
     address _poolToken,
     address _tokenAddress,
     uint256 _erc20Amount,
@@ -384,6 +425,7 @@ contract PoolPortal is Ownable{
   {
     // check if such a pool exist
     if(_tokenAddress != address(0x0000000000000000000000000000000000000000)){
+      require(_ethAmount == msg.value, "Not enough ETH");
       // transfer ERC20 connector from sender and approve to UNI pool token
       _transferFromSenderAndApproveTo(IERC20(_tokenAddress), _erc20Amount, _poolToken);
       // get exchange contract
@@ -414,6 +456,61 @@ contract PoolPortal is Ownable{
     }
   }
 
+
+  /**
+  * @dev helper for buy pool in Uniswap network v2
+  */
+  function buyUniswapPoolV2(
+    uint256 _amount,
+    IERC20 _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
+    bytes calldata _additionalData
+  )
+   private
+   returns(uint256 poolAmountReceive)
+  {
+    // set deadline
+    uint256 deadline = now + 15 minutes;
+    // get additional data
+    (uint256 amountAMinReturn,
+      uint256 amountBMinReturn) = abi.decode(_additionalData, (uint256, uint256));
+
+    // TODO approve ERC20
+
+    // Buy pool
+    // ETH connector case
+    if(_connectorsAddress[0] == address(ETH_TOKEN_ADDRESS)){
+      // buy Uni pool with ETH
+      (, , poolAmountReceive) = uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
+       _connectorsAddress[1], // token,
+       _connectorsAmount[0],  // amountTokenDesired,
+       amountBMinReturn,        // amountTokenMin,
+       amountAMinReturn,          // amountETHMin,
+       address(this),         // to,
+       deadline               // deadline
+      );
+    }
+    // ERC20 connector case
+    else{
+      (, , poolAmountReceive) = uniswapV2Router.addLiquidity(
+        _connectorsAddress[0], // tokenA,
+        _connectorsAddress[1], // tokenB,
+        _connectorsAmount[0],  // amountADesired,
+        _connectorsAmount[1],  // amountBDesired,
+        amountAMinReturn,      // amountAMin,
+        amountBMinReturn,      // amountBMin,
+        address(this),         // to,
+        deadline               // deadline
+      );
+    }
+
+    // Transfer pool tokens
+    // Todo transfer remains
+    // Set token type
+    setTokenType(address(_poolToken), "UNISWAP_POOL_V2");
+  }
+
   /**
   * @dev return token ration in ETH in Uniswap network
   *
@@ -426,7 +523,7 @@ contract PoolPortal is Ownable{
     returns(uint256)
   {
     UniswapExchangeInterface exchange = UniswapExchangeInterface(
-      uniswapFactory.getExchange(_token));
+      uniswapFactoryV1.getExchange(_token));
 
     return exchange.getTokenToEthOutputPrice(_amount);
   }
@@ -652,7 +749,7 @@ contract PoolPortal is Ownable{
      uint256 poolAmountSent
   )
   {
-    address tokenAddress = uniswapFactory.getToken(address(_poolToken));
+    address tokenAddress = uniswapFactoryV1.getToken(address(_poolToken));
     // check if such a pool exist
     if(tokenAddress != address(0x0000000000000000000000000000000000000000)){
       UniswapExchangeInterface exchange = UniswapExchangeInterface(address(_poolToken));
@@ -736,7 +833,7 @@ contract PoolPortal is Ownable{
     view
     returns(address)
   {
-    return uniswapFactory.getToken(_exchange);
+    return uniswapFactoryV1.getToken(_exchange);
   }
 
 
@@ -754,7 +851,7 @@ contract PoolPortal is Ownable{
     view
     returns(uint256 ethAmount, uint256 ercAmount)
   {
-    IERC20 token = IERC20(uniswapFactory.getToken(_exchange));
+    IERC20 token = IERC20(uniswapFactoryV1.getToken(_exchange));
     // total_liquidity exchange.totalSupply
     uint256 totalLiquidity = UniswapExchangeInterface(_exchange).totalSupply();
     // ethAmount = amount * exchane.eth.balance / total_liquidity

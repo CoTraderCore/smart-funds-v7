@@ -1,4 +1,4 @@
-interface UniswapFactoryInterface {
+interface UniswapFactoryInterfaceV1 {
     // Create Exchange
     function createExchange(address token) external returns (address exchange);
     // Get Exchange and Token Info
