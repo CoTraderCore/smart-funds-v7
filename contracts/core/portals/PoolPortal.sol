@@ -169,7 +169,6 @@ contract PoolPortal is Ownable{
     else if (_type == uint(PortalType.Uniswap)){
       buyUniswapPool(
         _amount,
-        _type,
         address(_poolToken),
         _connectorsAddress,
         _connectorsAmount,
@@ -337,7 +336,6 @@ contract PoolPortal is Ownable{
   */
   function buyUniswapPool(
     uint256 _amount,
-    uint _type,
     address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
@@ -565,9 +563,11 @@ contract PoolPortal is Ownable{
     }
     // sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
-      (connectorsAddress,
-       connectorsAmount,
-       poolAmountSent) = sellPoolViaUniswap(_poolToken, _amount);
+      (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaUniswap(
+        _poolToken,
+        _amount,
+        _additionalArgs,
+        _additionalData);
     }
     else{
       revert("Unknown portal type");
@@ -704,9 +704,96 @@ contract PoolPortal is Ownable{
     converter.removeLiquidity(address(_poolToken), _amount, minReturn);
   }
 
+  /**
+  * @dev helper for sell pool in Uniswap network for v1 and v2
+  */
+  function sellPoolViaUniswap(
+    IERC20 _poolToken,
+    uint256 _amount,
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionalData
+  )
+   private
+   returns(
+     address[] memory connectorsAddress,
+     uint256[] memory connectorsAmount,
+     uint256 poolAmountSent
+  )
+  {
+    // approve pool token
+    _transferFromSenderAndApproveTo(_poolToken, _amount, address(_poolToken));
+
+    // sell Uni v1 or v2 pool
+    if(uint256(_additionalArgs[0]) == 1){
+      (connectorsAddress) = sellPoolViaUniswapV1(_poolToken, _amount);
+    }else{
+      (connectorsAddress) = sellPoolViaUniswapV2(_poolToken, _amount, _additionalData);
+    }
+
+    // transfer pool connectors back to fund
+    connectorsAmount = transferConnectorsToSender(connectorsAddress);
+    // return data
+    poolAmountSent = _amount;
+  }
+
 
   /**
-  * @dev helper for sell Bancor pool
+  * @dev helper for sell pool in Uniswap network v1
+  */
+  function sellPoolViaUniswapV1(
+    IERC20 _poolToken,
+    uint256 _amount
+  )
+    private
+    returns(address[] memory connectorsAddress)
+  {
+    // get token by pool token
+    address tokenAddress = uniswapFactoryV1.getToken(address(_poolToken));
+    // check if such a pool exist
+    if(tokenAddress != address(0x0000000000000000000000000000000000000000)){
+      // get UNI exchane
+      UniswapExchangeInterface exchange = UniswapExchangeInterface(address(_poolToken));
+
+      // get min returns
+      (uint256 minEthAmount,
+       uint256 minErcAmount) = getUniswapConnectorsAmountByPoolAmount(_amount, address(_poolToken));
+
+      // set deadline
+      uint256 deadline = now + 15 minutes;
+
+      // liquidate
+      exchange.removeLiquidity(
+         _amount,
+         minEthAmount,
+         minErcAmount,
+         deadline);
+
+      // return data
+      connectorsAddress = new address[](2);
+      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
+      connectorsAddress[1] = tokenAddress;
+    }
+    else{
+      revert("Not exist UNI v1 pool");
+    }
+  }
+
+  /**
+  * @dev helper for sell pool in Uniswap network v2
+  */
+  function sellPoolViaUniswapV2(
+    IERC20 _poolToken,
+    uint256 _amount,
+    bytes calldata _additionalData
+  )
+    private
+    returns(address[] memory connectorsAddress)
+  {
+    return connectorsAddress;
+  }
+
+  /**
+  * @dev helper for sell Bancor and Uniswap pools
   * transfer pool connectors from sold pool back to sender
   * return array with amount of recieved connectors
   */
@@ -738,60 +825,6 @@ contract PoolPortal is Ownable{
         if(received > 0)
           IERC20(connectorsAddress[i]).transfer(msg.sender, received);
       }
-    }
-  }
-
-
-  /**
-  * @dev helper for sell pool in Uniswap network
-  *
-  * @param _poolToken        address of uniswap exchane
-  * @param _amount           amount of uniswap pool
-  */
-  function sellPoolViaUniswap(IERC20 _poolToken, uint256 _amount)
-   private
-   returns(
-     address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
-     uint256 poolAmountSent
-  )
-  {
-    address tokenAddress = uniswapFactoryV1.getToken(address(_poolToken));
-    // check if such a pool exist
-    if(tokenAddress != address(0x0000000000000000000000000000000000000000)){
-      UniswapExchangeInterface exchange = UniswapExchangeInterface(address(_poolToken));
-      // approve pool token
-      _transferFromSenderAndApproveTo(IERC20(_poolToken), _amount, address(_poolToken));
-      // get min returns
-      (uint256 minEthAmount,
-        uint256 minErcAmount) = getUniswapConnectorsAmountByPoolAmount(
-          _amount,
-          address(_poolToken));
-      // set deadline
-      uint256 deadline = now + 15 minutes;
-
-      // liquidate
-      (uint256 eth_amount,
-       uint256 token_amount) = exchange.removeLiquidity(
-         _amount,
-         minEthAmount,
-         minErcAmount,
-         deadline);
-
-      // return data
-      connectorsAddress = new address[](2);
-      connectorsAmount = new uint256[](2);
-      connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
-      connectorsAddress[1] = tokenAddress;
-      connectorsAmount[0] = eth_amount;
-      connectorsAmount[1] = token_amount;
-      poolAmountSent = _amount;
-
-      // transfer assets back to smart fund
-      msg.sender.transfer(eth_amount);
-      IERC20(tokenAddress).transfer(msg.sender, token_amount);
-    }else{
-      revert();
     }
   }
 
