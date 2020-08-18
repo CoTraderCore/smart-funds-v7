@@ -649,6 +649,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _to,
     uint256 _amount
   ) public view returns (uint256 value) {
+
     // get underlying amount by cToken amount
     uint256 underlyingAmount = getCompoundUnderlyingRatio(
       _from,
@@ -678,6 +679,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256)
   {
+    // return 0 for attempt get underlying for ETH
+    if(_from == address(ETH_TOKEN_ADDRESS))
+       return 0;
+
+    // try get underlying ratio
     try CToken(_from).exchangeRateStored() returns(uint256 rate)
     {
       uint256 underlyingAmount = _amount.mul(rate).div(1e18);
