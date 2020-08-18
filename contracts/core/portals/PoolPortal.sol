@@ -200,7 +200,7 @@ contract PoolPortal is Ownable{
     private
     returns(uint256 poolAmountReceive)
   {
-    // get Bancor converter address
+    // get Bancor converter address by pool token (or pool container for type 2)
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
     // transfer from sender and approve to converter
     // for detect if there are ETH in connectors or not we use etherAmount
@@ -216,7 +216,9 @@ contract PoolPortal is Ownable{
       // encode and compare converter type
       if(uint256(_additionalArgs[1]) == 2) {
         // buy Bancor v2 case
-        _buyBancorPoolV2(
+        // NOTE: rewrite _poolToken with return result from _buyBancorPoolV2
+        // because for Bancor type 2 we should extract poolToken from poolContainer
+        _poolToken = _buyBancorPoolV2(
           converterAddress,
           etherAmount,
           _connectorsAddress,
@@ -314,6 +316,7 @@ contract PoolPortal is Ownable{
     bytes memory _additionalData
   )
     private
+    returns(IERC20 _poolToken)
   {
     // get converter as contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
@@ -328,6 +331,8 @@ contract PoolPortal is Ownable{
       // non payable
       converter.addLiquidity(_connectorsAddress[0], _connectorsAmount[0], minReturn);
     }
+    // extract pool token from pool container
+    _poolToken = IERC20(converter.poolToken(_connectorsAddress[0]));
   }
 
 
