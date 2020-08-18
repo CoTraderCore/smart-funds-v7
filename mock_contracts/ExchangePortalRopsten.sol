@@ -606,6 +606,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256)
   {
+    // return 0 for attempt get underlying for ETH
+    if(_from == address(ETH_TOKEN_ADDRESS))
+       return 0;
+
+    // try get underlying ratio
     try CToken(_from).exchangeRateStored() returns(uint256 rate)
     {
       uint256 underlyingAmount = _amount.mul(rate).div(1e18);
@@ -628,24 +633,27 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   returns (uint256)
   {
     // get connectors amount
-    (uint256 ethAmount,
-     uint256 ercAmount) = poolPortal.getUniswapConnectorsAmountByPoolAmount(
+    try poolPortal.getUniswapConnectorsAmountByPoolAmount(
       _amount,
       _from
-    );
-    // get ERC amount in ETH
-    address token = poolPortal.getTokenByUniswapExchange(_from);
-    uint256 ercAmountInETH = getValueViaDEXsAgregators(token, address(ETH_TOKEN_ADDRESS), ercAmount);
-    // sum ETH with ERC amount in ETH
-    uint256 totalETH = ethAmount.add(ercAmountInETH);
+    ) returns (uint256 ethAmount, uint256 ercAmount)
+    {
+      // get ERC amount in ETH
+      address token = poolPortal.getTokenByUniswapExchange(_from);
+      uint256 ercAmountInETH = getValueViaDEXsAgregators(token, address(ETH_TOKEN_ADDRESS), ercAmount);
+      // sum ETH with ERC amount in ETH
+      uint256 totalETH = ethAmount.add(ercAmountInETH);
 
-    // if _to == ETH no need additional convert, just return ETH amount
-    if(_to == address(ETH_TOKEN_ADDRESS)){
-      return totalETH;
-    }
-    // convert ETH into _to asset via Paraswap
-    else{
-      return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
+      // if _to == ETH no need additional convert, just return ETH amount
+      if(_to == address(ETH_TOKEN_ADDRESS)){
+        return totalETH;
+      }
+      // convert ETH into _to asset via Paraswap
+      else{
+        return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
+      }
+    }catch{
+      return 0;
     }
   }
 
