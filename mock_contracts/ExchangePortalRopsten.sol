@@ -480,7 +480,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   *
   * @return best price from Paraswap or 1inch for ERC20, or ratio for Uniswap and Bancor pools
   */
-  function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
+  function findValue(address _from, address _to, uint256 _amount) public view returns (uint256) {
      if(_amount > 0){
        // If Paraswap return 0, check from 1inch for ensure
        uint256 paraswapResult = getValueViaParaswap(_from, _to, _amount);
