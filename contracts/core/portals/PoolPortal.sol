@@ -647,12 +647,20 @@ contract PoolPortal is Ownable{
      uint256 poolAmountSent
    )
   {
-    // get Bancor Converter address
+    // get Bancor Converter instance
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 0);
+    BancorConverterInterface converter = BancorConverterInterface(converterAddress);
+
     // liquidate relay
-    BancorConverterInterface(converterAddress).liquidate(_amount);
-    // get connectors
-    (connectorsAddress) = getBancorConnectorsByRelayOldV(address(_poolToken));
+    converter.liquidate(_amount);
+
+    // return connectors addresses
+    uint256 connectorsCount = converter.connectorTokenCount();
+    connectorsAddress = new address[](connectorsCount);
+
+    for(uint8 i = 0; i<connectorsCount; i++){
+      connectorsAddress[i] = address(converter.connectorTokens(i));
+    }
   }
 
 
@@ -881,27 +889,6 @@ contract PoolPortal is Ownable{
       converter = SmartTokenInterface(smartTokenContainer).owner();
     }else{
       converter = SmartTokenInterface(_relay).owner();
-    }
-  }
-
-
-  /**
-  * @dev helper for get Bancor ERC20 connectors addresses
-  * works for old Bancor version
-  * @param _relay       address of bancor relay
-  */
-  function getBancorConnectorsByRelayOldV(address _relay)
-    public
-    view
-    returns(address[] memory connectorsAddress)
-  {
-    address converterAddress = getBacorConverterAddressByRelay(_relay, 0);
-    BancorConverterInterface converter = BancorConverterInterface(converterAddress);
-    uint256 connectorsCount = converter.connectorTokenCount();
-    connectorsAddress = new address[](connectorsCount);
-
-    for(uint8 i = 0; i<connectorsCount; i++){
-      connectorsAddress[i] = address(converter.connectorTokens(i));
     }
   }
 
