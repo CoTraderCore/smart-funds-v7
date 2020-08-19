@@ -43,7 +43,7 @@ interface ERC20 {
 */
 interface BancorNetworkInterface {
    function getReturnByPath(
-     ERC20[] _path,
+     address[] _path,
      uint256 _amount)
      external
      view
@@ -149,15 +149,9 @@ contract GetBancorData is Ownable{
 
       // get Bancor path array
       address[] memory path = bancorNetwork.conversionPath(_from, _to);
-      ERC20[] memory pathInERC20 = new ERC20[](path.length);
-
-      // Convert addresses to ERC20
-      for(uint i=0; i<path.length; i++){
-          pathInERC20[i] = ERC20(path[i]);
-      }
 
       // get Ratio
-      ( uint256 ratio, ) = bancorNetwork.getReturnByPath(pathInERC20, _amount);
+      ( uint256 ratio, ) = bancorNetwork.getReturnByPath(path, _amount);
       result = ratio;
     }
     else{
