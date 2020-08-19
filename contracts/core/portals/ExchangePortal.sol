@@ -532,26 +532,21 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _to        Address of token we're getting the value in
   * @param _amount    The amount of _from
   *
-  * @return best price from Paraswap or 1inch for ERC20, or ratio for Uniswap and Bancor pools
+  * @return best price from 1inch for ERC20, or ratio for Uniswap and Bancor pools
   */
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
-       // If Paraswap return 0, check from 1inch for ensure
-       uint256 paraswapResult = getValueViaParaswap(_from, _to, _amount);
-       if(paraswapResult > 0)
-         return paraswapResult;
-
        // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
        uint256 oneInchResult = getValueViaOneInch(_from, _to, _amount);
        if(oneInchResult > 0)
          return oneInchResult;
 
-       // If Bancor return 0, check from Syntetix network for ensure this is not Synth asset
+       // If Bancor return 0, check from Compound network for ensure this is not Compound asset
        uint256 bancorResult = getValueViaBancor(_from, _to, _amount);
        if(bancorResult > 0)
           return bancorResult;
 
-       // If Compound return 0, check from UNISWAP_POOLs for ensure this is not Uniswap
+       // If Compound return 0, check from Uniswap pools for ensure this is not Uniswap pool
        uint256 compoundResult = getValueViaCompound(_from, _to, _amount);
        if(compoundResult > 0)
           return compoundResult;
@@ -564,22 +559,20 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      }
   }
 
-  // helper for get value via 1inch and Paraswap
+  // helper for get value via 1inch
+  // in this interface can be added more DEXs aggregators
   function getValueViaDEXsAgregators(
     address _from,
     address _to,
     uint256 _amount
   )
   public view returns (uint256){
-    // try get value from 1inch aggregator
-    uint256 valueFromOneInch = getValueViaOneInch(_from, _to, _amount);
-    if(valueFromOneInch > 0){
-      return valueFromOneInch;
+    if(_amount > 0){
+      // try get value from 1inch aggregator
+      return getValueViaOneInch(_from, _to, _amount);
     }
-    // if 1 inch can't return value, check from Paraswap aggregator
     else{
-      uint256 valueFromParaswap = getValueViaParaswap(_from, _to, _amount);
-      return valueFromParaswap;
+      return 0;
     }
   }
 
