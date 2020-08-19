@@ -53,6 +53,11 @@ interface BancorNetworkInterface {
       ERC20 _sourceToken,
       ERC20 _targetToken
     ) external view returns (address[]);
+
+    function rateByPath(
+        address[] _path,
+        uint256 _amount
+    ) external view returns (uint256);
 }
 
 
@@ -151,8 +156,7 @@ contract GetBancorData is Ownable{
       address[] memory path = bancorNetwork.conversionPath(_from, _to);
 
       // get Ratio
-      ( uint256 ratio, ) = bancorNetwork.getReturnByPath(path, _amount);
-      result = ratio;
+      return bancorNetwork.rateByPath(path, _amount);
     }
     else{
       result = 0;
