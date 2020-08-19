@@ -27,8 +27,7 @@ interface PoolPortalInterface {
   payable
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    uint256 poolAmountSent
+    uint256[] memory connectorsAmount
   );
 
   function getDataForBuyingPool(IERC20 _poolToken, uint _type, uint256 _amount)

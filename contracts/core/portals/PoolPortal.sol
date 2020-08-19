@@ -553,13 +553,12 @@ contract PoolPortal is Ownable{
   external
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    uint256 poolAmountSent
+    uint256[] memory connectorsAmount
   )
   {
     // Sell Bancor Pool
     if(_type == uint(PortalType.Bancor)){
-      (connectorsAddress, connectorsAmount, poolAmountSent) = sellBancorPool(
+      (connectorsAddress, connectorsAmount) = sellBancorPool(
          _amount,
          _poolToken,
         _additionalArgs,
@@ -567,7 +566,7 @@ contract PoolPortal is Ownable{
     }
     // sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
-      (connectorsAddress, connectorsAmount, poolAmountSent) = sellPoolViaUniswap(
+      (connectorsAddress, connectorsAmount) = sellPoolViaUniswap(
         _poolToken,
         _amount,
         _additionalArgs,
@@ -594,8 +593,7 @@ contract PoolPortal is Ownable{
   private
   returns(
     address[] memory connectorsAddress,
-    uint256[] memory connectorsAmount,
-    uint256 poolAmountSent
+    uint256[] memory connectorsAmount
   )
   {
     // transfer pool from fund
@@ -609,8 +607,7 @@ contract PoolPortal is Ownable{
     if(bancorPoolVersion >= 28){
       // sell new Bancor v2 pool
       if(bancorConverterType == 2){
-        (connectorsAddress,
-          poolAmountSent) = sellPoolViaBancorV2(
+        (connectorsAddress) = sellPoolViaBancorV2(
           _poolToken,
           _amount,
           _additionalData
@@ -618,20 +615,16 @@ contract PoolPortal is Ownable{
       }
       // sell new Bancor v1 pool
       else{
-        (connectorsAddress,
-          poolAmountSent) = sellPoolViaBancorV1(_poolToken, _amount, _additionalData);
+        (connectorsAddress) = sellPoolViaBancorV1(_poolToken, _amount, _additionalData);
       }
     }
     // sell old Bancor pool
     else{
-      (connectorsAddress,
-       poolAmountSent) = sellPoolViaBancorOldV(_poolToken, _amount);
+      (connectorsAddress) = sellPoolViaBancorOldV(_poolToken, _amount);
     }
 
     // transfer pool connectors back to fund
     connectorsAmount = transferConnectorsToSender(connectorsAddress);
-    // return pool amount
-    poolAmountSent = _amount;
   }
 
   /**
@@ -642,10 +635,7 @@ contract PoolPortal is Ownable{
   */
   function sellPoolViaBancorOldV(IERC20 _poolToken, uint256 _amount)
    private
-   returns(
-     address[] memory connectorsAddress,
-     uint256 poolAmountSent
-   )
+   returns(address[] memory connectorsAddress)
   {
     // get Bancor Converter instance
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 0);
@@ -673,10 +663,7 @@ contract PoolPortal is Ownable{
     bytes memory _additionalData
   )
    private
-   returns(
-     address[] memory connectorsAddress,
-     uint256 poolAmountSent
-   )
+   returns(address[] memory connectorsAddress)
   {
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 1);
@@ -699,10 +686,7 @@ contract PoolPortal is Ownable{
     bytes calldata _additionalData
   )
    private
-   returns(
-     address[] memory connectorsAddress,
-     uint256 poolAmountSent
-   )
+   returns(address[] memory connectorsAddress)
   {
     // get Bancor Converter address
     address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 2);
@@ -728,8 +712,7 @@ contract PoolPortal is Ownable{
    private
    returns(
      address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount,
-     uint256 poolAmountSent
+     uint256[] memory connectorsAmount
   )
   {
     // approve pool token
@@ -744,8 +727,6 @@ contract PoolPortal is Ownable{
 
     // transfer pool connectors back to fund
     connectorsAmount = transferConnectorsToSender(connectorsAddress);
-    // return data
-    poolAmountSent = _amount;
   }
 
 

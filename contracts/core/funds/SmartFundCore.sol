@@ -459,7 +459,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
     // sell pool
     (address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount, ) = poolPortal.sellPool(
+     uint256[] memory connectorsAmount) = poolPortal.sellPool(
       _amount,
       _type,
      _poolToken,
