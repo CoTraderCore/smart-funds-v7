@@ -85,7 +85,7 @@ contract PoolPortal is Ownable{
     // Buy Bancor pool
     if(_type == uint(PortalType.Bancor)){
       // get Bancor converter
-      address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+      address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 0);
       // get converter as contract
       BancorConverterInterface converter = BancorConverterInterface(converterAddress);
       uint256 connectorsCount = converter.connectorTokenCount();
@@ -132,7 +132,7 @@ contract PoolPortal is Ownable{
   *
   * @param _amount             amount of pool token
   * @param _type               pool type
-  * @param _poolToken          pool token address
+  * @param _poolToken          pool token address (NOTE: for Bancor type 2 don't forget extract pool address from container)
   * @param _connectorsAddress  address of pool connectors (NOTE: for Uniswap ETH should be pass in [0], ERC20 in [1])
   * @param _connectorsAmount   amount of pool connectors (NOTE: for Uniswap ETH amount should be pass in [0])
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
@@ -167,7 +167,7 @@ contract PoolPortal is Ownable{
     }
     // Buy Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
-      buyUniswapPool(
+      (poolAmountReceive) = buyUniswapPool(
         _amount,
         address(_poolToken),
         _connectorsAddress,
@@ -200,8 +200,12 @@ contract PoolPortal is Ownable{
     private
     returns(uint256 poolAmountReceive)
   {
-    // get Bancor converter address by pool token (or pool container for type 2)
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    // get Bancor converter address by pool token and pool type
+    address converterAddress = getBacorConverterAddressByRelay(
+      address(_poolToken),
+      uint256(_additionalArgs[1])
+    );
+
     // transfer from sender and approve to converter
     // for detect if there are ETH in connectors or not we use etherAmount
     uint256 etherAmount = _approvePoolConnectors(
@@ -216,9 +220,7 @@ contract PoolPortal is Ownable{
       // encode and compare converter type
       if(uint256(_additionalArgs[1]) == 2) {
         // buy Bancor v2 case
-        // NOTE: rewrite _poolToken with return result from _buyBancorPoolV2
-        // because for Bancor type 2 we should extract poolToken from poolContainer
-        _poolToken = _buyBancorPoolV2(
+        _buyBancorPoolV2(
           converterAddress,
           etherAmount,
           _connectorsAddress,
@@ -316,7 +318,6 @@ contract PoolPortal is Ownable{
     bytes memory _additionalData
   )
     private
-    returns(IERC20 _poolToken)
   {
     // get converter as contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
@@ -331,8 +332,6 @@ contract PoolPortal is Ownable{
       // non payable
       converter.addLiquidity(_connectorsAddress[0], _connectorsAmount[0], minReturn);
     }
-    // extract pool token from pool container
-    _poolToken = IERC20(converter.poolToken(_connectorsAddress[0]));
   }
 
 
@@ -649,11 +648,11 @@ contract PoolPortal is Ownable{
    )
   {
     // get Bancor Converter address
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 0);
     // liquidate relay
     BancorConverterInterface(converterAddress).liquidate(_amount);
     // get connectors
-    (connectorsAddress) = getBancorConnectorsByRelay(address(_poolToken));
+    (connectorsAddress) = getBancorConnectorsByRelayOldV(address(_poolToken));
   }
 
 
@@ -672,7 +671,7 @@ contract PoolPortal is Ownable{
    )
   {
     // get Bancor Converter address
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 1);
     // get min returns
     uint256[] memory reserveMinReturnAmounts;
     // get connetor tokens data for remove liquidity
@@ -698,7 +697,7 @@ contract PoolPortal is Ownable{
    )
   {
     // get Bancor Converter address
-    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken));
+    address converterAddress = getBacorConverterAddressByRelay(address(_poolToken), 2);
     // get converter v2 contract
     BancorConverterInterfaceV2 converter = BancorConverterInterfaceV2(converterAddress);
     // get additional data
@@ -870,27 +869,33 @@ contract PoolPortal is Ownable{
   * @dev helper for get bancor converter by bancor relay addrses
   *
   * @param _relay       address of bancor relay
+  * @param _poolType    bancor pool type
   */
-  function getBacorConverterAddressByRelay(address _relay)
+  function getBacorConverterAddressByRelay(address _relay, uint256 _poolType)
     public
     view
     returns(address converter)
   {
-    converter = SmartTokenInterface(_relay).owner();
+    if(_poolType == 2){
+      address smartTokenContainer = SmartTokenInterface(_relay).owner();
+      converter = SmartTokenInterface(smartTokenContainer).owner();
+    }else{
+      converter = SmartTokenInterface(_relay).owner();
+    }
   }
 
 
   /**
   * @dev helper for get Bancor ERC20 connectors addresses
-  *
+  * works for old Bancor version
   * @param _relay       address of bancor relay
   */
-  function getBancorConnectorsByRelay(address _relay)
+  function getBancorConnectorsByRelayOldV(address _relay)
     public
     view
     returns(address[] memory connectorsAddress)
   {
-    address converterAddress = getBacorConverterAddressByRelay(_relay);
+    address converterAddress = getBacorConverterAddressByRelay(_relay, 0);
     BancorConverterInterface converter = BancorConverterInterface(converterAddress);
     uint256 connectorsCount = converter.connectorTokenCount();
     connectorsAddress = new address[](connectorsCount);
