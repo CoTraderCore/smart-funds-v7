@@ -33,6 +33,7 @@ contract SmartFundUSD is SmartFundCore {
   * @param _poolPortalAddress            Address of initial pool portal
   * @param _stableCoinAddress            address of stable coin
   * @param _cEther                       Address of the cEther
+  * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset 
   */
   constructor(
     address _owner,
@@ -46,7 +47,8 @@ contract SmartFundUSD is SmartFundCore {
     address _permittedStables,
     address _poolPortalAddress,
     address _stableCoinAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
   )
   SmartFundCore(
     _owner,
@@ -59,7 +61,8 @@ contract SmartFundUSD is SmartFundCore {
     _permittedPoolsAddress,
     _poolPortalAddress,
     _cEther,
-    _stableCoinAddress
+    _stableCoinAddress,
+    _isRequireTradeVerification
   )
   public {
     // Initial stable coint interface

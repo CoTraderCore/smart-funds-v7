@@ -8,7 +8,8 @@ interface SmartFundETHFactoryInterface {
     address _permittedExchanges,
     address _permittedPools,
     address _poolPortalAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
     )
   external
   returns(address);

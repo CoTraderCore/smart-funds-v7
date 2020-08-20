@@ -19,7 +19,8 @@ contract SmartFundETHFactory {
     address _permittedExchanges,
     address _permittedPools,
     address _poolPortalAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
     )
   public
   returns(address)
@@ -34,7 +35,8 @@ contract SmartFundETHFactory {
       _permittedExchanges,
       _permittedPools,
       _poolPortalAddress,
-      _cEther
+      _cEther,
+      _isRequireTradeVerification
     );
 
     return address(smartFundETH);

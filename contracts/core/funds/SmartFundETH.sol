@@ -23,6 +23,7 @@ contract SmartFundETH is SmartFundCore {
   * @param _permittedPoolsAddress        Address of PermittedPools contract
   * @param _poolPortalAddress            Address of initial pool portal
   * @param _cEther                       Address of the cEther
+  * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset 
   */
   constructor(
     address _owner,
@@ -34,7 +35,8 @@ contract SmartFundETH is SmartFundCore {
     address _permittedExchangesAddress,
     address _permittedPoolsAddress,
     address _poolPortalAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
   )
   SmartFundCore(
     _owner,
@@ -47,7 +49,8 @@ contract SmartFundETH is SmartFundCore {
     _permittedPoolsAddress,
     _poolPortalAddress,
     _cEther,
-    address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee)
+    address(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee),
+    _isRequireTradeVerification
   )
   public{}
 

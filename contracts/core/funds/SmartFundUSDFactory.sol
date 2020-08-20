@@ -21,7 +21,8 @@ contract SmartFundUSDFactory {
     address _permittedStables,
     address _poolPortalAddress,
     address _stableCoinAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
     )
   public
   returns(address)
@@ -38,7 +39,8 @@ contract SmartFundUSDFactory {
       _permittedStables,
       _poolPortalAddress,
       _stableCoinAddress,
-      _cEther
+      _cEther,
+      _isRequireTradeVerification
     );
 
     return address(smartFundUSD);

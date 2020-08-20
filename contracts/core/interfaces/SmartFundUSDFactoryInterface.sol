@@ -10,7 +10,8 @@ interface SmartFundUSDFactoryInterface {
     address _permittedStabels,
     address _poolPortalAddress,
     address _stableCoinAddress,
-    address _cEther
+    address _cEther,
+    bool    _isRequireTradeVerification
     )
   external
   returns(address);

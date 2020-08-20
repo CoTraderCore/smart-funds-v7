@@ -84,8 +84,9 @@ contract SmartFundRegistry is Ownable {
   */
   function createSmartFund(
     string memory _name,
-    uint256 _successFee,
-    bool _isStableBasedFund
+    uint256       _successFee,
+    bool          _isStableBasedFund,
+    bool          _isRequireTradeVerification
   ) public {
     // Require that the funds success fee be less than the maximum allowed amount
     require(_successFee <= maximumSuccessFee);
@@ -106,7 +107,8 @@ contract SmartFundRegistry is Ownable {
         address(permittedStables),
         poolPortalAddress,
         stableCoinAddress,
-        cEther
+        cEther,
+        _isRequireTradeVerification
       );
     }else{
       // Create ETH Fund
@@ -119,7 +121,8 @@ contract SmartFundRegistry is Ownable {
         address(permittedExchanges),
         address(permittedPools),
         poolPortalAddress,
-        cEther
+        cEther,
+        _isRequireTradeVerification
       );
     }
 

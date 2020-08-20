@@ -27,7 +27,6 @@ import "../../zeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 abstract contract SmartFundCore is Ownable, IERC20 {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
-
   // Total amount of ether or stable deposited by all users
   uint256 public totalWeiDeposited = 0;
 
@@ -97,6 +96,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // for ETH and USD fund this asset different
   address public coreFundAsset;
 
+  // If true the contract will require each new asset to buy to be on a special Merkle tree list
+  bool public isRequireTradeVerification;
+
   // how many shares belong to each address
   mapping (address => uint256) public addressToShares;
 
@@ -150,7 +152,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     address _permittedPoolsAddress,
     address _poolPortalAddress,
     address _cEther,
-    address _coreFundAsset
+    address _coreFundAsset,
+    bool    _isRequireTradeVerification
   )public{
     // never allow a 100% fee
     require(_successFee < TOTAL_PERCENTAGE);
@@ -185,6 +188,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
     cEther = _cEther;
     coreFundAsset = _coreFundAsset;
+    isRequireTradeVerification = _isRequireTradeVerification;
 
     emit SmartFundCreated(owner());
   }
@@ -322,7 +326,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _proof,
         _positions,
         _additionalData,
-        true
+        isRequireTradeVerification
       );
     } else {
       _source.approve(address(exchangePortal), _sourceAmount);
@@ -334,7 +338,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
         _proof,
         _positions,
         _additionalData,
-        true
+        isRequireTradeVerification
       );
     }
 
@@ -382,13 +386,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    for(uint8 i = 0; i < _connectorsAddress.length; i++){
      if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
        // fund can't buy token which not in traded tokens list
-       require(tokensTraded[_connectorsAddress[i]],
-         "cant buy pool for non traded token");
-
+       if(isRequireTradeVerification)
+         require(tokensTraded[_connectorsAddress[i]], "Cant buy pool for non traded token");
        // approve
-       IERC20(_connectorsAddress[i]).approve(
-         address(poolPortal),
-         _connectorsAmount[i]);
+       IERC20(_connectorsAddress[i]).approve(address(poolPortal), _connectorsAmount[i]);
      }
      else{
        etherAmount = _connectorsAmount[i];
