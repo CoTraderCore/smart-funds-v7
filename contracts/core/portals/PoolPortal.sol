@@ -361,7 +361,6 @@ contract PoolPortal is Ownable{
         _amount);
     }else{
       (poolAmountReceive) = _buyUniswapPoolV2(
-        _amount,
         _poolToken,
         _connectorsAddress,
         _connectorsAmount,
@@ -421,7 +420,6 @@ contract PoolPortal is Ownable{
   * @dev helper for buy pool in Uniswap network v2
   */
   function _buyUniswapPoolV2(
-    uint256 _amount,
     address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
