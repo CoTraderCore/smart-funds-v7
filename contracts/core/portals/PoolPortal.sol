@@ -443,8 +443,8 @@ contract PoolPortal is Ownable{
       (, , poolAmountReceive) = uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
        _connectorsAddress[1], // token,
        _connectorsAmount[0],  // amountTokenDesired,
-       amountBMinReturn,        // amountTokenMin,
-       amountAMinReturn,          // amountETHMin,
+       amountBMinReturn,      // amountTokenMin,
+       amountAMinReturn,      // amountETHMin,
        address(this),         // to,
        deadline               // deadline
       );

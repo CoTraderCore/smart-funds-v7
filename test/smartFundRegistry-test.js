@@ -40,7 +40,7 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       '0x0000000000000000000000000000000000000000', //   ExchangePortal.address,
       this.permittedPools.address ,                 //   PermittedPools.address,
       '0x0000000000000000000000000000000000000000', //   PoolPortal.address,
-      this.permittedStables.address ,                //   PermittedStabels.address,
+      this.permittedStables.address ,               //   PermittedStabels.address,
       '0x0000000000000000000000000000000000000000', //   STABLE_COIN_ADDRESS,
       this.smartFundETHFactory.address,             //   SmartFundETHFactory.address,
       this.smartFundUSDFactory.address,             //   SmartFundUSDFactory.address,
@@ -57,11 +57,11 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
 
   describe('Create funds', function() {
     it('should be able create new ETH and USD funds', async function() {
-      await this.registry.createSmartFund("ETH Fund", 20, false)
+      await this.registry.createSmartFund("ETH Fund", 20, false, true)
       let totalFunds = await this.registry.totalSmartFunds()
       assert.equal(1, totalFunds)
 
-      await this.registry.createSmartFund("USD Fund", 20, true)
+      await this.registry.createSmartFund("USD Fund", 20, true, true)
       totalFunds = await this.registry.totalSmartFunds()
       assert.equal(2, totalFunds)
     })

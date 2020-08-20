@@ -219,7 +219,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       permittedStables.address,                     // address _permittedStabels
       poolPortal.address,                           // address _poolPortalAddress,
       DAI.address,                                  // address_stableCoinAddress
-      cEther.address                                // address _cEther
+      cEther.address,                               // address _cEther
+      true                                          // verification for trade tokens
     )
 
     // send all BNT and UNI pools to portal

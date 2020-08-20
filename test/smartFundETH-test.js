@@ -204,7 +204,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       permittedExchanges.address,                   // address _permittedExchangesAddress,
       permittedPools.address,                       // address _permittedPoolsAddress,
       poolPortal.address,                           // address _poolPortalAddress,
-      cEther.address                                // address _cEther
+      cEther.address,                               // address _cEther
+      true                                          // verification for trade tokens
     )
 
     // send all BNT and UNI pools to portal

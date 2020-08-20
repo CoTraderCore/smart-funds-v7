@@ -181,7 +181,8 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       '0x0000000000000000000000000000000000000000', // address _permittedExchangesAddress,
       '0x0000000000000000000000000000000000000000', // address _permittedPoolsAddress,
       poolPortal.address,                           // address _poolPortalAddress,
-      cEther.address                                // address _cEther
+      cEther.address,                               // address _cEther
+      true                                          // verification for trade tokens
     )
 
     // Deploy atack contracts
