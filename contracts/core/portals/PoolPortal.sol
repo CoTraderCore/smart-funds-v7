@@ -349,8 +349,16 @@ contract PoolPortal is Ownable{
    private
    returns(uint256 poolAmountReceive)
   {
+    // define spender dependse of UNI pool version
+    address spender = uint256(_additionalArgs[0]) == 1
+    ? _poolToken
+    : address(uniswapV2Router);
+
     // approve pool tokens to Uni pool exchange
-    _approvePoolConnectors(_connectorsAddress, _connectorsAmount, _poolToken);
+    _approvePoolConnectors(
+      _connectorsAddress,
+      _connectorsAmount,
+      spender);
 
     // Buy Uni pool dependse of version
     if(uint256(_additionalArgs[0]) == 1){
