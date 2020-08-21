@@ -134,7 +134,7 @@ contract PoolPortal is Ownable{
   * @param _type               pool type
   * @param _poolToken          pool token address (NOTE: for Bancor type 2 don't forget extract pool address from container)
   * @param _connectorsAddress  address of pool connectors (NOTE: for Uniswap ETH should be pass in [0], ERC20 in [1])
-  * @param _connectorsAmount   amount of pool connectors (NOTE: for Uniswap ETH amount should be pass in [0])
+  * @param _connectorsAmount   amount of pool connectors (NOTE: for Uniswap ETH amount should be pass in [0], ERC20 in [1])
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
   * @param _additionalData     for provide any additional data, if not used just set "0x",
   * for Bancor _additionalData[0] should be converterVersion and _additionalData[1] should be converterType
@@ -394,11 +394,12 @@ contract PoolPortal is Ownable{
    private
    returns(uint256 poolAmountReceive)
   {
-    // check if such a pool exist
-    if(_tokenAddress != address(0x0000000000000000000000000000000000000000)){
-      require(_ethAmount == msg.value, "Not enough ETH");
-      // get exchange contract
-      UniswapExchangeInterface exchange = UniswapExchangeInterface(_poolToken);
+    require(_ethAmount == msg.value, "Not enough ETH");
+    // get exchange contract
+    UniswapExchangeInterface exchange = UniswapExchangeInterface(_poolToken);
+
+    // check if such a pool exchange exist
+    if(exchange != address(0x0000000000000000000000000000000000000000)){
       // set deadline
       uint256 deadline = now + 15 minutes;
       // buy pool
@@ -411,7 +412,7 @@ contract PoolPortal is Ownable{
       setTokenType(_poolToken, "UNISWAP_POOL");
     }else{
       // throw if such pool not Exist in Uniswap network
-      revert("Unknown UNI pool address");
+      revert("Unknown UNI exchange");
     }
   }
 
