@@ -405,23 +405,16 @@ contract PoolPortal is Ownable{
     require(_ethAmount == msg.value, "Not enough ETH");
     // get exchange contract
     UniswapExchangeInterface exchange = UniswapExchangeInterface(_poolToken);
-
-    // check if such a pool exchange exist
-    if(exchange != address(0x0000000000000000000000000000000000000000)){
-      // set deadline
-      uint256 deadline = now + 15 minutes;
-      // buy pool
-      poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
-        1,
-        _erc20Amount,
-        deadline
-      );
-      // Set token type
-      setTokenType(_poolToken, "UNISWAP_POOL");
-    }else{
-      // throw if such pool not Exist in Uniswap network
-      revert("Unknown UNI exchange");
-    }
+    // set deadline
+    uint256 deadline = now + 15 minutes;
+    // buy pool
+    poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
+      1,
+      _erc20Amount,
+      deadline
+    );
+    // Set token type
+    setTokenType(_poolToken, "UNISWAP_POOL");
   }
 
 
@@ -722,8 +715,13 @@ contract PoolPortal is Ownable{
      uint256[] memory connectorsAmount
   )
   {
+    // define spender dependse of UNI pool version
+    address spender = uint256(_additionalArgs[0]) == 1
+    ? address(_poolToken)
+    : address(uniswapV2Router);
+
     // approve pool token
-    _transferFromSenderAndApproveTo(_poolToken, _amount, address(_poolToken));
+    _transferFromSenderAndApproveTo(_poolToken, _amount, spender);
 
     // sell Uni v1 or v2 pool
     if(uint256(_additionalArgs[0]) == 1){
