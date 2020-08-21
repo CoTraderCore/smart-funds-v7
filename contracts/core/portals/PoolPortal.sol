@@ -440,7 +440,7 @@ contract PoolPortal is Ownable{
       // buy Uni pool with ETH
       (, , poolAmountReceive) = uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
        _connectorsAddress[1], // token,
-       _connectorsAmount[0],  // amountTokenDesired,
+       _connectorsAmount[1],  // amountTokenDesired,
        amountBMinReturn,      // amountTokenMin,
        amountAMinReturn,      // amountETHMin,
        address(this),         // to,
