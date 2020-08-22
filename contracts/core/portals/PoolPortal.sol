@@ -362,20 +362,21 @@ contract PoolPortal is Ownable{
 
     // Buy Uni pool dependse of version
     if(uint256(_additionalArgs[0]) == 1){
-      (poolAmountReceive) = _buyUniswapPoolV1(
+      _buyUniswapPoolV1(
         _poolToken,
         _connectorsAddress[1], // connector ERC20 token address
         _connectorsAmount[1],  // connector ERC20 token amount
         _amount);
     }else{
-      (poolAmountReceive) = _buyUniswapPoolV2(
+      _buyUniswapPoolV2(
         _poolToken,
         _connectorsAddress,
         _connectorsAmount,
         _additionalData
         );
     }
-
+    // get pool amount
+    poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // check if we recieved pool token
     require(poolAmountReceive >= 0, "UNI pool received amount can not be zerro");
     // transfer pool token back to smart fund
@@ -400,7 +401,6 @@ contract PoolPortal is Ownable{
     uint256 _ethAmount
   )
    private
-   returns(uint256 poolAmountReceive)
   {
     require(_ethAmount == msg.value, "Not enough ETH");
     // get exchange contract
@@ -408,7 +408,7 @@ contract PoolPortal is Ownable{
     // set deadline
     uint256 deadline = now + 15 minutes;
     // buy pool
-    poolAmountReceive = exchange.addLiquidity.value(_ethAmount)(
+    exchange.addLiquidity.value(_ethAmount)(
       1,
       _erc20Amount,
       deadline
@@ -428,7 +428,6 @@ contract PoolPortal is Ownable{
     bytes calldata _additionalData
   )
    private
-   returns(uint256 poolAmountReceive)
   {
     // set deadline
     uint256 deadline = now + 15 minutes;
@@ -440,7 +439,7 @@ contract PoolPortal is Ownable{
     // ETH connector case
     if(_connectorsAddress[0] == address(ETH_TOKEN_ADDRESS)){
       // buy Uni pool with ETH
-      (, , poolAmountReceive) = uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
+      uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
        _connectorsAddress[1], // token,
        _connectorsAmount[1],  // amountTokenDesired,
        amountBMinReturn,      // amountTokenMin,
@@ -451,7 +450,7 @@ contract PoolPortal is Ownable{
     }
     // ERC20 connector case
     else{
-      (, , poolAmountReceive) = uniswapV2Router.addLiquidity(
+      uniswapV2Router.addLiquidity(
         _connectorsAddress[0], // tokenA,
         _connectorsAddress[1], // tokenB,
         _connectorsAmount[0],  // amountADesired,
