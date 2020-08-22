@@ -252,7 +252,7 @@ contract PoolPortal is Ownable{
     // addition check
     require(poolAmountReceive > 0, "Recieved amount can not be zerro");
     // transfer connectors remains
-    _transferPoolonnectorsRemains(_connectorsAddress);
+    _transferPoolConnectorsRemains(_connectorsAddress);
     // transfer pool token back to smart fund
     _poolToken.transfer(msg.sender, poolAmountReceive);
     // set token type for this asset
@@ -381,7 +381,7 @@ contract PoolPortal is Ownable{
     // transfer pool token back to smart fund
     IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
     // transfer ERC20 remains if for a some reason pool not spend all approved tokens
-    _transferPoolonnectorsRemains(_connectorsAddress);
+    _transferPoolConnectorsRemains(_connectorsAddress);
   }
 
 
@@ -500,7 +500,7 @@ contract PoolPortal is Ownable{
   * @dev helper for buying BNT or UNI pools, transfer ERC20 tokens and ETH remains after bying pool,
   * if the balance is positive on this contract
   */
-  function _transferPoolonnectorsRemains(address[] memory connectorsAddress) private {
+  function _transferPoolConnectorsRemains(address[] memory connectorsAddress) private {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
     for(uint8 j = 0; j < connectorsAddress.length; j++){
