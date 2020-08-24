@@ -372,7 +372,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   function buyPool(
    uint256 _amount,
    uint _type,
-   address _poolToken,
+   IERC20 _poolToken,
    address[] calldata _connectorsAddress,
    uint256[] calldata _connectorsAmount,
    bytes32[] calldata _additionalArgs,
@@ -380,8 +380,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   )
   external onlyOwner {
    uint256 poolAmountReceive;
-   // for some cases like Uniswap V2 we should extract pool address
-   address poolAddress;
 
    // approve connectors
    uint256 etherAmount = 0;
@@ -400,7 +398,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
    // buy pool via ERC20 and ETH (payable case)
    if(etherAmount > 0){
-    (poolAmountReceive, poolAddress) = poolPortal.buyPool.value(etherAmount)(
+    (poolAmountReceive) = poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
      _poolToken,
@@ -412,7 +410,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    }
    // buy pool only via ERC20 (non payable case)
    else{
-     (poolAmountReceive, poolAddress) = poolPortal.buyPool(
+     (poolAmountReceive) = poolPortal.buyPool(
       _amount,
       _type,
      _poolToken,
@@ -427,11 +425,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    require(poolAmountReceive > 0, "not received pool");
 
    // Add pool as ERC20 for withdraw
-   _addToken(poolAddress);
+   _addToken(address(_poolToken));
 
    // emit event
    emit BuyPool(
-     poolAddress,
+     address(_poolToken),
      poolAmountReceive,
      _connectorsAddress,
      _connectorsAmount);

@@ -5,7 +5,7 @@ interface PoolPortalInterface {
   (
     uint256 _amount,
     uint _type,
-    address _poolToken,
+    IERC20 _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -13,7 +13,7 @@ interface PoolPortalInterface {
   )
   external
   payable
-  returns(uint256 poolAmountReceive, address poolAddress);
+  returns(uint256 poolAmountReceive);
 
   function sellPool
   (
