@@ -372,7 +372,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   function buyPool(
    uint256 _amount,
    uint _type,
-   IERC20 _poolToken,
+   address _poolToken,
    address[] calldata _connectorsAddress,
    uint256[] calldata _connectorsAmount,
    bytes32[] calldata _additionalArgs,
@@ -425,11 +425,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    require(poolAmountReceive > 0, "not received pool");
 
    // Add pool as ERC20 for withdraw
-   _addToken(address(_poolToken));
+   _addToken(_poolToken);
 
    // emit event
    emit BuyPool(
-     address(_poolToken),
+     _poolToken,
      poolAmountReceive,
      _connectorsAddress,
      _connectorsAmount);

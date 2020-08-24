@@ -144,7 +144,7 @@ contract PoolPortal is Ownable{
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -169,7 +169,7 @@ contract PoolPortal is Ownable{
     else if (_type == uint(PortalType.Uniswap)){
       (poolAmountReceive) = buyUniswapPool(
         _amount,
-        address(_poolToken),
+        _poolToken,
         _connectorsAddress,
         _connectorsAmount,
         _additionalArgs,
@@ -191,7 +191,7 @@ contract PoolPortal is Ownable{
   */
   function buyBancorPool(
     uint256 _amount,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -202,7 +202,7 @@ contract PoolPortal is Ownable{
   {
     // get Bancor converter address by pool token and pool type
     address converterAddress = getBacorConverterAddressByRelay(
-      address(_poolToken),
+      _poolToken,
       uint256(_additionalArgs[1])
     );
 
@@ -248,15 +248,15 @@ contract PoolPortal is Ownable{
     }
 
     // get recieved pool amount
-    poolAmountReceive = _poolToken.balanceOf(address(this));
+    poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // addition check
     require(poolAmountReceive > 0, "Recieved amount can not be zerro");
     // transfer connectors remains
     _transferPoolConnectorsRemains(_connectorsAddress);
     // transfer pool token back to smart fund
-    _poolToken.transfer(msg.sender, poolAmountReceive);
+    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
     // set token type for this asset
-    setTokenType(address(_poolToken), "BANCOR_ASSET");
+    setTokenType(_poolToken, "BANCOR_ASSET");
   }
 
 
@@ -461,8 +461,6 @@ contract PoolPortal is Ownable{
         deadline               // deadline
       );
     }
-
-    // Todo transfer remains
     // Set token type
     setTokenType(_poolToken, "UNISWAP_POOL_V2");
   }
