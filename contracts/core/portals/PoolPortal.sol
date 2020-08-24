@@ -378,7 +378,7 @@ contract PoolPortal is Ownable{
     // get pool amount
     poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // check if we recieved pool token
-    require(poolAmountReceive >= 0, "UNI pool received amount can not be zerro");
+    require(poolAmountReceive > 0, "UNI pool received amount can not be zerro");
     // transfer pool token back to smart fund
     IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
     // transfer ERC20 remains if for a some reason pool not spend all approved tokens
