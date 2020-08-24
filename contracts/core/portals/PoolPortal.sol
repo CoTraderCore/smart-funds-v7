@@ -132,7 +132,8 @@ contract PoolPortal is Ownable{
   *
   * @param _amount             amount of pool token
   * @param _type               pool type
-  * @param _poolToken          pool token address (NOTE: for Bancor type 2 don't forget extract pool address from container)
+  * @param _poolToken          pool token address (NOTE: for Bancor type 2 don't forget extract pool address from container,
+  *                            for Uni v2 this contract extract pool token from pool exchange automaticly)
   * @param _connectorsAddress  address of pool connectors (NOTE: for Uniswap ETH should be pass in [0], ERC20 in [1])
   * @param _connectorsAmount   amount of pool connectors (NOTE: for Uniswap ETH amount should be pass in [0], ERC20 in [1])
   * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
@@ -144,7 +145,7 @@ contract PoolPortal is Ownable{
   (
     uint256 _amount,
     uint _type,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -152,10 +153,11 @@ contract PoolPortal is Ownable{
   )
   external
   payable
-  returns(uint256 poolAmountReceive)
+  returns(uint256 poolAmountReceive, address poolAddress)
   {
     // Buy Bancor pool
     if(_type == uint(PortalType.Bancor)){
+      // buy bancor pool
       (poolAmountReceive) = buyBancorPool(
         _amount,
         _poolToken,
@@ -164,12 +166,25 @@ contract PoolPortal is Ownable{
         _additionalArgs,
         _additionalData
       );
+
+      // for Bancor case pool address the same
+      poolAddress = _poolToken;
     }
     // Buy Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
+      // define Uniswap pool address dependse of version
+      poolAddress =  uint256(_additionalArgs[0]) == 1
+      ? _poolToken
+      : uniswapV2GetPairFor(
+        _poolToken,
+        _connectorsAddress[0],
+        _connectorsAddress[1]
+      );
+
+      // buy Uni pool
       (poolAmountReceive) = buyUniswapPool(
         _amount,
-        address(_poolToken),
+        poolAddress,
         _connectorsAddress,
         _connectorsAmount,
         _additionalArgs,
@@ -181,7 +196,7 @@ contract PoolPortal is Ownable{
       revert("Unknown portal type");
     }
 
-    emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
+    emit BuyPool(poolAddress, poolAmountReceive, msg.sender);
   }
 
 
@@ -191,7 +206,7 @@ contract PoolPortal is Ownable{
   */
   function buyBancorPool(
     uint256 _amount,
-    IERC20 _poolToken,
+    address _poolToken,
     address[] calldata _connectorsAddress,
     uint256[] calldata _connectorsAmount,
     bytes32[] calldata _additionalArgs,
@@ -202,7 +217,7 @@ contract PoolPortal is Ownable{
   {
     // get Bancor converter address by pool token and pool type
     address converterAddress = getBacorConverterAddressByRelay(
-      address(_poolToken),
+      _poolToken,
       uint256(_additionalArgs[1])
     );
 
@@ -248,15 +263,15 @@ contract PoolPortal is Ownable{
     }
 
     // get recieved pool amount
-    poolAmountReceive = _poolToken.balanceOf(address(this));
+    poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // addition check
     require(poolAmountReceive > 0, "Recieved amount can not be zerro");
     // transfer connectors remains
     _transferPoolConnectorsRemains(_connectorsAddress);
     // transfer pool token back to smart fund
-    _poolToken.transfer(msg.sender, poolAmountReceive);
+    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
     // set token type for this asset
-    setTokenType(address(_poolToken), "BANCOR_ASSET");
+    setTokenType(_poolToken, "BANCOR_ASSET");
   }
 
 
@@ -657,6 +672,31 @@ contract PoolPortal is Ownable{
     for(uint8 i = 0; i<connectorsCount; i++){
       connectorsAddress[i] = address(converter.connectorTokens(i));
     }
+  }
+
+  // calculates the CREATE2 address for a pair without making any external calls
+  function uniswapV2GetPairFor(
+    address factory,
+    address tokenA,
+    address tokenB)
+  internal
+  pure
+  returns (address pair) {
+     (address token0, address token1) = sortTokens(tokenA, tokenB);
+     pair = address(uint(keccak256(abi.encodePacked(
+       hex'ff',
+       factory,
+       keccak256(abi.encodePacked(token0, token1)),
+       hex'96e8ac4277198ff8b6f785478aa9a39f403cb768dd02cbee326c3e7da348845f' // init code hash
+     ))));
+  }
+
+  // Helper for uniswapV2GetPairFor
+  // returns sorted token addresses, used to handle return values from pairs sorted in this order
+  function sortTokens(address tokenA, address tokenB) internal pure returns (address token0, address token1) {
+    require(tokenA != tokenB, 'UniswapV2Library: IDENTICAL_ADDRESSES');
+    (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+    require(token0 != address(0), 'UniswapV2Library: ZERO_ADDRESS');
   }
 
 
