@@ -51,8 +51,8 @@ for reduce gas cost.
 
 # Todo
 ```
-1) Fix Bancor pool v >= 28 && type == 2
-2) Test UNI v2 pool
+1) Add Balancer pools
+2) Add Curve pools
 ```
 
 # Possible issue
