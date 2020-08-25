@@ -624,7 +624,6 @@ contract PoolPortal is Ownable{
       (connectorsAddress, connectorsAmount) = sellBalancerPool(
         _amount,
         _poolToken,
-        _additionalArgs,
         _additionalData);
     }
     else{
@@ -885,7 +884,6 @@ contract PoolPortal is Ownable{
   function sellBalancerPool(
     uint256 _amount,
     IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs,
     bytes calldata _additionalData
   )
   private
@@ -894,7 +892,19 @@ contract PoolPortal is Ownable{
     uint256[] memory connectorsAmount
   )
   {
-    // TODO
+    // get additional data
+    uint256[] memory minConnectorsAmount;
+    (connectorsAddress,
+      minConnectorsAmount) = abi.decode(_additionalData, (address[], uint256[]));
+    // approve pool
+    _transferFromSenderAndApproveTo(
+      _poolToken,
+      _amount,
+      address(_poolToken));
+    // sell pool
+    IBalancerPool(address(_poolToken)).exitPool(_amount, minConnectorsAmount);
+    // transfer connectors back to fund
+    connectorsAmount = transferConnectorsToSender(connectorsAddress);
   }
 
   /**
