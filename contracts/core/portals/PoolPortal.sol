@@ -21,7 +21,6 @@ import "../../uniswap/interfaces/UniswapFactoryInterfaceV1.sol";
 import "../../uniswap/interfaces/IUniswapV2Router.sol";
 
 import "../../balancer/IBalancerPool.sol";
-import "../../balancer/IBalancerFactory.sol";
 
 import "../interfaces/ITokensTypeStorage.sol";
 
