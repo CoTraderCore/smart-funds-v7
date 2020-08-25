@@ -20,6 +20,9 @@ import "../../uniswap/interfaces/UniswapExchangeInterface.sol";
 import "../../uniswap/interfaces/UniswapFactoryInterfaceV1.sol";
 import "../../uniswap/interfaces/IUniswapV2Router.sol";
 
+import "../../balancer/IBalancerPool.sol";
+import "../../balancer/IBalancerFactory.sol";
+
 import "../interfaces/ITokensTypeStorage.sol";
 
 contract PoolPortal is Ownable{
@@ -34,7 +37,7 @@ contract PoolPortal is Ownable{
 
   // Enum
   // NOTE: You can add a new type at the end, but do not change this order
-  enum PortalType { Bancor, Uniswap }
+  enum PortalType { Bancor, Uniswap, Balancer }
 
   // events
   event BuyPool(address poolToken, uint256 amount, address trader);
@@ -173,6 +176,16 @@ contract PoolPortal is Ownable{
         _connectorsAddress,
         _connectorsAmount,
         _additionalArgs,
+        _additionalData
+      );
+    }
+    // Buy Balancer pool
+    else if (_type == uint(PortalType.Balancer)){
+      (poolAmountReceive) = buyBalancerPool(
+        _amount,
+        _poolToken,
+        _connectorsAddress,
+        _connectorsAmount,
         _additionalData
       );
     }
@@ -463,6 +476,24 @@ contract PoolPortal is Ownable{
     }
     // Set token type
     setTokenType(_poolToken, "UNISWAP_POOL_V2");
+  }
+
+
+  /**
+  * @dev helper for buying Balancer pool
+  */
+  function buyBalancerPool(
+    uint256 _amount,
+    address _poolToken,
+    address[] calldata _connectorsAddress,
+    uint256[] calldata _connectorsAmount,
+    bytes calldata _additionalData
+  )
+    private
+    returns(uint256 poolAmountReceive)
+  {
+    // TODO
+    return poolAmountReceive;
   }
 
   /**
