@@ -590,7 +590,7 @@ contract PoolPortal is Ownable{
     uint256[] memory connectorsAmount
   )
   {
-    // Sell Bancor Pool
+    // sell Bancor Pool
     if(_type == uint(PortalType.Bancor)){
       (connectorsAddress, connectorsAmount) = sellBancorPool(
          _amount,
@@ -600,9 +600,17 @@ contract PoolPortal is Ownable{
     }
     // sell Uniswap pool
     else if (_type == uint(PortalType.Uniswap)){
-      (connectorsAddress, connectorsAmount) = sellPoolViaUniswap(
+      (connectorsAddress, connectorsAmount) = sellUniswapPool(
         _poolToken,
         _amount,
+        _additionalArgs,
+        _additionalData);
+    }
+    // sell Balancer pool
+    else if (_type == uint(PortalType.Balancer)){
+      (connectorsAddress, connectorsAmount) = sellBalancerPool(
+        _amount,
+        _poolToken,
         _additionalArgs,
         _additionalData);
     }
@@ -737,7 +745,7 @@ contract PoolPortal is Ownable{
   /**
   * @dev helper for sell pool in Uniswap network for v1 and v2
   */
-  function sellPoolViaUniswap(
+  function sellUniswapPool(
     IERC20 _poolToken,
     uint256 _amount,
     bytes32[] calldata _additionalArgs,
@@ -855,6 +863,25 @@ contract PoolPortal is Ownable{
           deadline
       );
     }
+  }
+
+  /**
+  * @dev helper for sell Balancer pool
+  */
+
+  function sellBalancerPool(
+    uint256 _amount,
+    IERC20 _poolToken,
+    bytes32[] calldata _additionalArgs,
+    bytes calldata _additionalData
+  )
+  private
+  returns(
+    address[] memory connectorsAddress,
+    uint256[] memory connectorsAmount
+  )
+  {
+    // TODO
   }
 
   /**
