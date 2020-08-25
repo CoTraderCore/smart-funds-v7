@@ -184,8 +184,7 @@ contract PoolPortal is Ownable{
         _amount,
         _poolToken,
         _connectorsAddress,
-        _connectorsAmount,
-        _additionalData
+        _connectorsAmount
       );
     }
     else{
@@ -485,14 +484,28 @@ contract PoolPortal is Ownable{
     uint256 _amount,
     address _poolToken,
     address[] calldata _connectorsAddress,
-    uint256[] calldata _connectorsAmount,
-    bytes calldata _additionalData
+    uint256[] calldata _connectorsAmount
   )
     private
     returns(uint256 poolAmountReceive)
   {
-    // TODO
-    return poolAmountReceive;
+    // approve pool tokens to Uni pool exchange
+    _approvePoolConnectors(
+      _connectorsAddress,
+      _connectorsAmount,
+      _poolToken);
+    // buy pool
+    IBalancerPool(_poolToken).joinPool(_amount, _connectorsAmount);
+    // get balance
+    poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
+    // check
+    require(poolAmountReceive > 0, "Should receive Balancer pool");
+    // transfer pool to fund
+    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
+    // transfer remains
+    _transferPoolConnectorsRemains(_connectorsAddress);
+    // update type
+    setTokenType(_poolToken, "BALANCER_POOL");
   }
 
   /**
