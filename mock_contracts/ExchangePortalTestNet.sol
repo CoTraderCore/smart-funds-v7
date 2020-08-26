@@ -1,14 +1,11 @@
-// This contract need only for Ropsten tests!!!
-// This contract Mock 1 inch and Paraswap aggregators with Bancor network
+// This contract need only for tests!!!
+// This contract Mock 1 inch aggregator with Bancor network
 
 pragma solidity ^0.6.12;
 
 
 import "../contracts/zeppelin-solidity/contracts/access/Ownable.sol";
 import "../contracts/zeppelin-solidity/contracts/math/SafeMath.sol";
-
-import "../contracts/paraswap/interfaces/ParaswapInterface.sol";
-import "../contracts/paraswap/interfaces/IPriceFeed.sol";
 
 import "../contracts/bancor/interfaces/IGetBancorData.sol";
 import "../contracts/bancor/interfaces/BancorNetworkInterface.sol";
@@ -25,7 +22,7 @@ import "../contracts/core/interfaces/ITokensTypeStorage.sol";
 import "../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
 
 
-contract ExchangePortal is ExchangePortalInterface, Ownable {
+contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
   uint public version = 3;
@@ -38,12 +35,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // COMPOUND
   CEther public cEther;
-
-  // PARASWAP
-  address public paraswap;
-  ParaswapInterface public paraswapInterface;
-  IPriceFeed public priceFeedInterface;
-  address public paraswapSpender;
 
   // 1INCH
   IOneSplitAudit public oneInch;
@@ -85,8 +76,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   /**
   * @dev contructor
   *
-  * @param _paraswap               paraswap main address
-  * @param _paraswapPrice          paraswap price feed address
   * @param _bancorData             address of GetBancorData helper
   * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
@@ -96,8 +85,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
-    address _paraswap,
-    address _paraswapPrice,
     address _bancorData,
     address _permitedStable,
     address _poolPortal,
@@ -108,11 +95,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     )
     public
   {
-    paraswap = _paraswap;
-    paraswapInterface = ParaswapInterface(_paraswap);
-    priceFeedInterface = IPriceFeed(_paraswapPrice);
     bancorData = IGetBancorData(_bancorData);
-    paraswapSpender = paraswapInterface.getTokenTransferProxy();
     permitedStable = PermittedStablesInterface(_permitedStable);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
@@ -130,7 +113,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _source            ERC20 token to convert from
   * @param _sourceAmount      Amount to convert from (in _source token)
   * @param _destination       ERC20 token to convert to
-  * @param _type              The type of exchange to trade with (For now 0 - because only paraswap)
+  * @param _type              The type of exchange to trade with
   * @param _proof             Merkle tree proof (if not used just set [])
   * @param _positions         Merkle tree positions (if not used just set [])
   * @param _additionalData    For additional data (if not used just set 0x0)
@@ -169,15 +152,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
     // SHOULD TRADE PARASWAP HERE
     if (_type == uint(ExchangeType.Paraswap)) {
-      // throw if Paraswap data not correct
-      _verifyParaswapData(_additionalData);
-
-      // mock with Bancor
-      receivedAmount = _tradeViaBancorNewtork(
-          address(_source),
-          address(_destination),
-          _sourceAmount
-      );
+      revert("PARASWAP not supported");
     }
     // SHOULD TRADE BANCOR HERE
     else if (_type == uint(ExchangeType.Bancor)){
@@ -260,27 +235,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     if(!status)
       revert("Dest not in white list");
   }
-
-  // for test correct decode
-  function _verifyParaswapData(
-    bytes memory _additionalData
- )
-   public
- {
-   (uint256 minDestinationAmount,
-    address[] memory callees,
-    uint256[] memory startIndexes,
-    uint256[] memory values,
-    uint256 mintPrice,
-    bytes memory exchangeData) = abi.decode(_additionalData, (uint256, address[], uint256[], uint256[], uint256, bytes));
-
-    // check params
-    require(minDestinationAmount > 0, 'Not corerct minDestinationAmount param for Paraswap');
-    require(callees.length > 0, 'Not corerct callees param for Paraswap');
-    require(startIndexes.length  > 0, 'Not corerct startIndexes param for Paraswap');
-    require(values.length  > 0, 'Not corerct values param for Paraswap');
-    require(mintPrice > 0, 'Not corerct mintPrice param for Paraswap');
- }
 
 // for test correct decode
  function _verifyOneInchData(
@@ -440,7 +394,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _to        Address of token we're getting the value in
   * @param _amount    The amount of _from
   *
-  * @return best price from Paraswap or 1inch for ERC20, or ratio for Uniswap and Bancor pools
+  * @return best price from 1inch for ERC20, or ratio for Uniswap and Bancor pools
   */
   function getValue(address _from, address _to, uint256 _amount)
     public
@@ -478,15 +432,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _to        Address of token we're getting the value in
   * @param _amount    The amount of _from
   *
-  * @return best price from Paraswap or 1inch for ERC20, or ratio for Uniswap and Bancor pools
+  * @return best price from 1inch for ERC20, or ratio for Uniswap and Bancor pools
   */
   function findValue(address _from, address _to, uint256 _amount) public view returns (uint256) {
      if(_amount > 0){
-       // If Paraswap return 0, check from 1inch for ensure
-       uint256 paraswapResult = getValueViaParaswap(_from, _to, _amount);
-       if(paraswapResult > 0)
-         return paraswapResult;
-
        // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
        uint256 oneInchResult = getValueViaOneInch(_from, _to, _amount);
        if(oneInchResult > 0)
@@ -510,7 +459,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      }
   }
 
-  // helper for get value via 1inch and Paraswap
+  // helper for get value via 1inch
   function getValueViaDEXsAgregators(
     address _from,
     address _to,
@@ -522,21 +471,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     if(valueFromOneInch > 0){
       return valueFromOneInch;
     }
-    // if 1 inch can't return value, check from Paraswap aggregator
+    // if 1 inch can't return value
     else{
-      uint256 valueFromParaswap = getValueViaParaswap(_from, _to, _amount);
-      return valueFromParaswap;
+      return 0;
     }
-  }
-
-  // helper for get ratio between assets in Paraswap aggregator
-  function getValueViaParaswap(
-    address _from,
-    address _to,
-    uint256 _amount
-  )
-  public view returns (uint256 value) {
-    return getValueViaBancor(_from, _to, _amount);
   }
 
   // helper for get ratio between assets in 1inch aggregator
@@ -648,7 +586,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       if(_to == address(ETH_TOKEN_ADDRESS)){
         return totalETH;
       }
-      // convert ETH into _to asset via Paraswap
+      // convert ETH into _to asset
       else{
         return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
       }
@@ -723,21 +661,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function setToken(address _token, bool _enabled) external onlyOwner {
     disabledTokens[_token] = _enabled;
-  }
-
-  // owner can change IFeed
-  function setNewIFeed(address _paraswapPrice) external onlyOwner {
-    priceFeedInterface = IPriceFeed(_paraswapPrice);
-  }
-
-  // owner can change paraswap spender address
-  function setNewParaswapSpender(address _paraswapSpender) external onlyOwner {
-    paraswapSpender = _paraswapSpender;
-  }
-
-  // owner can change paraswap Augustus
-  function setNewParaswapMain(address _paraswap) external onlyOwner {
-    paraswapInterface = ParaswapInterface(_paraswap);
   }
 
   // owner can change oneInch

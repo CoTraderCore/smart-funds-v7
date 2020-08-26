@@ -1,7 +1,7 @@
 pragma solidity ^0.6.12;
 
 /*
-* This contract do swap for ERC20 via Paraswap, 1inch, and (between synth assest),
+* This contract do swap for ERC20 via 1inch, and (between synth assest),
   Also Borrow and Reedem via Compound
 
   Also this contract allow get ratio between crypto curency assets
@@ -10,9 +10,6 @@ pragma solidity ^0.6.12;
 
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
-
-import "../../paraswap/interfaces/ParaswapInterface.sol";
-import "../../paraswap/interfaces/IPriceFeed.sol";
 
 import "../../bancor/interfaces/IGetBancorData.sol";
 import "../../bancor/interfaces/BancorNetworkInterface.sol";
@@ -42,12 +39,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // COMPOUND
   CEther public cEther;
-
-  // PARASWAP
-  address public paraswap;
-  ParaswapInterface public paraswapInterface;
-  IPriceFeed public priceFeedInterface;
-  address public paraswapSpender;
 
   // 1INCH
   IOneSplitAudit public oneInch;
@@ -89,8 +80,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   /**
   * @dev contructor
   *
-  * @param _paraswap               paraswap main address
-  * @param _paraswapPrice          paraswap price feed address
   * @param _bancorData             address of GetBancorData helper
   * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
@@ -100,8 +89,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
-    address _paraswap,
-    address _paraswapPrice,
     address _bancorData,
     address _permitedStable,
     address _poolPortal,
@@ -112,11 +99,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     )
     public
   {
-    paraswap = _paraswap;
-    paraswapInterface = ParaswapInterface(_paraswap);
-    priceFeedInterface = IPriceFeed(_paraswapPrice);
     bancorData = IGetBancorData(_bancorData);
-    paraswapSpender = paraswapInterface.getTokenTransferProxy();
     permitedStable = PermittedStablesInterface(_permitedStable);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
@@ -134,7 +117,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _source            ERC20 token to convert from
   * @param _sourceAmount      Amount to convert from (in _source token)
   * @param _destination       ERC20 token to convert to
-  * @param _type              The type of exchange to trade with (For now 0 - because only paraswap)
+  * @param _type              The type of exchange to trade with
   * @param _proof             Merkle tree proof (if not used just set [])
   * @param _positions         Merkle tree positions (if not used just set [])
   * @param _additionalData    For additional data (if not used just set 0x0)
@@ -173,13 +156,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
     // SHOULD TRADE PARASWAP HERE
     if (_type == uint(ExchangeType.Paraswap)) {
-      // call paraswap
-      receivedAmount = _tradeViaParaswap(
-          address(_source),
-          address(_destination),
-          _sourceAmount,
-          _additionalData
-      );
+      revert("PARASWAP not supported");
     }
     // SHOULD TRADE BANCOR HERE
     else if (_type == uint(ExchangeType.Bancor)){
@@ -260,57 +237,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     if(!status)
       revert("Dest not in white list");
   }
-
-
-  // Facilitates trade with Paraswap
-  function _tradeViaParaswap(
-    address sourceToken,
-    address destinationToken,
-    uint256 sourceAmount,
-    bytes memory _additionalData
- )
-   private
-   returns (uint256 destinationReceived)
- {
-   (uint256 minDestinationAmount,
-    address[] memory callees,
-    uint256[] memory startIndexes,
-    uint256[] memory values,
-    uint256 mintPrice,
-    bytes memory exchangeData) = abi.decode(_additionalData, (uint256, address[], uint256[], uint256[], uint256, bytes));
-
-   if (IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-     paraswapInterface.swap.value(sourceAmount)(
-       sourceToken,
-       destinationToken,
-       sourceAmount,
-       minDestinationAmount,
-       callees,
-       exchangeData,
-       startIndexes,
-       values,
-       "CoTrader", // referrer
-       mintPrice
-     );
-   } else {
-     _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, paraswapSpender);
-     paraswapInterface.swap(
-       sourceToken,
-       destinationToken,
-       sourceAmount,
-       minDestinationAmount,
-       callees,
-       exchangeData,
-       startIndexes,
-       values,
-       "CoTrader", // referrer
-       mintPrice
-     );
-   }
-
-   destinationReceived = tokenBalance(IERC20(destinationToken));
-   setTokenType(destinationToken, "CRYPTOCURRENCY");
- }
 
  // Facilitates trade with 1inch
  function _tradeViaOneInch(
@@ -494,7 +420,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _to        Address of token we're getting the value in
   * @param _amount    The amount of _from
   *
-  * @return best price from Paraswap or 1inch for ERC20, or ratio for Uniswap and Bancor pools
+  * @return best price from 1inch for ERC20, or ratio for Uniswap and Bancor pools
   */
   function getValue(address _from, address _to, uint256 _amount)
     public
@@ -573,22 +499,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     }
     else{
       return 0;
-    }
-  }
-
-  // helper for get ratio between assets in Paraswap aggregator
-  function getValueViaParaswap(
-    address _from,
-    address _to,
-    uint256 _amount
-  )
-  public view returns (uint256 value) {
-    // Check call Paraswap (Because Paraswap can return error for some not supported  assets)
-    try priceFeedInterface.getBestPriceSimple(_from, _to, _amount) returns (uint256 result)
-    {
-      value = result;
-    }catch{
-      value = 0;
     }
   }
 
@@ -714,7 +624,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       if(_to == address(ETH_TOKEN_ADDRESS)){
         return totalETH;
       }
-      // convert ETH into _to asset via Paraswap
+      // convert ETH into _to asset via 1inch
       else{
         return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
       }
@@ -789,21 +699,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function setToken(address _token, bool _enabled) external onlyOwner {
     disabledTokens[_token] = _enabled;
-  }
-
-  // owner can change IFeed
-  function setNewIFeed(address _paraswapPrice) external onlyOwner {
-    priceFeedInterface = IPriceFeed(_paraswapPrice);
-  }
-
-  // owner can change paraswap spender address
-  function setNewParaswapSpender(address _paraswapSpender) external onlyOwner {
-    paraswapSpender = _paraswapSpender;
-  }
-
-  // owner can change paraswap Augustus
-  function setNewParaswapMain(address _paraswap) external onlyOwner {
-    paraswapInterface = ParaswapInterface(_paraswap);
   }
 
   // owner can change oneInch
