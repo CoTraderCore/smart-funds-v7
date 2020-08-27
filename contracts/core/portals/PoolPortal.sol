@@ -489,7 +489,7 @@ contract PoolPortal is Ownable{
     private
     returns(uint256 poolAmountReceive)
   {
-    // approve pool tokens to Uni pool exchange
+    // approve pool tokens to Balancer pool exchange
     _approvePoolConnectors(
       _connectorsAddress,
       _connectorsAmount,
