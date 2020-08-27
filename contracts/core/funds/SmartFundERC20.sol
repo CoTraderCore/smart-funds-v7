@@ -13,7 +13,7 @@ contract SmartFundUSD is SmartFundCore {
   using SafeERC20 for IERC20;
 
   // Address of core coin can be set in constructor and for USD coins case can be changed via function
-  address public сoinAddress;
+  address public coinAddress;
 
   // State for recognize if this fund stable asset based
   bool public isStableCoinBasedFund;
@@ -34,7 +34,7 @@ contract SmartFundUSD is SmartFundCore {
   * @param _permittedPoolsAddress        Address of PermittedPools contract
   * @param _permittedStables             Address of permittedStables contract
   * @param _poolPortalAddress            Address of initial pool portal
-  * @param _сoinAddress                  Address of core ERC20 coin
+  * @param _coinAddress                  Address of core ERC20 coin
   * @param _cEther                       Address of the cEther
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
@@ -49,7 +49,7 @@ contract SmartFundUSD is SmartFundCore {
     address _permittedPoolsAddress,
     address _permittedStables,
     address _poolPortalAddress,
-    address _сoinAddress,
+    address _coinAddress,
     address _cEther,
     bool    _isRequireTradeVerification
   )
@@ -64,18 +64,18 @@ contract SmartFundUSD is SmartFundCore {
     _permittedPoolsAddress,
     _poolPortalAddress,
     _cEther,
-    _сoinAddress,
+    _coinAddress,
     _isRequireTradeVerification
   )
   public {
     // Initial stable coint permitted interface
     permittedStables = PermittedStablesInterface(_permittedStables);
     // Initial coin address
-    сoinAddress = _сoinAddress;
+    coinAddress = _coinAddress;
     // Push coin in tokens list
-    _addToken(_сoinAddress);
+    _addToken(_coinAddress);
     // Check if this is stable coin based fund
-    if(permittedStables.permittedAddresses(_сoinAddress))
+    if(permittedStables.permittedAddresses(_coinAddress))
       isStableCoinBasedFund = true;
   }
 
@@ -94,7 +94,7 @@ contract SmartFundUSD is SmartFundCore {
     require(depositAmount > 0, "deposit amount should be more than zero");
 
     // Transfer core ERC20 coin from sender
-    require(IERC20(сoinAddress).transferFrom(msg.sender, address(this), depositAmount),
+    require(IERC20(coinAddress).transferFrom(msg.sender, address(this), depositAmount),
     "can not transfer from");
 
     totalWeiDeposited += depositAmount;
@@ -128,7 +128,7 @@ contract SmartFundUSD is SmartFundCore {
     // Convert ETH balance to core ERC20
     uint256 ethBalance = exchangePortal.getValue(
       address(ETH_TOKEN_ADDRESS),
-      сoinAddress,
+      coinAddress,
       address(this).balance
     );
 
@@ -150,10 +150,10 @@ contract SmartFundUSD is SmartFundCore {
       index++;
     }
     // Ask the Exchange Portal for the value of all the funds tokens in core coin
-    uint256 tokensValue = exchangePortal.getTotalValue(fromAddresses, amounts, сoinAddress);
+    uint256 tokensValue = exchangePortal.getTotalValue(fromAddresses, amounts, coinAddress);
 
     // Get curernt core ERC20 token balance
-    uint256 currentERC20 = IERC20(сoinAddress).balanceOf(address(this));
+    uint256 currentERC20 = IERC20(coinAddress).balanceOf(address(this));
 
     // Sum ETH in ERC20 + Current ERC20 Token + ERC20 in ERC20
     return ethBalance + currentERC20 + tokensValue;
@@ -172,11 +172,11 @@ contract SmartFundUSD is SmartFundCore {
     if (_token == ETH_TOKEN_ADDRESS){
       return exchangePortal.getValue(
         address(_token),
-        сoinAddress,
+        coinAddress,
         address(this).balance);
     }
     // get current core ERC20
-    else if(_token == IERC20(сoinAddress)){
+    else if(_token == IERC20(coinAddress)){
       return _token.balanceOf(address(this));
     }
     // get ERC20 in core ERC20
@@ -184,21 +184,21 @@ contract SmartFundUSD is SmartFundCore {
       uint256 tokenBalance = _token.balanceOf(address(this));
       return exchangePortal.getValue(
         address(_token),
-        сoinAddress,
+        coinAddress,
         tokenBalance
       );
     }
   }
 
   /**
-  * @dev sets new сoinAddress NOTE: this works only for stable coins
+  * @dev sets new coinAddress NOTE: this works only for stable coins
   *
-  * @param _сoinAddress    New stable address
+  * @param _coinAddress    New stable address
   */
-  function changeStableCoinAddress(address _сoinAddress) external onlyOwner {
+  function changeStableCoinAddress(address _coinAddress) external onlyOwner {
     require(isStableCoinBasedFund, "can not update non stable coin based fund");
     require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedStables.permittedAddresses(_сoinAddress), "address not permitted");
-    сoinAddress = _сoinAddress;
+    require(permittedStables.permittedAddresses(_coinAddress), "address not permitted");
+    coinAddress = _coinAddress;
   }
 }

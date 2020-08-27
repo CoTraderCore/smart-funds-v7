@@ -81,7 +81,7 @@ contract SmartFundRegistry is Ownable {
     stableCoinAddress = _stableCoinAddress;
     COTCoinAddress = _COTCoinAddress;
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
-    smartFundERC20Factory = smartFundERC20FactoryInterface(_smartFundERC20Factory);
+    smartFundERC20Factory = SmartFundERC20FactoryInterface(_smartFundERC20Factory);
     cEther = _cEther;
   }
 
@@ -103,7 +103,6 @@ contract SmartFundRegistry is Ownable {
     // Require that the funds success fee be less than the maximum allowed amount
     require(_successFee <= maximumSuccessFee);
 
-    address owner = msg.sender;
     address smartFund;
 
     // ERC20 case
@@ -111,11 +110,11 @@ contract SmartFundRegistry is Ownable {
       // Define coin address dependse of fund type
       address coinAddress = _fundType == uint256(FundType.USD)
       ? stableCoinAddress
-      : COTCoinAddress
+      : COTCoinAddress;
 
       // Create ERC20 based fund
       smartFund = smartFundERC20Factory.createSmartFund(
-        owner,
+        msg.sender,
         _name,
         _successFee, // manager fee
         _successFee, // platform fee the same as a manager fee
@@ -132,7 +131,7 @@ contract SmartFundRegistry is Ownable {
     else if (_fundType == uint256(FundType.ETH)){
       // Create ETH Fund
       smartFund = smartFundETHFactory.createSmartFund(
-        owner,
+        msg.sender,
         _name,
         _successFee, // manager fee
         _successFee, // platform fee the same as a manager fee
@@ -149,7 +148,7 @@ contract SmartFundRegistry is Ownable {
     }
 
     smartFunds.push(smartFund);
-    emit SmartFundAdded(smartFund, owner);
+    emit SmartFundAdded(smartFund, msg.sender);
   }
 
   function totalSmartFunds() public view returns (uint256) {
