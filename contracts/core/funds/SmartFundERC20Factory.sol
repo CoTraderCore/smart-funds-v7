@@ -1,9 +1,8 @@
-// due eip-170 error we should create 2 factory one for ETH another for USD
 pragma solidity ^0.6.12;
 
-import "./SmartFundUSD.sol";
+import "./SmartFundERC20.sol";
 
-contract SmartFundUSDFactory {
+contract SmartFundERC20Factory {
   address public platfromAddress;
 
   constructor(address _platfromAddress) public {

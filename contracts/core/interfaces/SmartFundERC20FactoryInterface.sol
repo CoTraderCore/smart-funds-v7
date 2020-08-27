@@ -9,7 +9,7 @@ interface SmartFundUSDFactoryInterface {
     address _permittedPools,
     address _permittedStabels,
     address _poolPortalAddress,
-    address _stableCoinAddress,
+    address _сoinAddress,
     address _cEther,
     bool    _isRequireTradeVerification
     )
