@@ -1,7 +1,7 @@
 pragma solidity ^0.6.12;
 
 import "./interfaces/SmartFundETHFactoryInterface.sol";
-import "./interfaces/SmartFundUSDFactoryInterface.sol";
+import "./interfaces/SmartFundERC20FactoryInterface.sol";
 import "./interfaces/PermittedExchangesInterface.sol";
 import "./interfaces/PermittedPoolsInterface.sol";
 import "./interfaces/PermittedStablesInterface.sol";
@@ -31,12 +31,19 @@ contract SmartFundRegistry is Ownable {
   // Address of stable coin can be set in constructor and changed via function
   address public stableCoinAddress;
 
+  // Address of CoTrader coin be set in constructor
+  address public COTCoinAddress;
+
   // Addresses for Compound platform
   address public cEther;
 
   // Factories
   SmartFundETHFactoryInterface public smartFundETHFactory;
-  SmartFundUSDFactoryInterface public smartFundUSDFactory;
+  SmartFundERC20FactoryInterface public smartFundERC20Factory;
+
+  // Enum for detect fund type in create fund function
+  // NOTE: You can add a new type at the end, but do not change this order
+  enum FundType { ETH, USD, COT }
 
   event SmartFundAdded(address indexed smartFundAddress, address indexed owner);
 
@@ -49,8 +56,9 @@ contract SmartFundRegistry is Ownable {
   * @param _poolPortalAddress            Address of the initial PoolPortal contract
   * @param _permittedStables             Address of the permittesStabels contract
   * @param _stableCoinAddress            Address of the stable coin
+  * @param _COTCoinAddress               Address of Cotrader coin
   * @param _smartFundETHFactory          Address of smartFund ETH factory
-  * @param _smartFundUSDFactory          Address of smartFund USD factory
+  * @param _smartFundERC20Factory          Address of smartFund USD factory
   * @param _cEther                       Address of Compound ETH wrapper
   */
   constructor(
@@ -60,8 +68,9 @@ contract SmartFundRegistry is Ownable {
     address _poolPortalAddress,
     address _permittedStables,
     address _stableCoinAddress,
+    address _COTCoinAddress,
     address _smartFundETHFactory,
-    address _smartFundUSDFactory,
+    address _smartFundERC20Factory,
     address _cEther
   ) public {
     exchangePortalAddress = _exchangePortalAddress;
@@ -70,22 +79,25 @@ contract SmartFundRegistry is Ownable {
     permittedStables = PermittedStablesInterface(_permittedStables);
     poolPortalAddress = _poolPortalAddress;
     stableCoinAddress = _stableCoinAddress;
+    COTCoinAddress = _COTCoinAddress;
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
-    smartFundUSDFactory = SmartFundUSDFactoryInterface(_smartFundUSDFactory);
+    smartFundERC20Factory = smartFundERC20FactoryInterface(_smartFundERC20Factory);
     cEther = _cEther;
   }
 
   /**
   * @dev Creates a new SmartFund
   *
-  * @param _name               The name of the new fund
-  * @param _successFee         The fund managers success fee
-  * @param _isStableBasedFund  true for USD base fund, false for ETH base
+  * @param _name                        The name of the new fund
+  * @param _successFee                  The fund managers success fee
+  * @param _fundType                    Fund type enum number
+  * @param _isRequireTradeVerification  If true fund can buy only tokens,
+  *                                     which include in Merkle Three white list
   */
   function createSmartFund(
     string memory _name,
     uint256       _successFee,
-    bool          _isStableBasedFund,
+    uint256       _fundType,
     bool          _isRequireTradeVerification
   ) public {
     // Require that the funds success fee be less than the maximum allowed amount
@@ -94,9 +106,15 @@ contract SmartFundRegistry is Ownable {
     address owner = msg.sender;
     address smartFund;
 
-    if(_isStableBasedFund){
-      // Create USD Fund
-      smartFund = smartFundUSDFactory.createSmartFund(
+    // ERC20 case
+    if(_fundType == uint256(FundType.USD) || _fundType == uint256(FundType.COT)){
+      // Define coin address dependse of fund type
+      address coinAddress = _fundType == uint256(FundType.USD)
+      ? stableCoinAddress
+      : COTCoinAddress
+
+      // Create ERC20 based fund
+      smartFund = smartFundERC20Factory.createSmartFund(
         owner,
         _name,
         _successFee, // manager fee
@@ -106,11 +124,12 @@ contract SmartFundRegistry is Ownable {
         address(permittedPools),
         address(permittedStables),
         poolPortalAddress,
-        stableCoinAddress,
+        coinAddress,
         cEther,
         _isRequireTradeVerification
       );
-    }else{
+    }
+    else if (_fundType == uint256(FundType.ETH)){
       // Create ETH Fund
       smartFund = smartFundETHFactory.createSmartFund(
         owner,
@@ -124,6 +143,9 @@ contract SmartFundRegistry is Ownable {
         cEther,
         _isRequireTradeVerification
       );
+    }
+    else{
+      revert("Unknown fund type");
     }
 
     smartFunds.push(smartFund);
