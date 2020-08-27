@@ -8,7 +8,7 @@ import "../interfaces/PermittedStablesInterface.sol";
   Note: this smart fund smart fund inherits SmartFundCore and make core operations like deposit,
   calculate fund value etc in ERC20
 */
-contract SmartFundUSD is SmartFundCore {
+contract SmartFundERC20 is SmartFundCore {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 

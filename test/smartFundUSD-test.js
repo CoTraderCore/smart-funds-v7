@@ -39,7 +39,7 @@ const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
   ])
 
 // real contracts
-const SmartFundUSD = artifacts.require('./core/funds/SmartFundUSD.sol')
+const SmartFundERC20 = artifacts.require('./core/funds/SmartFundERC20.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
 const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
 const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
@@ -66,7 +66,7 @@ const TOKEN_KEY_UNISWAP_POOL = "0x554e49535741505f504f4f4c0000000000000000000000
 let xxxERC,
     DAI,
     exchangePortal,
-    smartFundUSD,
+    smartFundERC20,
     cToken,
     cEther,
     BNT,
@@ -86,7 +86,7 @@ let xxxERC,
     MerkleTREE
 
 
-contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
+contract('smartFundERC20', function([userOne, userTwo, userThree]) {
   async function deployContracts(successFee=1000){
     COT_DAO_WALLET = await CoTraderDAOWalletMock.new()
     oneInch = await OneInch.new()
@@ -207,7 +207,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
 
     // Deploy USD fund
-    smartFundUSD = await SmartFundUSD.new(
+    smartFundERC20 = await SmartFundERC20.new(
       '0x0000000000000000000000000000000000000000', // address _owner,
       'TEST USD FUND',                              // string _name,
       successFee,                                   // uint256 _successFee,
@@ -295,12 +295,12 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     })
 
     it('Correct init usd smart fund', async function() {
-      const name = await smartFundUSD.name()
-      const totalShares = await smartFundUSD.totalShares()
-      const portalEXCHANGE = await smartFundUSD.exchangePortal()
-      const stableCoinAddress = await smartFundUSD.stableCoinAddress()
-      const cEthAddress = await smartFundUSD.cEther()
-      const portalPOOL = await smartFundUSD.poolPortal()
+      const name = await smartFundERC20.name()
+      const totalShares = await smartFundERC20.totalShares()
+      const portalEXCHANGE = await smartFundERC20.exchangePortal()
+      const stableCoinAddress = await smartFundERC20.coinAddress()
+      const cEthAddress = await smartFundERC20.cEther()
+      const portalPOOL = await smartFundERC20.poolPortal()
 
       assert.equal(exchangePortal.address, portalEXCHANGE)
       assert.equal(stableCoinAddress, DAI.address)
@@ -311,8 +311,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     })
 
     it('Correct init commision', async function() {
-      const successFee = await smartFundUSD.successFee()
-      const platformFee = await smartFundUSD.platformFee()
+      const successFee = await smartFundERC20.successFee()
+      const platformFee = await smartFundERC20.platformFee()
 
       assert.equal(Number(successFee), 1000)
       assert.equal(Number(platformFee), 1000)
@@ -322,37 +322,37 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
   describe('Deposit', function() {
     it('should not be able to deposit 0 USD', async function() {
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(0, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(0, { from: userOne })
       .should.be.rejectedWith(EVMRevert)
     })
 
     it('should be able to deposit positive amount of USD', async function() {
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
-      assert.equal(await smartFundUSD.addressToShares(userOne), toWei(String(1)))
-      assert.equal(await smartFundUSD.calculateFundValue(), 100)
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
+      assert.equal(await smartFundERC20.addressToShares(userOne), toWei(String(1)))
+      assert.equal(await smartFundERC20.calculateFundValue(), 100)
     })
 
     it('should accurately calculate empty fund value', async function() {
       // Ether is initial token, USD is second
-      assert.equal((await smartFundUSD.getAllTokenAddresses()).length, 2)
-      assert.equal(await smartFundUSD.calculateFundValue(), 0)
+      assert.equal((await smartFundERC20.getAllTokenAddresses()).length, 2)
+      assert.equal(await smartFundERC20.calculateFundValue(), 0)
     })
   })
 
 
   describe('Profit', function() {
     it('should have zero profit before any deposits have been made', async function() {
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), 0)
-        assert.equal(await smartFundUSD.calculateFundProfit(), 0)
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), 0)
+        assert.equal(await smartFundERC20.calculateFundProfit(), 0)
     })
 
     it('should have zero profit before any trades have been made', async function() {
-        await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-        await smartFundUSD.deposit(100, { from: userOne })
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), 0)
-        assert.equal(await smartFundUSD.calculateFundProfit(), 0)
+        await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+        await smartFundERC20.deposit(100, { from: userOne })
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), 0)
+        assert.equal(await smartFundERC20.calculateFundProfit(), 0)
     })
 
     it('should accurately calculate profit if price stays stable', async function() {
@@ -360,15 +360,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await xxxERC.transfer(exchangePortal.address, 1000)
 
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-        await smartFundUSD.deposit(100, { from: userOne })
+        await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+        await smartFundERC20.deposit(100, { from: userOne })
 
         // get proof and position for dest token
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // make a trade with the fund
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           100,
           xxxERC.address,
@@ -380,8 +380,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         })
 
         // check that we still haven't made a profit
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), 0)
-        assert.equal(await smartFundUSD.calculateFundProfit(), 0)
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), 0)
+        assert.equal(await smartFundERC20.calculateFundProfit(), 0)
     })
 
     it('should accurately calculate profit upon price rise', async function() {
@@ -389,15 +389,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await xxxERC.transfer(exchangePortal.address, 1000)
 
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-        await smartFundUSD.deposit(100, { from: userOne })
+        await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+        await smartFundERC20.deposit(100, { from: userOne })
 
         // get proof and position for dest token
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // make a trade with the fund
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           100,
           xxxERC.address,
@@ -412,8 +412,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await exchangePortal.setRatio(1, 2)
 
         // check that we have made a profit
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), 100)
-        assert.equal(await smartFundUSD.calculateFundProfit(), 100)
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), 100)
+        assert.equal(await smartFundERC20.calculateFundProfit(), 100)
     })
 
     it('should accurately calculate profit upon price fall', async function() {
@@ -421,15 +421,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await xxxERC.transfer(exchangePortal.address, 1000)
 
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-        await smartFundUSD.deposit(100, { from: userOne })
+        await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+        await smartFundERC20.deposit(100, { from: userOne })
 
         // get proof and position for dest token
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // Trade 100 eth for 100 bat via kyber
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           100,
           xxxERC.address,
@@ -444,8 +444,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await exchangePortal.setRatio(2, 1)
 
         // check that we made negatove profit
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), -50)
-        assert.equal(await smartFundUSD.calculateFundProfit(), -50)
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), -50)
+        assert.equal(await smartFundERC20.calculateFundProfit(), -50)
     })
 
     it('should accurately calculate profit if price stays stable with multiple trades', async function() {
@@ -454,8 +454,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await yyyERC.transfer(exchangePortal.address, 1000)
 
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-        await smartFundUSD.deposit(100, { from: userOne })
+        await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+        await smartFundERC20.deposit(100, { from: userOne })
 
         // get proof and position for dest token
         const proofYYY = MerkleTREE.getProof(keccak256(yyyERC.address)).map(x => buf2hex(x.data))
@@ -464,7 +464,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           50,
           yyyERC.address,
@@ -474,7 +474,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           PARASWAP_MOCK_ADDITIONAL_PARAMS, 1, {
           from: userOne,
         })
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           50,
           xxxERC.address,
@@ -486,8 +486,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         })
 
         // check that we still haven't made a profit
-        assert.equal(await smartFundUSD.calculateFundProfit(), 0)
-        assert.equal(await smartFundUSD.calculateAddressProfit(userOne), 0)
+        assert.equal(await smartFundERC20.calculateFundProfit(), 0)
+        assert.equal(await smartFundERC20.calculateAddressProfit(userOne), 0)
     })
 
     it('Fund manager should be able to withdraw after investor withdraws', async function() {
@@ -497,16 +497,16 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await exchangePortal.pay({ from: userOne, value: toWei(String(3))})
 
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-        await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+        await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+        await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
 
         // get proof and position for dest token
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           toWei(String(1)),
           xxxERC.address,
@@ -520,21 +520,21 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           }
         )
 
-        assert.equal((await smartFundUSD.getAllTokenAddresses()).length, 3)
+        assert.equal((await smartFundERC20.getAllTokenAddresses()).length, 3)
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
         // 1 token is now worth 2 DAI
         await exchangePortal.setRatio(1, 2)
 
-        assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(2)))
+        assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(2)))
 
         // get proof and position for dest token
         const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
         const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // should receive 200 'DAI' (wei)
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           xxxERC.address,
           toWei(String(1)),
           DAI.address,
@@ -548,40 +548,40 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           }
         )
 
-        assert.equal((await smartFundUSD.getAllTokenAddresses()).length, 3)
+        assert.equal((await smartFundERC20.getAllTokenAddresses()).length, 3)
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(2)))
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(2)))
 
-        const totalWeiDeposited = await smartFundUSD.totalWeiDeposited()
+        const totalWeiDeposited = await smartFundERC20.totalWeiDeposited()
         assert.equal(fromWei(totalWeiDeposited), 1)
 
         // user1 now withdraws 190 DAI, 90 of which are profit
-        await smartFundUSD.withdraw(0, { from: userOne })
+        await smartFundERC20.withdraw(0, { from: userOne })
 
-        const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
+        const totalWeiWithdrawn = await smartFundERC20.totalWeiWithdrawn()
         assert.equal(fromWei(totalWeiWithdrawn), 1.9)
 
 
-        const fB = await DAI.balanceOf(smartFundUSD.address)
+        const fB = await DAI.balanceOf(smartFundERC20.address)
         assert.equal(fromWei(fB), 0.1)
 
-        assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(0.1)))
+        assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(0.1)))
 
         const {
           fundManagerRemainingCut,
           fundValue,
           fundManagerTotalCut,
         } =
-        await smartFundUSD.calculateFundManagerCut()
+        await smartFundERC20.calculateFundManagerCut()
 
         assert.equal(fundValue, toWei(String(0.1)))
         assert.equal(fundManagerRemainingCut, toWei(String(0.1)))
         assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
           // // FM now withdraws their profit
-        await smartFundUSD.fundManagerWithdraw({ from: userOne })
+        await smartFundERC20.fundManagerWithdraw({ from: userOne })
         // Manager, can get his 10%, and remains 0.0001996 it's  platform commision
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
       })
 
    it('Should properly calculate profit after another user made profit and withdrew', async function() {
@@ -590,16 +590,16 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await DAI.transfer(exchangePortal.address, toWei(String(50)))
         await exchangePortal.pay({ from: userOne, value: toWei(String(5)) })
         // deposit in fund
-        await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-        await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+        await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+        await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
 
         // get proof and position for dest token
         const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
         const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           toWei(String(1)),
           xxxERC.address,
@@ -613,19 +613,19 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           }
         )
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
         // 1 token is now worth 2 ether
         await exchangePortal.setRatio(1, 2)
 
-        assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(2)))
+        assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(2)))
 
         // get proof and position for dest token
         const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
         const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
 
         // should receive 200 'ether' (wei)
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           xxxERC.address,
           toWei(String(1)),
           DAI.address,
@@ -639,27 +639,27 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           }
         )
 
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(2)))
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(2)))
 
         // user1 now withdraws 190 ether, 90 of which are profit
-        await smartFundUSD.withdraw(0, { from: userOne })
+        await smartFundERC20.withdraw(0, { from: userOne })
 
-        assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(0.1)))
+        assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(0.1)))
 
         // FM now withdraws their profit
-        await smartFundUSD.fundManagerWithdraw({ from: userOne })
-        assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+        await smartFundERC20.fundManagerWithdraw({ from: userOne })
+        assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
         // provide user2 with some DAI
         await DAI.transfer(userTwo, toWei(String(1)), { from: userOne })
         // now user2 deposits into the fund
-        await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userTwo })
-        await smartFundUSD.deposit(toWei(String(1)), { from: userTwo })
+        await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userTwo })
+        await smartFundERC20.deposit(toWei(String(1)), { from: userTwo })
 
         // 1 token is now worth 1 ether
         await exchangePortal.setRatio(1, 1)
 
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           DAI.address,
           toWei(String(1)),
           xxxERC.address,
@@ -677,7 +677,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         await exchangePortal.setRatio(1, 2)
 
         // should receive 200 'ether' (wei)
-        await smartFundUSD.trade(
+        await smartFundERC20.trade(
           xxxERC.address,
           toWei(String(1)),
           DAI.address,
@@ -695,7 +695,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           fundManagerRemainingCut,
           fundValue,
           fundManagerTotalCut,
-        } = await smartFundUSD.calculateFundManagerCut()
+        } = await smartFundERC20.calculateFundManagerCut()
 
         assert.equal(fundValue, toWei(String(2)))
         // 'remains cut should be 0.1 eth'
@@ -714,35 +714,35 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
   describe('Withdraw', function() {
    it('should be able to withdraw all deposited funds', async function() {
-      let totalShares = await smartFundUSD.totalShares()
+      let totalShares = await smartFundERC20.totalShares()
       assert.equal(totalShares, 0)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
 
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 100)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 100)
 
-      totalShares = await smartFundUSD.totalShares()
+      totalShares = await smartFundERC20.totalShares()
       assert.equal(totalShares, toWei(String(1)))
 
-      await smartFundUSD.withdraw(0, { from: userOne })
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+      await smartFundERC20.withdraw(0, { from: userOne })
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
     })
 
     it('should be able to withdraw percentage of deposited funds', async function() {
       let totalShares
 
-      totalShares = await smartFundUSD.totalShares()
+      totalShares = await smartFundERC20.totalShares()
       assert.equal(totalShares, 0)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
 
-      totalShares = await smartFundUSD.totalShares()
+      totalShares = await smartFundERC20.totalShares()
 
-      await smartFundUSD.withdraw(5000, { from: userOne }) // 50.00%
+      await smartFundERC20.withdraw(5000, { from: userOne }) // 50.00%
 
-      assert.equal(await smartFundUSD.totalShares(), totalShares / 2)
+      assert.equal(await smartFundERC20.totalShares(), totalShares / 2)
     })
 
     it('should be able to withdraw deposited funds with multiple users', async function() {
@@ -750,28 +750,28 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await DAI.transfer(userTwo, 100, { from: userOne })
 
       // deposit
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
 
-      assert.equal(await smartFundUSD.calculateFundValue(), 100)
+      assert.equal(await smartFundERC20.calculateFundValue(), 100)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo })
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo })
 
-      assert.equal(await smartFundUSD.calculateFundValue(), 200)
+      assert.equal(await smartFundERC20.calculateFundValue(), 200)
 
       // withdraw
       let sfBalance
-      sfBalance = await DAI.balanceOf(smartFundUSD.address)
+      sfBalance = await DAI.balanceOf(smartFundERC20.address)
       assert.equal(sfBalance, 200)
 
-      await smartFundUSD.withdraw(0,{ from: userOne })
-      sfBalance = await DAI.balanceOf(smartFundUSD.address)
+      await smartFundERC20.withdraw(0,{ from: userOne })
+      sfBalance = await DAI.balanceOf(smartFundERC20.address)
 
       assert.equal(sfBalance, 100)
 
-      await smartFundUSD.withdraw(0, { from: userTwo })
-      sfBalance = await DAI.balanceOf(smartFundUSD.address)
+      await smartFundERC20.withdraw(0, { from: userTwo })
+      sfBalance = await DAI.balanceOf(smartFundERC20.address)
       assert.equal(sfBalance, 0)
     })
   })
@@ -783,7 +783,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         fundManagerRemainingCut,
         fundValue,
         fundManagerTotalCut,
-      } = await smartFundUSD.calculateFundManagerCut()
+      } = await smartFundERC20.calculateFundManagerCut()
 
       assert.equal(fundManagerRemainingCut, 0)
       assert.equal(fundValue, 0)
@@ -792,8 +792,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
     const fundManagerTest = async (expectedFundManagerCut = 15, self) => {
       // deposit
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
       // send XXX to exchange
       await xxxERC.transfer(exchangePortal.address, 200, { from: userOne })
 
@@ -802,7 +802,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
       // Trade 100 DAI for 100 XXX
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         100, xxxERC.address,
         2,
@@ -820,7 +820,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         fundManagerRemainingCut,
         fundValue,
         fundManagerTotalCut,
-      } = await smartFundUSD.calculateFundManagerCut()
+      } = await smartFundERC20.calculateFundManagerCut()
 
       assert.equal(fundValue, 200)
       assert.equal(fundManagerRemainingCut.toNumber(), expectedFundManagerCut)
@@ -851,13 +851,13 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await deployContracts(2000)
       await fundManagerTest(20)
 
-      await smartFundUSD.fundManagerWithdraw({ from: userOne })
+      await smartFundERC20.fundManagerWithdraw({ from: userOne })
 
       const {
         fundManagerRemainingCut,
         fundValue,
         fundManagerTotalCut,
-      } = await smartFundUSD.calculateFundManagerCut()
+      } = await smartFundERC20.calculateFundManagerCut()
 
       assert.equal(fundValue, 180)
       assert.equal(fundManagerRemainingCut, 0)
@@ -869,21 +869,21 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     it('should accurately calculate shares when the manager makes a profit', async function() {
       // deploy smartFund with 10% success fee
       await deployContracts(1000)
-      const fee = await smartFundUSD.successFee()
+      const fee = await smartFundERC20.successFee()
       assert.equal(fee, 1000)
 
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(10)))
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
       // get proof and position for dest token
       const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -903,12 +903,12 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some DAI to user2
       DAI.transfer(userTwo, toWei(String(1)))
       // deposit from user 2
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userTwo })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userTwo })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userTwo })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userTwo })
 
       await exchangePortal.setRatio(1, 2)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -922,9 +922,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         }
       )
 
-      await smartFundUSD.fundManagerWithdraw()
+      await smartFundERC20.fundManagerWithdraw()
 
-      await smartFundUSD.withdraw(0, { from: userTwo })
+      await smartFundERC20.withdraw(0, { from: userTwo })
 
       const xxxUserTwo = await xxxERC.balanceOf(userTwo)
 
@@ -941,14 +941,14 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // deposit in fund
       // send some DAI to user2
       DAI.transfer(userTwo, toWei(String(100)))
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userTwo })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userTwo })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userTwo })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userTwo })
 
       // get proof and position for dest token
       const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -968,11 +968,11 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some DAI to user3
       DAI.transfer(userThree, toWei(String(100)))
       // user3 deposits, should have 2/3 of shares now
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userThree })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userThree })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userThree })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userThree })
 
-      assert.equal(await smartFundUSD.addressToShares.call(userTwo), toWei(String(1)))
-      assert.equal(await smartFundUSD.addressToShares.call(userThree), toWei(String(2)))
+      assert.equal(await smartFundERC20.addressToShares.call(userTwo), toWei(String(1)))
+      assert.equal(await smartFundERC20.addressToShares.call(userThree), toWei(String(2)))
 
       // 1 token is now worth 2 ether, funds value is 3 ether
       await exchangePortal.setRatio(1, 2)
@@ -981,7 +981,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
       const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         xxxERC.address,
         toWei(String(1)),
         DAI.address,
@@ -996,12 +996,12 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       assert.equal(
-        await DAI.balanceOf(smartFundUSD.address),
+        await DAI.balanceOf(smartFundERC20.address),
         toWei(String(3))
       )
 
-      assert.equal(await smartFundUSD.calculateAddressProfit(userTwo), 0)
-      assert.equal(await smartFundUSD.calculateAddressProfit(userThree), toWei(String(1)))
+      assert.equal(await smartFundERC20.calculateAddressProfit(userTwo), 0)
+      assert.equal(await smartFundERC20.calculateAddressProfit(userThree), toWei(String(1)))
     })
   })
 
@@ -1015,14 +1015,14 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await xxxERC.transfer(exchangePortal.address, toWei(String(10)))
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
       // get proof and position for dest token
       const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -1040,21 +1040,21 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
   describe('COMPOUND', function() {
     it('Fund Manager can mint and reedem CEther', async function() {
-      assert.equal(await cEther.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
 
       // send some ETH to exchnage portal
       await exchangePortal.pay({ from: userOne, value: toWei(String(1))})
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
       // get proof and position for dest token
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
       // change DAI to ETH
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
@@ -1068,7 +1068,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         }
       )
       // mint
-      await smartFundUSD.compoundMint(toWei(String(1)), cEther.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cEther.address)
       // check key after trade
       assert.equal(await tokensType.getType(cEther.address), TOKEN_KEY_COMPOUND)
 
@@ -1076,56 +1076,56 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       assert.equal(await tokensType.getType(cEther.address), TOKEN_KEY_COMPOUND)
 
       // check balance
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), 0)
-      assert.equal(await cEther.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
+      assert.equal(await cEther.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // reedem
-      await smartFundUSD.compoundRedeemByPercent(100, cEther.address)
+      await smartFundERC20.compoundRedeemByPercent(100, cEther.address)
 
       // check balance
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await cEther.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
     })
 
     it('Fund Manager can mint and reedem cToken', async function() {
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
       // mint DAI Ctoken
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
 
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // reedem
-      await smartFundUSD.compoundRedeemByPercent(100, cToken.address)
+      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
 
       // check balance
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
     })
 
 
     it('Compound assets works correct with ERC20 assests', async function() {
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
       // give exchange portal contract some money
       await xxxERC.transfer(exchangePortal.address, toWei(String(10)))
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(3)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(3)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(3)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(3)), { from: userOne })
 
       // mint
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(1)))
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // get proof and position for dest token
       const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -1138,32 +1138,32 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
           from: userOne,
         }
       )
-      assert.equal(await xxxERC.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await xxxERC.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // Total should be the same
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(3)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
 
       // reedem
-      await smartFundUSD.compoundRedeemByPercent(100, cToken.address)
+      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
 
       // remove cToken from fund
-      await smartFundUSD.removeToken(cToken.address, 2)
+      await smartFundERC20.removeToken(cToken.address, 2)
 
       // Total should be the same
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(3)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
 
       // mint
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(1)))
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // Total should be the same
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(3)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
 
-      await smartFundUSD.withdraw(0)
+      await smartFundERC20.withdraw(0)
 
       // check balance
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), 0)
-      assert.equal(await smartFundUSD.calculateFundValue(), 0)
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
+      assert.equal(await smartFundERC20.calculateFundValue(), 0)
       // investor get cToken
       assert.equal(await cToken.balanceOf(userOne), toWei(String(1)))
     })
@@ -1174,15 +1174,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await exchangePortal.pay({ from: userOne, value: toWei(String(2))})
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(4)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(4)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(4)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(4)), { from: userOne })
 
       // get proof and position for dest token
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 DAI from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(2)),
         ETH_TOKEN_ADDRESS,
@@ -1196,35 +1196,35 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         }
       )
       // mint 1 cEth
-      await smartFundUSD.compoundMint(toWei(String(1)), cEther.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cEther.address)
 
       // mint 1 DAI Ctoken
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
 
       // check asset allocation in fund
-      assert.equal(await cEther.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await cEther.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), toWei(String(1)))
 
       // Assume all assets have a 1 to 1 ratio
       // so in total should be still 4 ETH
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(4)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(4)))
 
       const ownerETHBalanceBefore = await web3.eth.getBalance(userOne)
       const ownerDAIBalanceBefore = await DAI.balanceOf(userOne)
 
       // withdarw
-      await smartFundUSD.withdraw(0)
+      await smartFundERC20.withdraw(0)
 
       // check asset allocation in fund after withdraw
-      assert.equal(await cEther.balanceOf(smartFundUSD.address), 0)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), 0)
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), 0)
+      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
 
       // check fund value
-      assert.equal(await smartFundUSD.calculateFundValue(), 0)
+      assert.equal(await smartFundERC20.calculateFundValue(), 0)
 
       // owner should get CTokens and DAI
       assert.equal(await cEther.balanceOf(userOne), toWei(String(1)))
@@ -1237,47 +1237,47 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
 
     it('manager can not redeemUnderlying not correct percent', async function() {
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
       // mint
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
 
       // reedem with 101%
-      await smartFundUSD.compoundRedeemByPercent(101, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+      await smartFundERC20.compoundRedeemByPercent(101, cToken.address)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
       // reedem with 0%
-      await smartFundUSD.compoundRedeemByPercent(0, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+      await smartFundERC20.compoundRedeemByPercent(0, cToken.address)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
       // reedem with 100%
-      await smartFundUSD.compoundRedeemByPercent(100, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
+      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
     })
 
 
     it('manager can redeemUnderlying different percent', async function() {
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
       // mint
-      await smartFundUSD.compoundMint(toWei(String(1)), cToken.address)
+      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
 
       // reedem with 50%
-      await smartFundUSD.compoundRedeemByPercent(50, cToken.address)
+      await smartFundERC20.compoundRedeemByPercent(50, cToken.address)
       .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(0.5)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0.5)))
 
       // reedem with 25%
-      await smartFundUSD.compoundRedeemByPercent(25, cToken.address)
+      await smartFundERC20.compoundRedeemByPercent(25, cToken.address)
       .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(0.375)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0.375)))
 
       // reedem with all remains
-      await smartFundUSD.compoundRedeemByPercent(100, cToken.address)
+      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
       .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundUSD.address), toWei(String(0)))
+      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0)))
     })
   })
 
@@ -1286,15 +1286,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some assets to pool portal
       await BNT.transfer(exchangePortal.address, toWei(String(1)))
 
-      await DAI.approve(smartFundUSD.address, toWei(String(2)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(2)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(2)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(2)), { from: userOne })
 
       // get proof and position for dest token
       const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
       const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 BNT from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         BNT.address,
@@ -1309,9 +1309,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Check balance before buy pool
-      assert.equal(await BNT.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await BNT.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAIBNT.balanceOf(smartFundERC20.address), 0)
 
       // get pool addresses and connectors
       const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
@@ -1320,23 +1320,23 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         toWei(String(2)))
 
       // buy BNT pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddress, connectorsAmount, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddress, connectorsAmount, [], "0x")
 
       // check key after buy Bancor pools
       assert.equal(await tokensType.getType(DAIBNT.address), TOKEN_KEY_BANCOR_POOL)
 
       // Check balance after buy pool
-      assert.equal(await BNT.balanceOf(smartFundUSD.address), 0)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
-      assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(2)))
+      assert.equal(await BNT.balanceOf(smartFundERC20.address), 0)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
+      assert.equal(await DAIBNT.balanceOf(smartFundERC20.address), toWei(String(2)))
 
       // sell pool
-      await smartFundUSD.sellPool(toWei(String(2)), 0, DAIBNT.address, [], "0x")
+      await smartFundERC20.sellPool(toWei(String(2)), 0, DAIBNT.address, [], "0x")
 
       // Check balance after sell pool
-      assert.equal(await BNT.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await BNT.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAIBNT.balanceOf(smartFundERC20.address), 0)
 
     })
 
@@ -1344,15 +1344,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // Send some ETH to portal
       await exchangePortal.pay({ from: userTwo, value: toWei(String(1)) })
 
-      await DAI.approve(smartFundUSD.address, toWei(String(2)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(2)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(2)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(2)), { from: userOne })
 
       // get proof and position for dest token
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 ETH from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
@@ -1367,8 +1367,8 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Check balance before buy pool
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAIUNI.balanceOf(smartFundERC20.address), 0)
 
       // get pool addresses and connectors
       const { connectorsAddress, connectorsAmount } = await poolPortal.getDataForBuyingPool(
@@ -1377,23 +1377,23 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         toWei(String(1)))
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddress, connectorsAmount, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddress, connectorsAmount, [], "0x")
 
       // Check key after buy UNI pool
       assert.equal(await tokensType.getType(DAIUNI.address), TOKEN_KEY_UNISWAP_POOL)
 
       // Check balance after buy pool
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(0)))
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), toWei(String(2)))
-      const fundETHBalanceAfterBuy = await web3.eth.getBalance(smartFundUSD.address)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(0)))
+      assert.equal(await DAIUNI.balanceOf(smartFundERC20.address), toWei(String(2)))
+      const fundETHBalanceAfterBuy = await web3.eth.getBalance(smartFundERC20.address)
 
       // Sell UNI Pool
-      await smartFundUSD.sellPool(toWei(String(2)), 1, DAIUNI.address, [], "0x")
+      await smartFundERC20.sellPool(toWei(String(2)), 1, DAIUNI.address, [], "0x")
 
       // Check balance after buy pool
-      const fundETHBalanceAfterSell = await web3.eth.getBalance(smartFundUSD.address)
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), toWei(String(0)))
+      const fundETHBalanceAfterSell = await web3.eth.getBalance(smartFundERC20.address)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
+      assert.equal(await DAIUNI.balanceOf(smartFundERC20.address), toWei(String(0)))
 
       assert.isTrue(fundETHBalanceAfterSell > fundETHBalanceAfterBuy)
     })
@@ -1403,15 +1403,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await BNT.transfer(exchangePortal.address, toWei(String(1)))
       await exchangePortal.pay({ from: userTwo, value: toWei(String(1)) })
 
-      await DAI.approve(smartFundUSD.address, toWei(String(4)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(4)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(4)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(4)), { from: userOne })
 
       // get proof and position for dest token
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 ETH from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
@@ -1430,7 +1430,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 BNT from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         BNT.address,
@@ -1455,7 +1455,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
 
       // get BNT pool addresses and connectors
       const {
@@ -1468,15 +1468,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy BNT Pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
 
       // Fund get UNI and BNT Pools
-      assert.equal(await DAIBNT.balanceOf(smartFundUSD.address), toWei(String(2)))
-      assert.equal(await DAIUNI.balanceOf(smartFundUSD.address), toWei(String(2)))
+      assert.equal(await DAIBNT.balanceOf(smartFundERC20.address), toWei(String(2)))
+      assert.equal(await DAIUNI.balanceOf(smartFundERC20.address), toWei(String(2)))
 
       // Assume that asset prices have not changed, and therefore the value of the fund
       // should be the same as with the first deposit
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(4)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(4)))
     })
 
     it('Investor can withdraw UNI and BNT pools', async function() {
@@ -1484,15 +1484,15 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await BNT.transfer(exchangePortal.address, toWei(String(1)))
       await exchangePortal.pay({ from: userTwo, value: toWei(String(1)) })
 
-      await DAI.approve(smartFundUSD.address, toWei(String(4)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(4)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(4)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(4)), { from: userOne })
 
       // get proof and position for dest token
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 ETH from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
@@ -1511,7 +1511,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
 
       // get 1 BNT from exchange portal
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         BNT.address,
@@ -1536,7 +1536,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy UNI Pool
-      await smartFundUSD.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(1)), 1, DAIUNI.address, connectorsAddressUNI, connectorsAmountUNI, [], "0x")
 
       // get BNT pool addresses and connectors
       const {
@@ -1549,9 +1549,9 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       )
 
       // Buy BNT Pool
-      await smartFundUSD.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
+      await smartFundERC20.buyPool(toWei(String(2)), 0, DAIBNT.address, connectorsAddressBNT, connectorsAmountBNT, [], "0x")
 
-      await smartFundUSD.withdraw(0)
+      await smartFundERC20.withdraw(0)
 
       // investor get his BNT and UNI pools
       assert.equal(await DAIBNT.balanceOf(userOne), toWei(String(2)))
@@ -1567,10 +1567,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await exchangePortal.pay({ from: userOne, value: toWei(String(3))})
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // 1 DAI now 2 ETH
       await exchangePortal.setRatio(1, 2)
@@ -1579,7 +1579,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
       const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         ETH_TOKEN_ADDRESS,
@@ -1596,39 +1596,39 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // 1 DAI now 1 ETH
       await exchangePortal.setRatio(1, 1)
 
-      assert.equal(await web3.eth.getBalance(smartFundUSD.address), toWei(String(2)))
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(2)))
+      assert.equal(await web3.eth.getBalance(smartFundERC20.address), toWei(String(2)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(2)))
 
-      const totalWeiDeposited = await smartFundUSD.totalWeiDeposited()
+      const totalWeiDeposited = await smartFundERC20.totalWeiDeposited()
       assert.equal(fromWei(totalWeiDeposited), 1)
 
       // user1 now withdraws 190 ether, 90 of which are profit
-      await smartFundUSD.withdraw(0, { from: userOne })
+      await smartFundERC20.withdraw(0, { from: userOne })
 
-      const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
+      const totalWeiWithdrawn = await smartFundERC20.totalWeiWithdrawn()
       assert.equal(fromWei(totalWeiWithdrawn), 1.9)
 
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(0.1)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(0.1)))
 
       const {
         fundManagerRemainingCut,
         fundValue,
         fundManagerTotalCut,
       } =
-      await smartFundUSD.calculateFundManagerCut()
+      await smartFundERC20.calculateFundManagerCut()
 
       assert.equal(fundValue, toWei(String(0.1)))
       assert.equal(fundManagerRemainingCut, toWei(String(0.1)))
       assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
       // // FM now withdraws their profit
-      await smartFundUSD.fundManagerWithdraw({ from: userOne })
+      await smartFundERC20.fundManagerWithdraw({ from: userOne })
 
       // Platform get 10%
       assert.equal(fromWei(await web3.eth.getBalance(COT_DAO_WALLET.address)), 0.01)
 
       // Fund transfer all balance
-      assert.equal(fromWei(await web3.eth.getBalance(smartFundUSD.address)), 0)
+      assert.equal(fromWei(await web3.eth.getBalance(smartFundERC20.address)), 0)
     })
 
     it('Platform can get 10% from ERC profit', async function() {
@@ -1639,10 +1639,10 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await exchangePortal.pay({ from: userOne, value: toWei(String(3))})
 
       // deposit in fund
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
 
       // 1 token is now cost 1 DAI
       await exchangePortal.setRatio(1, 1)
@@ -1651,7 +1651,7 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
       const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
 
-      await smartFundUSD.trade(
+      await smartFundERC20.trade(
         DAI.address,
         toWei(String(1)),
         xxxERC.address,
@@ -1665,49 +1665,49 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
         }
       )
 
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), 0)
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
 
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(1)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(1)))
 
       // 1 token is now worth 2 DAI
       await exchangePortal.setRatio(1, 2)
 
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(2)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(2)))
 
-      assert.equal(await DAI.balanceOf(smartFundUSD.address), toWei(String(0)))
-      assert.equal(await xxxERC.balanceOf(smartFundUSD.address), toWei(String(1)))
+      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(0)))
+      assert.equal(await xxxERC.balanceOf(smartFundERC20.address), toWei(String(1)))
 
-      const totalWeiDeposited = await smartFundUSD.totalWeiDeposited()
+      const totalWeiDeposited = await smartFundERC20.totalWeiDeposited()
       assert.equal(fromWei(totalWeiDeposited), 1)
 
       // user1 now withdraws 190 ether, 90 of which are profit
-      await smartFundUSD.withdraw(0, { from: userOne })
+      await smartFundERC20.withdraw(0, { from: userOne })
 
-      const totalWeiWithdrawn = await smartFundUSD.totalWeiWithdrawn()
+      const totalWeiWithdrawn = await smartFundERC20.totalWeiWithdrawn()
       assert.equal(fromWei(totalWeiWithdrawn), 1.9)
 
-      assert.equal(await smartFundUSD.calculateFundValue(), toWei(String(0.1)))
+      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(0.1)))
 
       const {
         fundManagerRemainingCut,
         fundValue,
         fundManagerTotalCut,
       } =
-      await smartFundUSD.calculateFundManagerCut()
+      await smartFundERC20.calculateFundManagerCut()
 
       assert.equal(fundValue, toWei(String(0.1)))
       assert.equal(fundManagerRemainingCut, toWei(String(0.1)))
       assert.equal(fundManagerTotalCut, toWei(String(0.1)))
 
       // // FM now withdraws their profit
-      await smartFundUSD.fundManagerWithdraw({ from: userOne })
+      await smartFundERC20.fundManagerWithdraw({ from: userOne })
 
       // Platform get 10%
       // 0.005 xxx = 0.01 ETH
       assert.equal(fromWei(await xxxERC.balanceOf(COT_DAO_WALLET.address)), 0.005)
 
       // Fund transfer all balance
-      assert.equal(fromWei(await xxxERC.balanceOf(smartFundUSD.address)), 0)
+      assert.equal(fromWei(await xxxERC.balanceOf(smartFundERC20.address)), 0)
     })
   })
 
@@ -1716,25 +1716,25 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some DAI to user two
       DAI.transfer(userTwo, 100)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo })
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo })
 
-      assert.equal(await smartFundUSD.balanceOf(userTwo), toWei(String(1)))
+      assert.equal(await smartFundERC20.balanceOf(userTwo), toWei(String(1)))
 
-      await smartFundUSD.transfer(userThree, toWei(String(1)), { from: userTwo })
-      assert.equal(await smartFundUSD.balanceOf(userThree), toWei(String(1)))
-      assert.equal(await smartFundUSD.balanceOf(userTwo), 0)
+      await smartFundERC20.transfer(userThree, toWei(String(1)), { from: userTwo })
+      assert.equal(await smartFundERC20.balanceOf(userThree), toWei(String(1)))
+      assert.equal(await smartFundERC20.balanceOf(userTwo), 0)
     })
 
     it('should allow a user to withdraw their shares that were transfered to them', async function() {
       // send some DAI to user two
       DAI.transfer(userTwo, 1000)
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo })
-      await smartFundUSD.transfer(userThree, toWei(String(1)), { from: userTwo })
-      assert.equal(await smartFundUSD.balanceOf(userThree), toWei(String(1)))
-      await smartFundUSD.withdraw(0, { from: userThree })
-      assert.equal(await smartFundUSD.balanceOf(userThree), 0)
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo })
+      await smartFundERC20.transfer(userThree, toWei(String(1)), { from: userTwo })
+      assert.equal(await smartFundERC20.balanceOf(userThree), toWei(String(1)))
+      await smartFundERC20.withdraw(0, { from: userThree })
+      assert.equal(await smartFundERC20.balanceOf(userThree), 0)
     })
   })
 
@@ -1743,11 +1743,11 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some DAI to user two
       DAI.transfer(userTwo, 1000)
 
-      await smartFundUSD.setWhitelistOnly(true)
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne }).should.be.rejectedWith(EVMRevert)
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo }).should.be.rejectedWith(EVMRevert)
+      await smartFundERC20.setWhitelistOnly(true)
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne }).should.be.rejectedWith(EVMRevert)
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo }).should.be.rejectedWith(EVMRevert)
     })
 
 
@@ -1755,34 +1755,34 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       // send some DAI to user two
       DAI.transfer(userTwo, 1000)
 
-      await smartFundUSD.setWhitelistOnly(true)
-      await smartFundUSD.setWhitelistAddress(userOne, true)
+      await smartFundERC20.setWhitelistOnly(true)
+      await smartFundERC20.setWhitelistAddress(userOne, true)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo }).should.be.rejectedWith(EVMRevert)
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo }).should.be.rejectedWith(EVMRevert)
 
-      await smartFundUSD.setWhitelistAddress(userTwo, true)
+      await smartFundERC20.setWhitelistAddress(userTwo, true)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userTwo })
-      await smartFundUSD.deposit(100, { from: userTwo })
+      await DAI.approve(smartFundERC20.address, 100, { from: userTwo })
+      await smartFundERC20.deposit(100, { from: userTwo })
 
-      assert.equal(await smartFundUSD.addressToShares.call(userOne), toWei(String(1)))
-      assert.equal(await smartFundUSD.addressToShares.call(userTwo), toWei(String(1)))
+      assert.equal(await smartFundERC20.addressToShares.call(userOne), toWei(String(1)))
+      assert.equal(await smartFundERC20.addressToShares.call(userTwo), toWei(String(1)))
 
-      await smartFundUSD.setWhitelistAddress(userOne, false)
+      await smartFundERC20.setWhitelistAddress(userOne, false)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne }).should.be.rejectedWith(EVMRevert)
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne }).should.be.rejectedWith(EVMRevert)
 
-      await smartFundUSD.setWhitelistOnly(false)
+      await smartFundERC20.setWhitelistOnly(false)
 
-      await DAI.approve(smartFundUSD.address, 100, { from: userOne })
-      await smartFundUSD.deposit(100, { from: userOne })
+      await DAI.approve(smartFundERC20.address, 100, { from: userOne })
+      await smartFundERC20.deposit(100, { from: userOne })
 
-      assert.equal(await smartFundUSD.addressToShares.call(userOne), toWei(String(2)))
+      assert.equal(await smartFundERC20.addressToShares.call(userOne), toWei(String(2)))
     })
   })
 
@@ -1791,39 +1791,39 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
     const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
 
     it('Should not be able change non permitted exchange portal address', async function() {
-      await smartFundUSD.setNewExchangePortal(testAddress).should.be.rejectedWith(EVMRevert)
+      await smartFundERC20.setNewExchangePortal(testAddress).should.be.rejectedWith(EVMRevert)
     })
 
     it('Should be able change permitted exchange portal address', async function() {
       await permittedExchanges.addNewExchangeAddress(testAddress)
-      await smartFundUSD.setNewExchangePortal(testAddress).should.be.fulfilled
+      await smartFundERC20.setNewExchangePortal(testAddress).should.be.fulfilled
     })
 
     it('Should not be able change non permitted pool portal address', async function() {
-      await smartFundUSD.setNewPoolPortal(testAddress).should.be.rejectedWith(EVMRevert)
+      await smartFundERC20.setNewPoolPortal(testAddress).should.be.rejectedWith(EVMRevert)
     })
 
     it('Should be able change permitted pool portal address', async function() {
       await permittedPools.addNewPoolAddress(testAddress)
-      await smartFundUSD.setNewPoolPortal(testAddress).should.be.fulfilled
+      await smartFundERC20.setNewPoolPortal(testAddress).should.be.fulfilled
     })
 
     it('Should not be able change non permitted stable portal address', async function() {
-      await smartFundUSD.changeStableCoinAddress(testAddress).should.be.rejectedWith(EVMRevert)
+      await smartFundERC20.changeStableCoinAddress(testAddress).should.be.rejectedWith(EVMRevert)
     })
 
     it('Should be able change permitted stable coin address', async function() {
       await permittedStables.addNewStableAddress(testAddress)
-      await smartFundUSD.changeStableCoinAddress(testAddress).should.be.fulfilled
+      await smartFundERC20.changeStableCoinAddress(testAddress).should.be.fulfilled
     })
 
     it('Should not be able change stable coin address if some investor did deposit', async function() {
       await permittedStables.addNewStableAddress(testAddress)
 
-      await DAI.approve(smartFundUSD.address, toWei(String(1)), { from: userOne })
-      await smartFundUSD.deposit(toWei(String(1)), { from: userOne })
+      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
+      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
 
-      await smartFundUSD.changeStableCoinAddress(testAddress)
+      await smartFundERC20.changeStableCoinAddress(testAddress)
       .should.be.rejectedWith(EVMRevert)
     })
 
@@ -1832,13 +1832,13 @@ contract('SmartFundUSD', function([userOne, userTwo, userThree]) {
       await permittedPools.addNewPoolAddress(testAddress)
       await permittedStables.addNewStableAddress(testAddress)
 
-      await smartFundUSD.setNewExchangePortal(testAddress, { from:userTwo })
+      await smartFundERC20.setNewExchangePortal(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
 
-      await smartFundUSD.setNewPoolPortal(testAddress, { from:userTwo })
+      await smartFundERC20.setNewPoolPortal(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
 
-      await smartFundUSD.changeStableCoinAddress(testAddress, { from:userTwo })
+      await smartFundERC20.changeStableCoinAddress(testAddress, { from:userTwo })
       .should.be.rejectedWith(EVMRevert)
     })
   })

@@ -14,7 +14,7 @@ require('chai')
 
 // real
 const SmartFundETHFactory = artifacts.require('./core/funds/SmartFundETHFactory.sol')
-const SmartFundUSDFactory = artifacts.require('./core/funds/SmartFundUSDFactory.sol')
+const SmartFundERC20Factory = artifacts.require('./core/funds/SmartFundERC20Factory.sol')
 const SmartFundRegistry = artifacts.require('./core/SmartFundRegistry.sol')
 const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
 const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
@@ -29,7 +29,7 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
     this.ETH_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE'
 
     this.smartFundETHFactory = await SmartFundETHFactory.new(this.COT_DAO_WALLET.address)
-    this.smartFundUSDFactory = await SmartFundUSDFactory.new(this.COT_DAO_WALLET.address)
+    this.SmartFundERC20Factory = await SmartFundERC20Factory.new(this.COT_DAO_WALLET.address)
 
     this.permittedStables = await PermittedStables.new('0x0000000000000000000000000000000000000000')
     this.permittedExchanges = await PermittedExchanges.new('0x0000000000000000000000000000000000000000')
@@ -42,8 +42,9 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
       '0x0000000000000000000000000000000000000000', //   PoolPortal.address,
       this.permittedStables.address ,               //   PermittedStabels.address,
       '0x0000000000000000000000000000000000000000', //   STABLE_COIN_ADDRESS,
+      '0x0000000000000000000000000000000000000000', //   COTRADER COIN ADDRESS
       this.smartFundETHFactory.address,             //   SmartFundETHFactory.address,
-      this.smartFundUSDFactory.address,             //   SmartFundUSDFactory.address,
+      this.SmartFundERC20Factory.address,             //   SmartFundERC20Factory.address,
       '0x0000000000000000000000000000000000000000'  //   COMPOUND_CETHER
     )
   })
@@ -57,11 +58,11 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
 
   describe('Create funds', function() {
     it('should be able create new ETH and USD funds', async function() {
-      await this.registry.createSmartFund("ETH Fund", 20, false, true)
+      await this.registry.createSmartFund("ETH Fund", 20, 1, true)
       let totalFunds = await this.registry.totalSmartFunds()
       assert.equal(1, totalFunds)
 
-      await this.registry.createSmartFund("USD Fund", 20, true, true)
+      await this.registry.createSmartFund("USD Fund", 20, 2, true)
       totalFunds = await this.registry.totalSmartFunds()
       assert.equal(2, totalFunds)
     })

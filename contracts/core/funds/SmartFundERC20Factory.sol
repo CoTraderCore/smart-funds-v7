@@ -26,7 +26,7 @@ contract SmartFundERC20Factory {
   public
   returns(address)
   {
-    SmartFundUSD smartFundUSD = new SmartFundUSD(
+    SmartFundERC20 smartFundERC20 = new SmartFundERC20(
       _owner,
       _name,
       _successFee,
@@ -42,6 +42,6 @@ contract SmartFundERC20Factory {
       _isRequireTradeVerification
     );
 
-    return address(smartFundUSD);
+    return address(smartFundERC20);
   }
 }
