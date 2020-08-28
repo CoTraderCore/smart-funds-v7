@@ -27,6 +27,8 @@ import "../interfaces/ITokensTypeStorage.sol";
 contract PoolPortal is Ownable{
   using SafeMath for uint256;
 
+  uint public version = 4;
+
   IGetBancorData public bancorData;
   UniswapFactoryInterfaceV1 public uniswapFactoryV1;
   IUniswapV2Router public uniswapV2Router;

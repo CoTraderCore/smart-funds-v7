@@ -19,6 +19,8 @@ import "../../oneInch/IOneSplitAudit.sol";
 import "../../compound/CEther.sol";
 import "../../compound/CToken.sol";
 
+import "../../balancer/IBalancerPool.sol";
+
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PermittedStablesInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
@@ -29,7 +31,7 @@ import "../interfaces/IMerkleTreeTokensVerification.sol";
 contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
-  uint public version = 3;
+  uint public version = 4;
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
@@ -429,16 +431,23 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     returns (uint256)
   {
     if(_amount > 0){
-      if(tokensTypes.getType(_from) == bytes32("CRYPTOCURRENCY")){
+      // get asset type
+      bytes32 assetType = tokensTypes.getType(_from);
+
+      // get value by asset type
+      if(assetType == bytes32("CRYPTOCURRENCY")){
         return getValueViaDEXsAgregators(_from, _to, _amount);
       }
-      else if (tokensTypes.getType(_from) == bytes32("BANCOR_ASSET")){
+      else if (assetType == bytes32("BANCOR_ASSET")){
         return getValueViaBancor(_from, _to, _amount);
       }
-      else if (tokensTypes.getType(_from) == bytes32("UNISWAP_POOL")){
+      else if (assetType == bytes32("UNISWAP_POOL")){
         return getValueForUniswapPools(_from, _to, _amount);
       }
-      else if (tokensTypes.getType(_from) == bytes32("COMPOUND")){
+      else if (assetType == bytes32("BALANCER_POOL")){
+        return getValueForBalancerPool(_from, _to, _amount);
+      }
+      else if (assetType == bytes32("COMPOUND")){
         return getValueViaCompound(_from, _to, _amount);
       }
       else{
@@ -463,7 +472,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
        // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
-       uint256 oneInchResult = getValueViaOneInch(_from, _to, _amount);
+       uint256 oneInchResult = getValueViaDEXsAgregators(_from, _to, _amount);
        if(oneInchResult > 0)
          return oneInchResult;
 
@@ -472,10 +481,15 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        if(bancorResult > 0)
           return bancorResult;
 
-       // If Compound return 0, check from Uniswap pools for ensure this is not Uniswap pool
+       // If Compound return 0, check from Balancer pools for ensure this is not Balancer  pool
        uint256 compoundResult = getValueViaCompound(_from, _to, _amount);
        if(compoundResult > 0)
           return compoundResult;
+
+       // If Balancer return 0, check from Uniswap pools for ensure this is not Uniswap pool
+       uint256 balancerResult = getValueForBalancerPool(_from, _to, _amount);
+       if(balancerResult > 0)
+          return balancerResult;
 
        // Uniswap pools return 0 if these is not a Uniswap pool
        return getValueForUniswapPools(_from, _to, _amount);
@@ -540,6 +554,41 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
       value = result;
     }catch{
+      value = 0;
+    }
+  }
+
+  // helper for get value via Balancer
+  // step 1 get all tokens
+  // step 2 get user amount from each token by a share
+  // step 3 convert to and sum
+  function getValueForBalancerPool(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+    public
+    view
+    returns (uint256 value)
+  {
+    IBalancerPool balancerPool = IBalancerPool(_from);
+    // get value for each pool share
+    try balancerPool.getCurrentTokens() returns(address[] memory tokens){
+     // get total pool shares
+     uint256 totalShares = IERC20(_from).totalSupply();
+     // get user pool share
+     uint256 userShare = IERC20(_from).balanceOf(msg.sender);
+     // calculate all tokens from the pool
+     for(uint i = 0; i < tokens.length; i++){
+       // get current token total amount in pool
+       uint256 totalTokenAmount = IERC20(tokens[i]).balanceOf(_from);
+       // get user share from this token amount in pool
+       uint256 userTokenAmount = totalTokenAmount.div(totalShares).mul(userShare);
+       // convert and sum value via DEX aggregator
+       value += getValueViaDEXsAgregators(tokens[i], _to, userTokenAmount);
+     }
+    }
+    catch{
       value = 0;
     }
   }
@@ -660,7 +709,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   // get underlying by cToken
-  function getCTokenUnderlying(address _cToken) external override view returns(address){
+  function getCTokenUnderlying(address _cToken)
+    external
+    override
+    view returns(address)
+  {
     return CToken(_cToken).underlying();
   }
 
