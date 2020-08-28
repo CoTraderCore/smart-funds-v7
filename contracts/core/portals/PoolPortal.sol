@@ -19,6 +19,7 @@ import "../../bancor/interfaces/IBancorFormula.sol";
 import "../../uniswap/interfaces/UniswapExchangeInterface.sol";
 import "../../uniswap/interfaces/UniswapFactoryInterfaceV1.sol";
 import "../../uniswap/interfaces/IUniswapV2Router.sol";
+import "../../uniswap/interfaces/IUniswapV2Pair.sol";
 
 import "../../balancer/IBalancerPool.sol";
 
@@ -1000,6 +1001,36 @@ contract PoolPortal is Ownable{
     ethAmount = _amount.mul(_exchange.balance).div(totalLiquidity);
     // ercAmount = amount * token.balanceOf(exchane) / total_liquidity
     ercAmount = _amount.mul(token.balanceOf(_exchange)).div(totalLiquidity);
+  }
+
+  /**
+  * @dev helper for get amounts for both Uniswap connectors for input amount of pool
+  * for Uniswap version 2
+  *
+  * @param _amount         relay amount
+  * @param _exchange       address of uniswap exchane
+  */
+  function getUniswapV2ConnectorsAmountByPoolAmount(
+    uint256 _amount,
+    address _exchange
+  )
+    public
+    view
+    returns(
+      uint256 tokenAmountOne,
+      uint256 tokenAmountTwo,
+      address tokenAddressOne,
+      address tokenAddressTwo
+    )
+  {
+    tokenAddressOne = IUniswapV2Pair.token0();
+    tokenAddressTwo = IUniswapV2Pair.token1();
+    // total_liquidity exchange.totalSupply
+    uint256 totalLiquidity = IERC20(_exchange).totalSupply();
+    // ethAmount = amount * exchane.eth.balance / total_liquidity
+    tokenOne = _amount.mul(token.balanceOf(tokenAddressOne)).div(totalLiquidity);
+    // ercAmount = amount * token.balanceOf(exchane) / total_liquidity
+    tokenTwo = _amount.mul(token.balanceOf(tokenAddressTwo)).div(totalLiquidity);
   }
 
 

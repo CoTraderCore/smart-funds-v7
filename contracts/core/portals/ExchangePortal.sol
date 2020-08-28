@@ -233,6 +233,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     bytes32 [] memory proof,
     uint256 [] memory positions)
     private
+    view
   {
     bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
 
@@ -444,6 +445,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       else if (assetType == bytes32("UNISWAP_POOL")){
         return getValueForUniswapPools(_from, _to, _amount);
       }
+      else if (assetType == bytes32("UNISWAP_POOL_V2")){
+        return getValueForUniswapV2Pools(_from, _to, _amount);
+      }
       else if (assetType == bytes32("BALANCER_POOL")){
         return getValueForBalancerPool(_from, _to, _amount);
       }
@@ -491,13 +495,19 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        if(balancerResult > 0)
           return balancerResult;
 
-       // Uniswap pools return 0 if these is not a Uniswap pool
-       return getValueForUniswapPools(_from, _to, _amount);
+       // If Uniswap return 0, check from Uniswap version 2 pools for ensure this is not Uniswap V2 pool
+       uint256 uniswapResult = getValueForUniswapPools(_from, _to, _amount);
+       if(uniswapResult > 0)
+          return uniswapResult;
+
+       // Uniswap V2 pools return 0 if these is not a Uniswap V2 pool
+       return getValueForUniswapV2Pools(_from, _to, _amount);
      }
      else{
        return 0;
      }
   }
+
 
   // helper for get value via 1inch
   // in this interface can be added more DEXs aggregators
@@ -515,6 +525,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       return 0;
     }
   }
+
 
   // helper for get ratio between assets in 1inch aggregator
   function getValueViaOneInch(
@@ -541,6 +552,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      }
   }
 
+
   // helper for get ratio between assets in Bancor network
   function getValueViaBancor(
     address _from,
@@ -557,6 +569,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       value = 0;
     }
   }
+
 
   // helper for get value via Balancer
   // step 1 get all tokens
@@ -577,7 +590,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
      // get total pool shares
      uint256 totalShares = IERC20(_from).totalSupply();
      // get user pool share
-     uint256 userShare = IERC20(_from).balanceOf(msg.sender);
+     uint256 userShare = _amount;
      // calculate all tokens from the pool
      for(uint i = 0; i < tokens.length; i++){
        // get current token total amount in pool
@@ -592,6 +605,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       value = 0;
     }
   }
+
 
   // helper for get value between Compound assets and ETH/ERC20
   // NOTE: _from should be COMPOUND cTokens,
@@ -621,6 +635,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     }
   }
 
+
   // helper for get underlying amount by cToken amount
   // NOTE: _from should be Compound token, amount = input * 1e8 (not 1e18)
   function getCompoundUnderlyingRatio(
@@ -645,6 +660,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       return 0;
     }
   }
+
 
   // helper for get ratio between pools in Uniswap network
   // _from - should be uniswap pool address
@@ -677,6 +693,39 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       else{
         return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
       }
+    }catch{
+      return 0;
+    }
+  }
+
+
+  // helper for get ratio between pools in Uniswap network version 2
+  // _from - should be uniswap pool address
+  function getValueForUniswapV2Pools(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+  public
+  view
+  returns (uint256)
+  {
+    // get connectors amount by pool share
+    try poolPortal.getUniswapV2ConnectorsAmountByPoolAmount(
+      _amount,
+      _from
+    ) returns (
+      uint256 tokenAmountOne,
+      uint256 tokenAmountTwo,
+      address tokenAddressOne,
+      address tokenAddressTwo
+      )
+    {
+      // convert connectors amount via DEX aggregator
+      uint256 amountOne = getValueViaDEXsAgregators(tokenAddressOne, _to, tokenAmountOne);
+      uint256 amountTwo = getValueViaDEXsAgregators(tokenAddressTwo, _to, tokenAmountTwo);
+      // return value
+      return amountOne + amountTwo;
     }catch{
       return 0;
     }

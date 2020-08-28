@@ -68,6 +68,19 @@ interface PoolPortalInterface {
   view
   returns(uint256 ethAmount, uint256 ercAmount);
 
+  function getUniswapV2ConnectorsAmountByPoolAmount(
+    uint256 _amount,
+    address _exchange
+  )
+  external
+  view
+  returns(
+    uint256 tokenAmountOne,
+    uint256 tokenAmountTwo,
+    address tokenAddressOne,
+    address tokenAddressTwo
+  );
+
   function getUniswapTokenAmountByETH(address _token, uint256 _amount)
   external
   view
