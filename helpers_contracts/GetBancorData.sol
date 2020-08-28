@@ -164,12 +164,14 @@ contract GetBancorData is Ownable{
   }
 
   // get addresses array of token path
-  function getBancorPathForAssets(ERC20 _from, ERC20 _to) public view returns(address[]){
+  function getBancorPathForAssets(ERC20 _from, ERC20 _to) public view returns(address[] memory){
     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
       getBancorContractAddresByName("BancorNetwork")
     );
 
-    return bancorNetwork.conversionPath(_from, _to);
+    address[] memory path = bancorNetwork.conversionPath(_from, _to);
+
+    return path;
   }
 
   // update bancor registry
