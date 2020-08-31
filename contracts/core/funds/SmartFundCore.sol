@@ -361,7 +361,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev buy pool via pool portal
   *
-  * @param _amount             For Bancor amount it's relay, for Uniswap amount it's ETH, for Bancor v2 can be 0
+  * @param _amount             For Bancor amount it's relay, for Uniswap amount it's ETH, for Bancor and Uniswap v2 can be 0
   * @param _type               type of pool (0 - Bancor, 1 - Uniswap)
   * @param _poolToken          address of relay for Bancor and exchange for Uniswap
   * @param _connectorsAddress  address of pool connectors
@@ -370,19 +370,21 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _additionData       for provide any additional data, if not used just set "0x"
   */
   function buyPool(
-   uint256 _amount,
-   uint _type,
-   address _poolToken,
+   uint256            _amount,
+   uint               _type,
+   address            _poolToken,
    address[] calldata _connectorsAddress,
-   uint256[] calldata _connectorsAmount,
+   uint256[] memory   _connectorsAmount,  // WARNING: this array rewrite from buyPool return (details below)
    bytes32[] calldata _additionalArgs,
-   bytes calldata _additionData
+   bytes calldata     _additionData
   )
   external onlyOwner {
+   // for determine the exact number of received pool
    uint256 poolAmountReceive;
+   // for detect ETH case
+   uint256 etherAmount = 0;
 
    // approve connectors
-   uint256 etherAmount = 0;
    for(uint8 i = 0; i < _connectorsAddress.length; i++){
      if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
        // fund can't buy token which not in traded tokens list
@@ -396,9 +398,15 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      }
    }
 
-   // buy pool via ERC20 and ETH (payable case)
+   // buy pool with ETH (payable case)
    if(etherAmount > 0){
-    (poolAmountReceive) = poolPortal.buyPool.value(etherAmount)(
+     // WARNING: rewrire _connectorsAmount from return
+     // some pools can return some remains for connectors, and for get correct result,
+     // for connectors amount to spend for emit event
+     // poolPortal calculates and return exactly how many tokens were spent (total - remains),
+     // unfortunate due stack too deep issue, we can't declarate new variable
+     // so we rewrire _connectorsAmount
+    (poolAmountReceive, _connectorsAmount) = poolPortal.buyPool.value(etherAmount)(
       _amount,
       _type,
      _poolToken,
@@ -408,9 +416,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      _additionData
      );
    }
-   // buy pool only via ERC20 (non payable case)
+   // buy pool only with ERC20 (non payable case)
    else{
-     (poolAmountReceive) = poolPortal.buyPool(
+     // WARNING: rewrire _connectorsAmount from return
+     (poolAmountReceive, _connectorsAmount) = poolPortal.buyPool(
       _amount,
       _type,
      _poolToken,
@@ -420,13 +429,10 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      _additionData
      );
    }
-
    // make sure fund receive pool token
    require(poolAmountReceive > 0, "not received pool");
-
    // Add pool as ERC20 for withdraw
    _addToken(_poolToken);
-
    // emit event
    emit BuyPool(
      _poolToken,
@@ -434,8 +440,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      _connectorsAddress,
      _connectorsAmount);
   }
-
-
 
 
   /**

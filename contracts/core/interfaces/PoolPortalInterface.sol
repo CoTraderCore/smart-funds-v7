@@ -13,7 +13,7 @@ interface PoolPortalInterface {
   )
   external
   payable
-  returns(uint256 poolAmountReceive);
+  returns(uint256 poolAmountReceive, uint256[] memory connectorsSpended);
 
   function sellPool
   (
