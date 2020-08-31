@@ -157,7 +157,7 @@ contract PoolPortal is Ownable{
   )
   external
   payable
-  returns(uint256 poolAmountReceive)
+  returns(uint256 poolAmountReceive, uint256[] memory connectorsSpended)
   {
     // Buy Bancor pool
     if(_type == uint(PortalType.Bancor)){
@@ -195,6 +195,16 @@ contract PoolPortal is Ownable{
       revert("Unknown portal type");
     }
 
+    // transfer pool token to fund
+    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
+
+    // transfer connectors remains to fund
+    // and calculate how much connectors was spended (current - remains)
+    connectorsSpended = _transferPoolConnectorsRemains(
+      _connectorsAddress,
+      _connectorsAmount);
+
+    // trigger event
     emit BuyPool(address(_poolToken), poolAmountReceive, msg.sender);
   }
 
@@ -263,12 +273,8 @@ contract PoolPortal is Ownable{
 
     // get recieved pool amount
     poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
-    // addition check
-    require(poolAmountReceive > 0, "Recieved amount can not be zerro");
-    // transfer connectors remains
-    _transferPoolConnectorsRemains(_connectorsAddress);
-    // transfer pool token back to smart fund
-    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
+    // make sure we recieved pool
+    require(poolAmountReceive > 0, "ERR BNT pool received 0");
     // set token type for this asset
     setTokenType(_poolToken, "BANCOR_ASSET");
   }
@@ -392,11 +398,7 @@ contract PoolPortal is Ownable{
     // get pool amount
     poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // check if we recieved pool token
-    require(poolAmountReceive > 0, "UNI pool received amount can not be zerro");
-    // transfer pool token back to smart fund
-    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
-    // transfer ERC20 remains if for a some reason pool not spend all approved tokens
-    _transferPoolConnectorsRemains(_connectorsAddress);
+    require(poolAmountReceive > 0, "ERR UNI pool received 0");
   }
 
 
@@ -449,30 +451,29 @@ contract PoolPortal is Ownable{
     (uint256 amountAMinReturn,
       uint256 amountBMinReturn) = abi.decode(_additionalData, (uint256, uint256));
 
-    // Buy pool
+    // Buy UNI V2 pool
     // ETH connector case
     if(_connectorsAddress[0] == address(ETH_TOKEN_ADDRESS)){
-      // buy Uni pool with ETH
       uniswapV2Router.addLiquidityETH.value(_connectorsAmount[0])(
-       _connectorsAddress[1], // token,
-       _connectorsAmount[1],  // amountTokenDesired,
-       amountBMinReturn,      // amountTokenMin,
-       amountAMinReturn,      // amountETHMin,
-       address(this),         // to,
-       deadline               // deadline
+       _connectorsAddress[1],
+       _connectorsAmount[1],
+       amountBMinReturn,
+       amountAMinReturn,
+       address(this),
+       deadline
       );
     }
     // ERC20 connector case
     else{
       uniswapV2Router.addLiquidity(
-        _connectorsAddress[0], // tokenA,
-        _connectorsAddress[1], // tokenB,
-        _connectorsAmount[0],  // amountADesired,
-        _connectorsAmount[1],  // amountBDesired,
-        amountAMinReturn,      // amountAMin,
-        amountBMinReturn,      // amountBMin,
-        address(this),         // to,
-        deadline               // deadline
+        _connectorsAddress[0],
+        _connectorsAddress[1],
+        _connectorsAmount[0],
+        _connectorsAmount[1],
+        amountAMinReturn,
+        amountBMinReturn,
+        address(this),
+        deadline
       );
     }
     // Set token type
@@ -502,11 +503,7 @@ contract PoolPortal is Ownable{
     // get balance
     poolAmountReceive = IERC20(_poolToken).balanceOf(address(this));
     // check
-    require(poolAmountReceive > 0, "Should receive Balancer pool");
-    // transfer pool to fund
-    IERC20(_poolToken).transfer(msg.sender, poolAmountReceive);
-    // transfer remains
-    _transferPoolConnectorsRemains(_connectorsAddress);
+    require(poolAmountReceive > 0, "ERR BALANCER pool received 0");
     // update type
     setTokenType(_poolToken, "BALANCER_POOL");
   }
@@ -541,19 +538,25 @@ contract PoolPortal is Ownable{
 
   /**
   * @dev helper for buying BNT or UNI pools, transfer ERC20 tokens and ETH remains after bying pool,
-  * if the balance is positive on this contract
+  * if the balance is positive on this contract, and calculate how many assets was spent.
   */
-  function _transferPoolConnectorsRemains(address[] memory connectorsAddress) private {
+  function _transferPoolConnectorsRemains(
+    address[] memory connectorsAddress,
+    uint256[] memory currentConnectorsAmount
+  )
+    private
+    returns (uint256[] memory connectorsSpended)
+  {
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
-    for(uint8 j = 0; j < connectorsAddress.length; j++){
+    for(uint8 i = 0; i < connectorsAddress.length; i++){
       // ERC20 case
-      if(connectorsAddress[j] != address(ETH_TOKEN_ADDRESS)){
+      if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
         // check balance
-        remains = IERC20(connectorsAddress[j]).balanceOf(address(this));
+        remains = IERC20(connectorsAddress[i]).balanceOf(address(this));
         // transfer ERC20
         if(remains > 0)
-           IERC20(connectorsAddress[j]).transfer(msg.sender, remains);
+           IERC20(connectorsAddress[i]).transfer(msg.sender, remains);
       }
       // ETH case
       else {
@@ -562,6 +565,8 @@ contract PoolPortal is Ownable{
         if(remains > 0)
            (msg.sender).transfer(remains);
       }
+      // calculate how many assets was spent
+      connectorsSpended[i] = currentConnectorsAmount[i].sub(remains);
     }
   }
 
@@ -1088,7 +1093,7 @@ contract PoolPortal is Ownable{
   }
 
   // owner of portal can change getBancorData helper, for case if Bancor do some major updates
-  function senNewGetBancorData(address _bancorData) public onlyOwner {
+  function setNewGetBancorData(address _bancorData) public onlyOwner {
     bancorData = IGetBancorData(_bancorData);
   }
 
