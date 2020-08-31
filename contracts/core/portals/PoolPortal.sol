@@ -1023,14 +1023,14 @@ contract PoolPortal is Ownable{
       address tokenAddressTwo
     )
   {
-    tokenAddressOne = IUniswapV2Pair.token0();
-    tokenAddressTwo = IUniswapV2Pair.token1();
+    tokenAddressOne = IUniswapV2Pair(_exchange).token0();
+    tokenAddressTwo = IUniswapV2Pair(_exchange).token1();
     // total_liquidity exchange.totalSupply
     uint256 totalLiquidity = IERC20(_exchange).totalSupply();
     // ethAmount = amount * exchane.eth.balance / total_liquidity
-    tokenOne = _amount.mul(token.balanceOf(tokenAddressOne)).div(totalLiquidity);
+    tokenAmountOne = _amount.mul(IERC20(tokenAddressOne).balanceOf(tokenAddressOne)).div(totalLiquidity);
     // ercAmount = amount * token.balanceOf(exchane) / total_liquidity
-    tokenTwo = _amount.mul(token.balanceOf(tokenAddressTwo)).div(totalLiquidity);
+    tokenAmountTwo = _amount.mul(IERC20(tokenAddressTwo).balanceOf(tokenAddressTwo)).div(totalLiquidity);
   }
 
 
