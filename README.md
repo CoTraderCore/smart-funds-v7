@@ -29,7 +29,7 @@ not only Uniswap and Bancor.
 5) Remove Bancor ETH wrapper from portals for reduce Bancor ETH transactions gas cost.
 
 6) Recieve data like Bancor path, ratio ect via proxy getBancorData contract,
-for case if Bancor will update some method.
+for case if Bancor will update some method name.
 
 7) Made upgradable addresses of getBancorData contract in Pool and Exchnage portals.
 
@@ -46,19 +46,18 @@ for reduce gas cost.
 
 13) Remove Convert portal.
 
-14) Add Uniswap v2 pools.
+14) Add New Bancor pools type 1 and 2.
+
+15) Add Uniswap v2 pools.
+
+16) Add Balancer pools.
 ```
 
-# Todo
-```
-1) Add Balancer pools
-2) Add Curve pools
-```
 
 # Possible issue
 
 ```
-Test returns pool data from pool portal in Ropsten
+Test returns events pool data from pool portal in Rinkeby for verifier script
 ```
 
 
