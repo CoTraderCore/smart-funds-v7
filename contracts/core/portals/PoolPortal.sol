@@ -1016,7 +1016,7 @@ contract PoolPortal is Ownable{
   * @dev helper for get amounts for both Uniswap connectors for input amount of pool
   * for Uniswap version 2
   *
-  * @param _amount         relay amount
+  * @param _amount         pool amount
   * @param _exchange       address of uniswap exchane
   */
   function getUniswapV2ConnectorsAmountByPoolAmount(
@@ -1040,6 +1040,44 @@ contract PoolPortal is Ownable{
     tokenAmountOne = _amount.mul(IERC20(tokenAddressOne).balanceOf(tokenAddressOne)).div(totalLiquidity);
     // ercAmount = amount * token.balanceOf(exchane) / total_liquidity
     tokenAmountTwo = _amount.mul(IERC20(tokenAddressTwo).balanceOf(tokenAddressTwo)).div(totalLiquidity);
+  }
+
+
+  /**
+  * @dev helper for get amounts all Balancer connectors for input amount of pool
+  * for Balancer
+  *
+  * step 1 get all tokens
+  * step 2 get user amount from each token by a user pool share
+  *
+  * @param _amount         pool amount
+  * @param _pool           address of balancer pool
+  */
+  function getBalancerConnectorsAmountByPoolAmount(
+    uint256 _amount,
+    address _pool
+  )
+    public
+    view
+    returns(
+      address[] memory tokens,
+      uint256[] memory tokensAmount
+    )
+  {
+    IBalancerPool balancerPool = IBalancerPool(_pool);
+    // get all pool tokens
+    tokens = balancerPool.getCurrentTokens();
+    // set tokens amount length
+    tokensAmount = new uint256[](tokens.length);
+    // get total pool shares
+    uint256 totalShares = IERC20(_pool).totalSupply();
+    // calculate all tokens from the pool
+    for(uint i = 0; i < tokens.length; i++){
+      // get a certain total token amount in pool
+      uint256 totalTokenAmount = IERC20(tokens[i]).balanceOf(_pool);
+      // get a certain pool share (_amount) from a certain token amount in pool
+      tokensAmount[i] = totalTokenAmount.div(totalShares).mul(_amount);
+    }
   }
 
 

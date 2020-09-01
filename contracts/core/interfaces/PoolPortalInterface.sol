@@ -81,6 +81,17 @@ interface PoolPortalInterface {
     address tokenAddressTwo
   );
 
+  function getBalancerConnectorsAmountByPoolAmount(
+    uint256 _amount,
+    address _pool
+  )
+  external
+  view
+  returns(
+    address[] memory tokens,
+    uint256[] memory tokensAmount
+  );
+
   function getUniswapTokenAmountByETH(address _token, uint256 _amount)
   external
   view

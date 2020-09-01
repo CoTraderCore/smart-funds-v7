@@ -19,8 +19,6 @@ import "../../oneInch/IOneSplitAudit.sol";
 import "../../compound/CEther.sol";
 import "../../compound/CToken.sol";
 
-import "../../balancer/IBalancerPool.sol";
-
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PermittedStablesInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
@@ -572,9 +570,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
 
   // helper for get value via Balancer
-  // step 1 get all tokens
-  // step 2 get user amount from each token by a share
-  // step 3 convert to and sum
   function getValueForBalancerPool(
     address _from,
     address _to,
@@ -584,21 +579,16 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256 value)
   {
-    IBalancerPool balancerPool = IBalancerPool(_from);
     // get value for each pool share
-    try balancerPool.getCurrentTokens() returns(address[] memory tokens){
-     // get total pool shares
-     uint256 totalShares = IERC20(_from).totalSupply();
-     // get user pool share
-     uint256 userShare = _amount;
-     // calculate all tokens from the pool
+    try poolPortal.getBalancerConnectorsAmountByPoolAmount(_amount, _from)
+    returns(
+      address[] memory tokens,
+      uint256[] memory tokensAmount
+    )
+    {
+     // convert and sum value via DEX aggregator
      for(uint i = 0; i < tokens.length; i++){
-       // get current token total amount in pool
-       uint256 totalTokenAmount = IERC20(tokens[i]).balanceOf(_from);
-       // get user share from this token amount in pool
-       uint256 userTokenAmount = totalTokenAmount.div(totalShares).mul(userShare);
-       // convert and sum value via DEX aggregator
-       value += getValueViaDEXsAgregators(tokens[i], _to, userTokenAmount);
+       value += getValueViaDEXsAgregators(tokens[i], _to, tokensAmount[i]);
      }
     }
     catch{
