@@ -1037,9 +1037,9 @@ contract PoolPortal is Ownable{
     // total_liquidity exchange.totalSupply
     uint256 totalLiquidity = IERC20(_exchange).totalSupply();
     // ethAmount = amount * exchane.eth.balance / total_liquidity
-    tokenAmountOne = _amount.mul(IERC20(tokenAddressOne).balanceOf(tokenAddressOne)).div(totalLiquidity);
+    tokenAmountOne = _amount.mul(IERC20(tokenAddressOne).balanceOf(_exchange)).div(totalLiquidity);
     // ercAmount = amount * token.balanceOf(exchane) / total_liquidity
-    tokenAmountTwo = _amount.mul(IERC20(tokenAddressTwo).balanceOf(tokenAddressTwo)).div(totalLiquidity);
+    tokenAmountTwo = _amount.mul(IERC20(tokenAddressTwo).balanceOf(_exchange)).div(totalLiquidity);
   }
 
 
