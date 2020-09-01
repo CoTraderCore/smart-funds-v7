@@ -1076,7 +1076,7 @@ contract PoolPortal is Ownable{
       // get a certain total token amount in pool
       uint256 totalTokenAmount = IERC20(tokens[i]).balanceOf(_pool);
       // get a certain pool share (_amount) from a certain token amount in pool
-      tokensAmount[i] = totalTokenAmount.div(totalShares).mul(_amount);
+      tokensAmount[i] = totalTokenAmount.mul(_amount).div(totalShares);
     }
   }
 
