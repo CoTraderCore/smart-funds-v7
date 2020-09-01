@@ -547,6 +547,9 @@ contract PoolPortal is Ownable{
     private
     returns (uint256[] memory connectorsSpended)
   {
+    // set length for connectorsSpended
+    connectorsSpended = new uint256[](currentConnectorsAmount.length);
+
     // transfer connectors back to fund if some amount remains
     uint256 remains = 0;
     for(uint8 i = 0; i < connectorsAddress.length; i++){
@@ -565,6 +568,7 @@ contract PoolPortal is Ownable{
         if(remains > 0)
            (msg.sender).transfer(remains);
       }
+
       // calculate how many assets was spent
       connectorsSpended[i] = currentConnectorsAmount[i].sub(remains);
     }
