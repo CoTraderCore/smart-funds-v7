@@ -617,8 +617,15 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       address underlyingAddress = (_from == address(cEther))
       ? address(ETH_TOKEN_ADDRESS)
       : CToken(_from).underlying();
-      // get rate for underlying address via DEX aggregators
-      return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
+
+      // return
+      if(underlyingAddress == _to){
+        // if from and to the same return just underlying
+        return underlyingAmount;
+      }else{
+        // get rate for underlying address via DEX aggregators
+        return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
+      }
     }
     else{
       return 0;
