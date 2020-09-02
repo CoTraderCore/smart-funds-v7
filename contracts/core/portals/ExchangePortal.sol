@@ -515,6 +515,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     uint256 _amount
   )
   public view returns (uint256){
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
+    // try get value via 1inch
     if(_amount > 0){
       // try get value from 1inch aggregator
       return getValueViaOneInch(_from, _to, _amount);
@@ -535,6 +540,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256 value)
   {
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
+    // try get rate
     try oneInch.getExpectedReturn(
        IERC20(_from),
        IERC20(_to),
@@ -561,10 +571,19 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     view
     returns (uint256 value)
   {
-    try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
-      value = result;
-    }catch{
-      value = 0;
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
+    // try get rate
+    if(_amount > 0){
+      try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
+        value = result;
+      }catch{
+        value = 0;
+      }
+    }else{
+      return 0;
     }
   }
 
@@ -618,14 +637,8 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       ? address(ETH_TOKEN_ADDRESS)
       : CToken(_from).underlying();
 
-      // return
-      if(underlyingAddress == _to){
-        // if from and to the same return just underlying
-        return underlyingAmount;
-      }else{
-        // get rate for underlying address via DEX aggregators
-        return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
-      }
+      // get rate for underlying address via DEX aggregators
+      return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
     }
     else{
       return 0;
