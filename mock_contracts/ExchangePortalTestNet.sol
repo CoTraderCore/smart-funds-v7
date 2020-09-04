@@ -483,6 +483,10 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     uint256 _amount
   )
   public view returns (uint256){
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
     // try get value from 1inch aggregator
     uint256 valueFromOneInch = getValueViaOneInch(_from, _to, _amount);
     if(valueFromOneInch > 0){
@@ -545,6 +549,11 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     view
     returns (uint256 value)
   {
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
+    // try get value 
     try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
       value = result;
     }catch{
