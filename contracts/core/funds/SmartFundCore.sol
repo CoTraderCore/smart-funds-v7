@@ -52,7 +52,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   string public name;
 
   // The maximum amount of tokens that can be traded via the smart fund
-  uint256 public MAX_TOKENS = 50;
+  uint256 public MAX_TOKENS = 20;
 
   // Percentages are rounded to 3 decimal places
   uint256 public TOTAL_PERCENTAGE = 10000;
@@ -505,7 +505,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 tokenCount = tokenAddresses.length;
 
     // we can't hold more than MAX_TOKENS tokens
-    require(tokenCount <= MAX_TOKENS);
+    require(tokenCount <= MAX_TOKENS, "MAX_TOKENS limit");
   }
 
   /**
