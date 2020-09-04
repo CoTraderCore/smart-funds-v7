@@ -48,7 +48,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // CoTrader additional
   PoolPortalInterface public poolPortal;
-  PermittedStablesInterface public permitedStable;
 
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
@@ -81,7 +80,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @dev contructor
   *
   * @param _bancorData             address of GetBancorData helper
-  * @param _permitedStable         address of permitedStable contract
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
   * @param _cEther                 address of the COMPOUND cEther
@@ -90,7 +88,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   constructor(
     address _bancorData,
-    address _permitedStable,
     address _poolPortal,
     address _oneInch,
     address _cEther,
@@ -100,7 +97,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     public
   {
     bancorData = IGetBancorData(_bancorData);
-    permitedStable = PermittedStablesInterface(_permitedStable);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
     cEther = CEther(_cEther);
@@ -818,7 +814,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     oneInch = IOneSplitAudit(_oneInch);
   }
 
-  // owner can set new pool portal 
+  // owner can set new pool portal
   function setNewPoolPortal(address _poolPortal) external onlyOwner {
     poolPortal = PoolPortalInterface(_poolPortal)
   }
