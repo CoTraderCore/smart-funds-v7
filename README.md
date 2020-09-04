@@ -51,6 +51,8 @@ for reduce gas cost.
 15) Add Uniswap v2 pools.
 
 16) Add Balancer pools.
+
+17) Fix bug in ExchangePortal.getValue for CETH in ETH fund (from == to return input)
 ```
 
 
