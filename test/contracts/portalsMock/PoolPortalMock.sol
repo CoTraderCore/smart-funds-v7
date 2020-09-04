@@ -75,17 +75,19 @@ contract PoolPortalMock {
   )
   external
   payable
-  returns(uint256 poolReceivedAmount)
+  returns(uint256 poolReceivedAmount, uint256[] memory connectorsSpended)
   {
 
     if(_type == uint(PortalType.Bancor)){
       buyBancorPool(_poolToken, _amount);
       poolReceivedAmount = _amount;
+      connectorsSpended = _connectorsAmount;
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
       buyUniswapPool(address(_poolToken), _amount);
       poolReceivedAmount = _amount;
+      connectorsSpended = _connectorsAmount;
     }
     else{
       // unknown portal type
