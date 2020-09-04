@@ -818,6 +818,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     oneInch = IOneSplitAudit(_oneInch);
   }
 
+  // owner can set new pool portal 
+  function setNewPoolPortal(address _poolPortal) external onlyOwner {
+    poolPortal = PoolPortalInterface(_poolPortal)
+  }
+
   // Exchange portal can mark each token
   function setTokenType(address _token, string memory _type) private {
     // no need add type, if token alredy registred
