@@ -1119,6 +1119,29 @@ contract PoolPortal is Ownable{
 
 
   /**
+  * @dev helper for get Bancor ERC20 connectors addresses for old Bancor version
+  *
+  * @param _relay       address of bancor relay
+  */
+  function getBancorConnectorsByRelay(address _relay)
+    public
+    view
+    returns(
+    IERC20[] memory connectors
+    )
+  {
+    address converterAddress = getBacorConverterAddressByRelay(_relay, 0);
+    BancorConverterInterface converter = BancorConverterInterface(converterAddress);
+    uint256 connectorTokenCount = converter.connectorTokenCount();
+    connectors = new IERC20[](connectorTokenCount);
+
+    for(uint8 i; i < connectorTokenCount; i++){
+      connectors[i] = converter.connectorTokens(i);
+    }
+  }
+
+
+  /**
   * @dev helper for get ratio between assets in bancor newtork
   *
   * @param _from      token or relay address
