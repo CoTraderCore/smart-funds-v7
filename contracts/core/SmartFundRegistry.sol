@@ -58,7 +58,7 @@ contract SmartFundRegistry is Ownable {
   * @param _stableCoinAddress            Address of the stable coin
   * @param _COTCoinAddress               Address of Cotrader coin
   * @param _smartFundETHFactory          Address of smartFund ETH factory
-  * @param _smartFundERC20Factory          Address of smartFund USD factory
+  * @param _smartFundERC20Factory        Address of smartFund USD factory
   * @param _cEther                       Address of Compound ETH wrapper
   */
   constructor(
@@ -166,7 +166,7 @@ contract SmartFundRegistry is Ownable {
   }
 
   /**
-  * @dev Sets a new default ExchangePortal address
+  * @dev Owner can set a new default ExchangePortal address
   *
   * @param _newExchangePortalAddress    Address of the new exchange portal to be set
   */
@@ -178,7 +178,7 @@ contract SmartFundRegistry is Ownable {
   }
 
   /**
-  * @dev Sets a new default Portal Portal address
+  * @dev Owner can set a new default Portal Portal address
   *
   * @param _poolPortalAddress    Address of the new pool portal to be set
   */
@@ -190,7 +190,7 @@ contract SmartFundRegistry is Ownable {
   }
 
   /**
-  * @dev Sets maximum success fee for all newly created SmartFunds
+  * @dev Owner can set maximum success fee for all newly created SmartFunds
   *
   * @param _maximumSuccessFee    New maximum success fee
   */
@@ -199,7 +199,7 @@ contract SmartFundRegistry is Ownable {
   }
 
   /**
-  * @dev Sets new stableCoinAddress
+  * @dev Owner can set new stableCoinAddress
   *
   * @param _stableCoinAddress    New stable address
   */
@@ -207,6 +207,27 @@ contract SmartFundRegistry is Ownable {
     require(permittedStables.permittedAddresses(_stableCoinAddress));
     stableCoinAddress = _stableCoinAddress;
   }
+
+
+  /**
+  * @dev Owner can set new smartFundETHFactory
+  *
+  * @param _smartFundETHFactory    address of ETH factory contract
+  */
+  function setNewSmartFundETHFactory(address _smartFundETHFactory) external onlyOwner {
+    smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
+  }
+
+
+  /**
+  * @dev Owner can set new smartFundERC20Factory
+  *
+  * @param _smartFundERC20Factory    address of ERC20 factory contract
+  */
+  function setNewSmartFundERC20Factory(address _smartFundERC20Factory) external onlyOwner {
+    smartFundERC20Factory = SmartFundERC20FactoryInterface(_smartFundERC20Factory);
+  }
+
 
   /**
   * @dev Allows platform to withdraw tokens received as part of the platform fee
