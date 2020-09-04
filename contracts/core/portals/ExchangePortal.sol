@@ -816,7 +816,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // owner can set new pool portal
   function setNewPoolPortal(address _poolPortal) external onlyOwner {
-    poolPortal = PoolPortalInterface(_poolPortal)
+    poolPortal = PoolPortalInterface(_poolPortal);
   }
 
   // Exchange portal can mark each token
