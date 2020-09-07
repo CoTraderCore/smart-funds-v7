@@ -523,8 +523,6 @@ contract PoolPortal is Ownable{
     // approve from portal to spender
     for(uint8 i = 0; i < connectorsAddress.length; i++){
       if(connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
-        // reset approve (some ERC20 not allow do new approve if already approved)
-        IERC20(connectorsAddress[i]).approve(spender, 0);
         // transfer from msg.sender and approve to
         _transferFromSenderAndApproveTo(
           IERC20(connectorsAddress[i]),
@@ -1172,7 +1170,9 @@ contract PoolPortal is Ownable{
   */
   function _transferFromSenderAndApproveTo(IERC20 _source, uint256 _sourceAmount, address _to) private {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
-
+    // reset approve (some ERC20 not allow do new approve if already approved)
+    _source.approve(_to, _sourceAmount);
+    // approve 
     _source.approve(_to, _sourceAmount);
   }
 

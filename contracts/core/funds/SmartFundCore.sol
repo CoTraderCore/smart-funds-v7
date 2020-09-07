@@ -246,7 +246,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _percentageWithdraw    The percentage of the users shares to withdraw.
   */
   function withdraw(uint256 _percentageWithdraw) external {
-    require(totalShares != 0);
+    require(totalShares != 0, "Empty shares");
+    require(_percentageWithdraw <= TOTAL_PERCENTAGE, "Not correct percent");
 
     uint256 percentageWithdraw = (_percentageWithdraw == 0) ? TOTAL_PERCENTAGE : _percentageWithdraw;
 

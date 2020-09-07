@@ -319,7 +319,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function _transferFromSenderAndApproveTo(IERC20 _source, uint256 _sourceAmount, address _to) private {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
-
+    // reset previos approve because some tokens require allowance 0
+    _source.approve(_to, 0);
+    // approve 
     _source.approve(_to, _sourceAmount);
   }
 
