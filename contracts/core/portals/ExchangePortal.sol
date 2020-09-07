@@ -829,7 +829,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   // owner of portal can change getBancorData helper, for case if Bancor do some major updates
-  function senNewGetBancorData(address _bancorData) public onlyOwner {
+  function setNewGetBancorData(address _bancorData) public onlyOwner {
     bancorData = IGetBancorData(_bancorData);
   }
 

@@ -759,7 +759,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   }
 
   /**
-  * @dev Allows the fund manager to connect to a new [poolPortal
+  * @dev Allows the fund manager to connect to a new poolPortal
   *
   * @param _newPoolPortal   The address of the new pool portal to use
   */
