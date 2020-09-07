@@ -293,7 +293,9 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   */
   function _transferFromSenderAndApproveTo(IERC20 _source, uint256 _sourceAmount, address _to) private {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
-
+    // reset previos approve because some tokens require allowance 0
+    _source.approve(_to, 0);
+    // approve
     _source.approve(_to, _sourceAmount);
   }
 
@@ -553,7 +555,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     if(_from == _to)
        return _amount;
 
-    // try get value 
+    // try get value
     try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
       value = result;
     }catch{

@@ -1170,9 +1170,9 @@ contract PoolPortal is Ownable{
   */
   function _transferFromSenderAndApproveTo(IERC20 _source, uint256 _sourceAmount, address _to) private {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
-    // reset approve (some ERC20 not allow do new approve if already approved)
+    // reset priveos approve (some ERC20 not allow do new approve if already approved)
     _source.approve(_to, _sourceAmount);
-    // approve 
+    // approve
     _source.approve(_to, _sourceAmount);
   }
 
