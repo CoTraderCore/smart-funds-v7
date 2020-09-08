@@ -49,6 +49,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // CoTrader additional
   PoolPortalInterface public poolPortal;
 
+  // 1 inch flags
+  // By default support Bancor + Uniswap + Uniswap v2
+  uint256 oneInchFlags = 570425349;
+
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
   // because order has dependency in other contracts like ConvertPortal
@@ -321,7 +325,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
     // reset previos approve because some tokens require allowance 0
     _source.approve(_to, 0);
-    // approve 
+    // approve
     _source.approve(_to, _sourceAmount);
   }
 
@@ -548,7 +552,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        IERC20(_to),
        _amount,
        10,
-       0)
+       oneInchFlags)
       returns(uint256 returnAmount, uint256[] memory distribution)
      {
        value = returnAmount;
@@ -821,6 +825,17 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     poolPortal = PoolPortalInterface(_poolPortal);
   }
 
+  // owner of portal can update 1 incg DEXs sources
+  function setOneInchFlags(uint256 _oneInchFlags) external onlyOwner {
+    oneInchFlags = _oneInchFlags;
+  }
+
+  // owner of portal can change getBancorData helper, for case if Bancor do some major updates
+  function setNewGetBancorData(address _bancorData) public onlyOwner {
+    bancorData = IGetBancorData(_bancorData);
+  }
+
+
   // Exchange portal can mark each token
   function setTokenType(address _token, string memory _type) private {
     // no need add type, if token alredy registred
@@ -828,11 +843,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       return;
 
     tokensTypes.addNewTokenType(_token,  _type);
-  }
-
-  // owner of portal can change getBancorData helper, for case if Bancor do some major updates
-  function setNewGetBancorData(address _bancorData) public onlyOwner {
-    bancorData = IGetBancorData(_bancorData);
   }
 
   // fallback payable function to receive ether from other contract addresses
