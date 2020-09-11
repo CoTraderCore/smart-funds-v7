@@ -53,6 +53,8 @@ for reduce gas cost.
 16) Add Balancer pools.
 
 17) Fix bug in ExchangePortal.getValue for CETH in ETH fund (from == to return input)
+
+18) Fix protect from sending 0 assets in withdraw 
 ```
 
 
