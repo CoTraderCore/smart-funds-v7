@@ -208,7 +208,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       await atackContract.deposit(toWei(String(1)))
       assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(11)))
 
-      // Atack
+      // Atack should be rejected
       await atackContract.startAtack({ from: userTwo }).should.be.rejectedWith(EVMRevert)
       assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(11)))
     })
@@ -225,7 +225,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       // check manager address
       assert.equal(await smartFundETH.owner(), userOne)
 
-      // Deposit as investir from user 2
+      // Deposit as investor from user 2
       await smartFundETH.deposit({ from: userTwo, value: toWei(String(1)) })
       assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(1)))
 
@@ -284,8 +284,11 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
 
       // Atack contract now manager
       await smartFundETH.transferOwnership(atackContract.address)
+
+      assert.equal(await smartFundETH.owner(), atackContract.address)
+
       // Atack
-      await atackContract.startAtack({ from: userOne }).should.be.rejectedWith(EVMRevert)
+      await atackContract.startAtack({ from: userOne })
 
       // balance not changed
       assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(2)))

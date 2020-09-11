@@ -227,7 +227,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       for(uint8 j = 0; j < _withdrawAddress.length; j++){
         // calculate withdraw ERC20 share
         uint256 payoutAmount = fundAmount.mul(_mul[j]).div(_div[j]);
-        token.transfer(_withdrawAddress[j], payoutAmount);
+        if(payoutAmount > 0)
+          token.transfer(_withdrawAddress[j], payoutAmount);
       }
     }
     // Transfer ETH to _withdrawAddress
@@ -235,7 +236,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     for(uint8 k = 0; k < _withdrawAddress.length; k++){
       // calculate withdraw ETH share
       uint256 etherPayoutAmount = (etherBalance).mul(_mul[k]).div(_div[k]);
-      payable(_withdrawAddress[k]).transfer(etherPayoutAmount);
+      if(etherPayoutAmount > 0)
+        payable(_withdrawAddress[k]).transfer(etherPayoutAmount);
     }
   }
 
