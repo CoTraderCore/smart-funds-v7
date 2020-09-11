@@ -284,7 +284,6 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
 
       // Atack contract now manager
       await smartFundETH.transferOwnership(atackContract.address)
-
       assert.equal(await smartFundETH.owner(), atackContract.address)
 
       // Atack
