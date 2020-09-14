@@ -35,7 +35,7 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _permittedStables             Address of permittedStables contract
   * @param _poolPortalAddress            Address of initial pool portal
   * @param _coinAddress                  Address of core ERC20 coin
-  * @param _cEther                       Address of the cEther
+
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
   constructor(
@@ -49,8 +49,9 @@ contract SmartFundERC20 is SmartFundCore {
     address _permittedPoolsAddress,
     address _permittedStables,
     address _poolPortalAddress,
+    address _defiPortal,
+    address _permittedDefiPortalAddress,
     address _coinAddress,
-    address _cEther,
     bool    _isRequireTradeVerification
   )
   SmartFundCore(
@@ -63,7 +64,8 @@ contract SmartFundERC20 is SmartFundCore {
     _permittedExchangesAddress,
     _permittedPoolsAddress,
     _poolPortalAddress,
-    _cEther,
+    _defiPortal,
+    _permittedDefiPortalAddress,
     _coinAddress,
     _isRequireTradeVerification
   )

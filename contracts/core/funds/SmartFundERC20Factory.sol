@@ -19,10 +19,11 @@ contract SmartFundERC20Factory {
     address _permittedPools,
     address _permittedStables,
     address _poolPortalAddress,
+    address _defiPortal,
+    address _permittedDefiPortalAddress,
     address _stableCoinAddress,
-    address _cEther,
     bool    _isRequireTradeVerification
-    )
+  )
   public
   returns(address)
   {
@@ -37,8 +38,9 @@ contract SmartFundERC20Factory {
       _permittedPools,
       _permittedStables,
       _poolPortalAddress,
+      _defiPortal,
+      _permittedDefiPortalAddress,
       _stableCoinAddress,
-      _cEther,
       _isRequireTradeVerification
     );
 

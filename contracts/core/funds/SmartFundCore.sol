@@ -19,6 +19,7 @@ import "../interfaces/PoolPortalInterface.sol";
 import "../interfaces/PermittedExchangesInterface.sol";
 import "../interfaces/PermittedPoolsInterface.sol";
 import "../interfaces/DefiPortalInterface.sol";
+import "../interfaces/PermittedDefiInterface.sol";
 
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -776,7 +777,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   /**
   * @dev Allows the fund manager to connect to a new permitted defi portal
   *
-  * @param_newDefiPortalAddress    The address of the new permitted defi portal to use
+  * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
   */
   function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
     // Require that the new defi portal is permitted by permittedExchanges
