@@ -50,6 +50,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // The Smart Contract which stores the addresses of all the authorized Pools Portals
   PermittedPoolsInterface public permittedPools;
 
+  // The Smart Contract which stores the addresses of all the authorized Defi Portals
+  PermittedDefiInterface public permittedDefi;
+
   // portals recognizes ETH by this address
   IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
 
@@ -184,6 +187,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     permittedPools = PermittedPoolsInterface(_permittedPoolsAddress);
     poolPortal = PoolPortalInterface(_poolPortalAddress);
     defiPortal = DefiPortalInterface(_defiPortal);
+    permittedDefi = PermittedDefiInterface(_permittedDefiPortalAddress);
 
     coreFundAsset = _coreFundAsset;
     isRequireTradeVerification = _isRequireTradeVerification;
@@ -746,9 +750,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   }
 
   /**
-  * @dev Allows the fund manager to connect to a new poolPortal
+  * @dev Allows the fund manager to connect to a new permitted poolPortal
   *
-  * @param _newPoolPortal   The address of the new pool portal to use
+  * @param _newPoolPortal   The address of the new permitted pool portal to use
   */
   function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
     // Require that the new pool portal is permitted by permittedPools
@@ -758,15 +762,27 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   }
 
   /**
-  * @dev Allows the fund manager to connect to a new exchange portal
+  * @dev Allows the fund manager to connect to a new permitted exchange portal
   *
-  * @param _newExchangePortalAddress    The address of the new exchange portal to use
+  * @param _newExchangePortalAddress    The address of the new permitted exchange portal to use
   */
   function setNewExchangePortal(address _newExchangePortalAddress) public onlyOwner {
     // Require that the new exchange portal is permitted by permittedExchanges
     require(permittedExchanges.permittedAddresses(_newExchangePortalAddress));
 
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
+  }
+
+  /**
+  * @dev Allows the fund manager to connect to a new permitted defi portal
+  *
+  * @param_newDefiPortalAddress    The address of the new permitted defi portal to use
+  */
+  function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
+    // Require that the new defi portal is permitted by permittedExchanges
+    require(permittedDefi.permittedAddresses(_newDefiPortalAddress));
+
+    defiPortal = DefiPortalInterface(_newDefiPortalAddress);
   }
 
   /**
