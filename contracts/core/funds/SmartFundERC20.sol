@@ -77,8 +77,7 @@ contract SmartFundERC20 is SmartFundCore {
     // Push coin in tokens list
     _addToken(_coinAddress);
     // Check if this is stable coin based fund
-    if(permittedStables.permittedAddresses(_coinAddress))
-      isStableCoinBasedFund = true;
+    isStableCoinBasedFund = permittedStables.permittedAddresses(_coinAddress);
   }
 
   /**

@@ -6,8 +6,12 @@ import "./interfaces/PermittedExchangesInterface.sol";
 import "./interfaces/PermittedPoolsInterface.sol";
 import "./interfaces/PermittedStablesInterface.sol";
 import "./interfaces/PermittedConvertsInterface.sol";
+import "./interfaces/PermittedDefiInterface.sol";
+
 import "../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+
+
 /*
 * The SmartFundRegistry is used to manage the creation and permissions of SmartFund contracts
 */
@@ -20,10 +24,13 @@ contract SmartFundRegistry is Ownable {
   PermittedPoolsInterface public permittedPools;
   // The Smart Contract which stores the addresses of all the authorized stable coins
   PermittedStablesInterface public permittedStables;
+  // The Smart Contract which stores the addresses of all the authorized Defi portals
+  PermittedDefiInterface public permittedDefi;
 
   // Addresses of portals
   address public poolPortalAddress;
   address public exchangePortalAddress;
+  address public defiPortal;
 
   // Default maximum success fee is 3000/30%
   uint256 public maximumSuccessFee = 3000;
@@ -33,9 +40,6 @@ contract SmartFundRegistry is Ownable {
 
   // Address of CoTrader coin be set in constructor
   address public COTCoinAddress;
-
-  // Addresses for Compound platform
-  address public cEther;
 
   // Factories
   SmartFundETHFactoryInterface public smartFundETHFactory;
@@ -59,7 +63,8 @@ contract SmartFundRegistry is Ownable {
   * @param _COTCoinAddress               Address of Cotrader coin
   * @param _smartFundETHFactory          Address of smartFund ETH factory
   * @param _smartFundERC20Factory        Address of smartFund USD factory
-  * @param _cEther                       Address of Compound ETH wrapper
+  * @param _defiPortal                   Address of defiPortal contract
+  * @param _permittedDefi                Address of permitted Defi contract
   */
   constructor(
     address _permittedExchangesAddress,
@@ -71,7 +76,8 @@ contract SmartFundRegistry is Ownable {
     address _COTCoinAddress,
     address _smartFundETHFactory,
     address _smartFundERC20Factory,
-    address _cEther
+    address _defiPortal,
+    address _permittedDefi
   ) public {
     exchangePortalAddress = _exchangePortalAddress;
     permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
@@ -82,7 +88,8 @@ contract SmartFundRegistry is Ownable {
     COTCoinAddress = _COTCoinAddress;
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
     smartFundERC20Factory = SmartFundERC20FactoryInterface(_smartFundERC20Factory);
-    cEther = _cEther;
+    defiPortal = _defiPortal;
+    permittedDefi = PermittedDefiInterface(_permittedDefi);
   }
 
   /**
@@ -123,8 +130,9 @@ contract SmartFundRegistry is Ownable {
         address(permittedPools),
         address(permittedStables),
         poolPortalAddress,
+        defiPortal,
+        address(permittedDefi),
         coinAddress,
-        cEther,
         _isRequireTradeVerification
       );
     }
@@ -139,7 +147,8 @@ contract SmartFundRegistry is Ownable {
         address(permittedExchanges),
         address(permittedPools),
         poolPortalAddress,
-        cEther,
+        defiPortal,
+        address(permittedDefi),
         _isRequireTradeVerification
       );
     }
@@ -187,6 +196,18 @@ contract SmartFundRegistry is Ownable {
     require(permittedPools.permittedAddresses(_poolPortalAddress));
 
     poolPortalAddress = _poolPortalAddress;
+  }
+
+  /**
+  * @dev Allows the fund manager to connect to a new permitted defi portal
+  *
+  * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
+  */
+  function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
+    // Require that the new defi portal is permitted by permittedExchanges
+    require(permittedDefi.permittedAddresses(_newDefiPortalAddress));
+
+    defiPortal = _newDefiPortalAddress;
   }
 
   /**
