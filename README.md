@@ -58,7 +58,9 @@ for reduce gas cost.
 
 19) Add DEFI portal for support new protocols without deploy new version of fund
 
-20  Move Compound from fund to Defi portal 
+20) Move Compound from fund to Defi portal
+
+21) Add one Global permitted contract for Exchange, Pool, Defi, Stable coins portal
 ```
 
 
