@@ -54,7 +54,11 @@ for reduce gas cost.
 
 17) Fix bug in ExchangePortal.getValue for CETH in ETH fund (from == to return input)
 
-18) Fix protect from sending 0 assets in withdraw 
+18) Fix protect from sending 0 assets in withdraw
+
+19) Add DEFI portal for support new protocols without deploy new version of fund
+
+20  Move Compound from fund to Defi portal 
 ```
 
 
