@@ -18,6 +18,8 @@ import "../interfaces/PoolPortalInterface.sol";
 
 import "../interfaces/PermittedExchangesInterface.sol";
 import "../interfaces/PermittedPoolsInterface.sol";
+import "../interfaces/DefiPortalInterface.sol";
+
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
@@ -38,6 +40,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
   // The Interface of pool portall
   PoolPortalInterface public poolPortal;
+
+  // The interface of DefiPortal
+  DefiPortalInterface public defiPortal;
 
   // The Smart Contract which stores the addresses of all the authorized Exchange Portals
   PermittedExchangesInterface public permittedExchanges;
@@ -90,9 +95,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // The earnings the fund manager has already cashed out
   uint256 public fundManagerCashedOut = 0;
 
-  // COMPOUND ETH wrapper address
-  address public cEther;
-
   // for ETH and USD fund this asset different
   address public coreFundAsset;
 
@@ -111,17 +113,12 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   mapping (address => int256) public addressesNetDeposit;
 
   // Events
-  event Loan(
-    address tokenAddress,
-    uint256 tokenAmount,
-    address underlyingAddress,
-    uint256 underlyingAmount);
-
-  event Redeem(
-    address tokenAddress,
-    uint256 tokenAmount,
-    address underlyingAddress,
-    uint256 underlyingAmount);
+  event DefiCall(
+    string eventType,
+    address[] tokensSent,
+    address[] tokensReceived,
+    uint256[] amountSent,
+    uint256[] amountReceived);
 
   event BuyPool(
     address poolAddress,
@@ -151,7 +148,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     address _permittedExchangesAddress,
     address _permittedPoolsAddress,
     address _poolPortalAddress,
-    address _cEther,
+    address _defiPortal,
+    address _permittedDefiPortalAddress,
     address _coreFundAsset,
     bool    _isRequireTradeVerification
   )public{
@@ -185,8 +183,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
     permittedPools = PermittedPoolsInterface(_permittedPoolsAddress);
     poolPortal = PoolPortalInterface(_poolPortalAddress);
+    defiPortal = DefiPortalInterface(_defiPortal);
 
-    cEther = _cEther;
     coreFundAsset = _coreFundAsset;
     isRequireTradeVerification = _isRequireTradeVerification;
 
@@ -488,6 +486,59 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       connectorsAmount);
   }
 
+  /**
+  * @dev allow manager use newest DEFI protocols
+  * NOTE: all logic in DEFI portal hardcoded, and also fund manager can't update
+  * non permitted DEFI portal, so this is safe call
+  *
+  * @param _etherAmount         amount of ETH to send
+  * @param _data                params data packed in bytes
+  * @param _additionalArgs      additional params array for quick unpack
+  */
+  function callDefiPortal(
+    uint256 _etherAmount,
+    bytes calldata _data,
+    bytes32[] calldata _additionalArgs
+  )
+    external
+    onlyOwner
+  {
+    // event data
+    string memory eventType;
+    address[] memory tokensSent;
+    address[] memory tokensReceived;
+    uint256[] memory amountSent;
+    uint256[] memory amountReceived;
+
+    // call
+    if(_etherAmount > 0){
+      (eventType,
+       tokensSent,
+       tokensReceived,
+       amountSent,
+       amountReceived) = defiPortal.callPayableProtocol.value(_etherAmount)(_data, _additionalArgs);
+    }else{
+      (eventType,
+       tokensSent,
+       tokensReceived,
+       amountSent,
+       amountReceived) = defiPortal.callNonPayableProtocol(_data, _additionalArgs);
+    }
+
+   // add new tokens in fund
+   for(uint8 i = 0; i<tokensReceived.length; i++){
+     _addToken(tokensReceived[i]);
+   }
+
+   // emit event
+    emit DefiCall(
+      eventType,
+      tokensSent,
+      tokensReceived,
+      amountSent,
+      amountReceived);
+  }
+
 
   // return all tokens addresses from fund
   function getAllTokenAddresses() external view returns (address[] memory) {
@@ -531,73 +582,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     tokenAddresses[_tokenIndex] = tokenAddresses[arrayLength];
     delete tokenAddresses[arrayLength];
     tokenAddresses.pop();
-  }
-
-  /**
-  * @dev buy Compound cTokens
-  *
-  * @param _amount       amount of ERC20 or ETH
-  * @param _cToken       cToken address
-  */
-  function compoundMint(uint256 _amount, address _cToken) external onlyOwner{
-    uint256 receivedAmount;
-    address underlying;
-    // Loan ETH
-    if(_cToken == address(cEther)){
-      underlying = address(ETH_TOKEN_ADDRESS);
-      receivedAmount = exchangePortal.compoundMint.value(_amount)(
-        _amount,
-        _cToken
-      );
-    }
-    // Loan ERC20
-    else{
-      underlying = exchangePortal.getCTokenUnderlying(_cToken);
-      IERC20(underlying).approve(address(exchangePortal), _amount);
-      receivedAmount = exchangePortal.compoundMint(
-        _amount,
-        _cToken
-      );
-    }
-
-    _addToken(_cToken);
-
-    emit Loan(_cToken, receivedAmount, underlying, _amount);
-  }
-
-  /**
-  * @dev sell certain percent of Ctokens to Compound
-  *
-  * @param _percent      percent from 1 to 100
-  * @param _cToken       cToken address
-  */
-  function compoundRedeemByPercent(uint256 _percent, address _cToken) external onlyOwner {
-    // get cToken amount by percent
-    uint256 amount = exchangePortal.getPercentFromCTokenBalance(
-      _percent,
-      _cToken,
-      address(this)
-    );
-
-    // get underlying address
-    address underlying = (_cToken == cEther)
-    ? address(ETH_TOKEN_ADDRESS)
-    : exchangePortal.getCTokenUnderlying(_cToken);
-
-    // Approve
-    IERC20(_cToken).approve(address(exchangePortal), amount);
-
-    // Redeem
-    uint256 receivedAmount = exchangePortal.compoundRedeemByPercent(
-      _percent,
-      _cToken
-    );
-
-    // Add token
-    _addToken(underlying);
-
-    // emit event
-    emit Redeem(_cToken, amount, underlying, receivedAmount);
   }
 
 
