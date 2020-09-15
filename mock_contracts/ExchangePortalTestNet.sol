@@ -12,20 +12,18 @@ import "../contracts/bancor/interfaces/BancorNetworkInterface.sol";
 
 import "../contracts/oneInch/IOneSplitAudit.sol";
 
-import "../contracts/compound/CEther.sol";
 import "../contracts/compound/CToken.sol";
-
 import "../contracts/core/interfaces/ExchangePortalInterface.sol";
-import "../contracts/core/interfaces/PermittedStablesInterface.sol";
+import "../contracts/core/interfaces/DefiPortalInterface.sol";
 import "../contracts/core/interfaces/PoolPortalInterface.sol";
 import "../contracts/core/interfaces/ITokensTypeStorage.sol";
 import "../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
 
 
-contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
+contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
-  uint public version = 3;
+  uint public version = 4;
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
@@ -34,7 +32,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
   // COMPOUND
-  CEther public cEther;
+  address public cEther;
 
   // 1INCH
   IOneSplitAudit public oneInch;
@@ -42,8 +40,13 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   // BANCOR
   IGetBancorData public bancorData;
 
-  // CoTrader additional
+  // CoTrader portals
   PoolPortalInterface public poolPortal;
+  DefiPortalInterface public defiPortal;
+
+  // 1 inch flags
+  // By default support Bancor + Uniswap + Uniswap v2
+  uint256 oneInchFlags = 570425349;
 
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
@@ -75,6 +78,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   /**
   * @dev contructor
   *
+  * @param _defiPortal             address of defiPortal contract
   * @param _bancorData             address of GetBancorData helper
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
@@ -83,6 +87,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
+    address _defiPortal,
     address _bancorData,
     address _poolPortal,
     address _oneInch,
@@ -92,10 +97,11 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     )
     public
   {
+    defiPortal = DefiPortalInterface(_defiPortal);
     bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
-    cEther = CEther(_cEther);
+    cEther = _cEther;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -224,7 +230,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     address _destination,
     bytes32 [] memory proof,
     uint256 [] memory positions)
-    public
+    private
     view
   {
     bool status = merkleTreeWhiteList.verify(_destination, proof, positions);
@@ -232,20 +238,6 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     if(!status)
       revert("Dest not in white list");
   }
-
-// for test correct decode
- function _verifyOneInchData(
-   bytes memory _additionalData
-   )
-   private
- {
-    (uint256 flags,
-     uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
-
-     // check params
-     require(flags > 0, "Not correct flags param for 1inch aggregator");
-     require(_distribution.length > 0, "Not correct _distribution param for 1inch aggregator");
- }
 
 
  // Facilitates trade with Bancor
@@ -280,8 +272,21 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
       returnAmount = bancorNetwork.claimAndConvert(pathInERC20, sourceAmount, 1);
     }
 
-    setTokenType(destinationToken, "BANCOR_ASSET");
+    tokensTypes.addNewTokenType(destinationToken, "BANCOR_ASSET");
  }
+
+  // for test correct decode
+  function _verifyOneInchData(
+    bytes memory _additionalData
+    )
+    private
+  {
+     (uint256 flags,
+      uint256[] memory _distribution) = abi.decode(_additionalData, (uint256, uint256[]));
+
+      // check params
+      require(flags > 0, "Not correct flags param for 1inch aggregator");
+  }
 
 
   /**
@@ -300,83 +305,6 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   }
 
 
-  /**
-  * @dev buy Compound cTokens
-  *
-  * @param _amount       amount of ERC20 or ETH
-  * @param _cToken       cToken address
-  */
-  function compoundMint(uint256 _amount, address _cToken)
-   external
-   override
-   payable
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-    if(_cToken == address(cEther)){
-      // mint cETH
-      cEther.mint.value(_amount)();
-      // transfer received cETH back to fund
-      receivedAmount = cEther.balanceOf(address(this));
-      cEther.transfer(msg.sender, receivedAmount);
-    }else{
-      // mint cERC20
-      CToken cToken = CToken(_cToken);
-      address underlyingAddress = cToken.underlying();
-      _transferFromSenderAndApproveTo(IERC20(underlyingAddress), _amount, address(_cToken));
-      cToken.mint(_amount);
-      // transfer received cERC back to fund
-      receivedAmount = cToken.balanceOf(address(this));
-      cToken.transfer(msg.sender, receivedAmount);
-    }
-
-    require(receivedAmount > 0, "received amount can not be zerro");
-
-    setTokenType(_cToken, "COMPOUND");
-    return receivedAmount;
-  }
-
-  /**
-  * @dev sell certain percent of Ctokens to Compound
-  *
-  * @param _percent      percent from 1 to 100
-  * @param _cToken       cToken address
-  */
-  function compoundRedeemByPercent(uint _percent, address _cToken)
-   external
-   override
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-
-    uint256 amount = getPercentFromCTokenBalance(_percent, _cToken, msg.sender);
-
-    // transfer amount from sender
-    IERC20(_cToken).transferFrom(msg.sender, address(this), amount);
-
-    // reedem
-    if(_cToken == address(cEther)){
-      // redeem compound ETH
-      cEther.redeem(amount);
-      // transfer received ETH back to fund
-      receivedAmount = address(this).balance;
-      (msg.sender).transfer(receivedAmount);
-
-    }else{
-      // redeem ERC20
-      CToken cToken = CToken(_cToken);
-      cToken.redeem(amount);
-      // transfer received ERC20 back to fund
-      address underlyingAddress = cToken.underlying();
-      IERC20 underlying = IERC20(underlyingAddress);
-      receivedAmount = underlying.balanceOf(address(this));
-      underlying.transfer(msg.sender, receivedAmount);
-    }
-
-    require(receivedAmount > 0, "received amount can not be zerro");
-
-    return receivedAmount;
-  }
 
   // VIEW Functions
 
@@ -445,6 +373,12 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
   */
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
+       // Check at first value from defi portal, maybe there are new defi protocols
+       // If defiValue return 0 continue check from another sources
+       uint256 defiValue = defiPortal.getValue(_from, _to, _amount);
+       if(defiValue > 0)
+          return defiValue;
+
        // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
        uint256 oneInchResult = getValueViaDEXsAgregators(_from, _to, _amount);
        if(oneInchResult > 0)
@@ -478,7 +412,9 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
      }
   }
 
+
   // helper for get value via 1inch
+  // in this interface can be added more DEXs aggregators
   function getValueViaDEXsAgregators(
     address _from,
     address _to,
@@ -489,18 +425,45 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     if(_from == _to)
        return _amount;
 
-    // try get value from 1inch aggregator
-    uint256 valueFromOneInch = getValueViaOneInch(_from, _to, _amount);
-    if(valueFromOneInch > 0){
-      return valueFromOneInch;
+    // try get value via 1inch
+    if(_amount > 0){
+      // Mock 1 inch with Bancor
+      return getValueViaBancor(_from, _to, _amount);
     }
-    // if 1 inch can't return value
     else{
       return 0;
     }
   }
 
-  // helper for get value via Balancer
+
+
+  // helper for get ratio between assets in Bancor network
+  function getValueViaBancor(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+    public
+    view
+    returns (uint256 value)
+  {
+    // if direction the same, just return amount
+    if(_from == _to)
+       return _amount;
+
+    // try get rate
+    if(_amount > 0){
+      try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
+        value = result;
+      }catch{
+        value = 0;
+      }
+    }else{
+      return 0;
+    }
+  }
+
+
   // helper for get value via Balancer
   function getValueForBalancerPool(
     address _from,
@@ -528,40 +491,6 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     }
   }
 
-  // helper for get ratio between assets in 1inch aggregator
-  function getValueViaOneInch(
-    address _from,
-    address _to,
-    uint256 _amount
-  )
-    public
-    view
-    returns (uint256 value)
-  {
-    return getValueViaBancor(_from, _to, _amount);
-  }
-
-  // helper for get ratio between assets in Bancor network
-  function getValueViaBancor(
-    address _from,
-    address _to,
-    uint256 _amount
-  )
-    public
-    view
-    returns (uint256 value)
-  {
-    // if direction the same, just return amount
-    if(_from == _to)
-       return _amount;
-
-    // try get value
-    try poolPortal.getBancorRatio(_from, _to, _amount) returns(uint256 result){
-      value = result;
-    }catch{
-      value = 0;
-    }
-  }
 
   // helper for get value between Compound assets and ETH/ERC20
   // NOTE: _from should be COMPOUND cTokens,
@@ -571,6 +500,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     address _to,
     uint256 _amount
   ) public view returns (uint256 value) {
+
     // get underlying amount by cToken amount
     uint256 underlyingAmount = getCompoundUnderlyingRatio(
       _from,
@@ -579,9 +509,10 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     // convert underlying in _to
     if(underlyingAmount > 0){
       // get underlying address
-      address underlyingAddress = (_from == address(cEther))
+      address underlyingAddress = (_from == cEther)
       ? address(ETH_TOKEN_ADDRESS)
       : CToken(_from).underlying();
+
       // get rate for underlying address via DEX aggregators
       return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
     }
@@ -589,6 +520,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
       return 0;
     }
   }
+
 
   // helper for get underlying amount by cToken amount
   // NOTE: _from should be Compound token, amount = input * 1e8 (not 1e18)
@@ -614,6 +546,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
       return 0;
     }
   }
+
 
   // helper for get ratio between pools in Uniswap network
   // _from - should be uniswap pool address
@@ -642,7 +575,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
       if(_to == address(ETH_TOKEN_ADDRESS)){
         return totalETH;
       }
-      // convert ETH into _to asset
+      // convert ETH into _to asset via 1inch
       else{
         return getValueViaDEXsAgregators(address(ETH_TOKEN_ADDRESS), _to, totalETH);
       }
@@ -650,6 +583,7 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
       return 0;
     }
   }
+
 
   // helper for get ratio between pools in Uniswap network version 2
   // _from - should be uniswap pool address
@@ -681,37 +615,6 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     }catch{
       return 0;
     }
-  }
-
-  /**
-  * @dev return percent of compound cToken balance
-  *
-  * @param _percent       amount of ERC20 or ETH
-  * @param _cToken        cToken address
-  * @param _holder        address of cToken holder
-  */
-  function getPercentFromCTokenBalance(uint _percent, address _cToken, address _holder)
-   public
-   override
-   view
-   returns(uint256)
-  {
-    if(_percent == 100){
-      return IERC20(_cToken).balanceOf(_holder);
-    }
-    else if(_percent > 0 && _percent < 100){
-      uint256 currectBalance = IERC20(_cToken).balanceOf(_holder);
-      return currectBalance.div(100).mul(_percent);
-    }
-    else{
-      // not correct percent
-      return 0;
-    }
-  }
-
-  // get underlying by cToken
-  function getCTokenUnderlying(address _cToken) external override view returns(address){
-    return CToken(_cToken).underlying();
   }
 
   /**
@@ -756,17 +659,23 @@ contract ExchangePortalTestNet is ExchangePortalInterface, Ownable {
     oneInch = IOneSplitAudit(_oneInch);
   }
 
-  // Exchange portal can mark each token
-  function setTokenType(address _token, string memory _type) private {
-    // no need add type, if token alredy registred
-    if(tokensTypes.isRegistred(_token))
-      return;
+  // owner can set new pool portal
+  function setNewPoolPortal(address _poolPortal) external onlyOwner {
+    poolPortal = PoolPortalInterface(_poolPortal);
+  }
 
-    tokensTypes.addNewTokenType(_token,  _type);
+  // owner can set new defi portal
+  function setNewDefiPortal(address _defiPortal) external onlyOwner {
+    defiPortal = DefiPortalInterface(_defiPortal);
+  }
+
+  // owner of portal can update 1 incg DEXs sources
+  function setOneInchFlags(uint256 _oneInchFlags) external onlyOwner {
+    oneInchFlags = _oneInchFlags;
   }
 
   // owner of portal can change getBancorData helper, for case if Bancor do some major updates
-  function senNewGetBancorData(address _bancorData) public onlyOwner {
+  function setNewGetBancorData(address _bancorData) external onlyOwner {
     bancorData = IGetBancorData(_bancorData);
   }
 
