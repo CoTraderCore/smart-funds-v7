@@ -36,12 +36,21 @@ contract PermittedAddresses is Ownable {
 
 
   /**
-  * @dev Completes the process of adding a new address to permittedAddresses
+  * @dev adding a new address to permittedAddresses
   *
   * @param _newAddress    The new address to permit
   */
   function addNewAddress(address _newAddress, string memory addressType) public onlyOwner {
     _enableAddress(_newAddress, addressType);
+  }
+
+  /**
+  * @dev update address type as owner for case if wrong address type was set
+  *
+  * @param _newAddress    The new address to permit
+  */
+  function updateAddressType(address _newAddress, string memory addressType) public onlyOwner {
+    addressesTypes[_newAddress] = addressType;
   }
 
   /**

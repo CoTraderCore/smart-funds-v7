@@ -63,6 +63,12 @@ for reduce gas cost.
 21) Add one Global permitted contract for Exchange, Pool, Defi, Stable coins portal
 ```
 
+# TODO
+
+```
+Update Unit tests with DEFI portal and new permittedAddresses
+```
+
 
 # Possible issue
 
