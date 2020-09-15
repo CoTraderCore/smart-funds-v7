@@ -5,13 +5,11 @@ interface SmartFundETHFactoryInterface {
     uint256 _successFee,
     uint256 _platformFee,
     address _exchangePortalAddress,
-    address _permittedExchanges,
-    address _permittedPools,
-    address _defiPortal,
-    address _permittedDefiPortalAddress,
     address _poolPortalAddress,
+    address _defiPortal,
+    address _permittedAddresses,
     bool    _isRequireTradeVerification
-    )
+  )
   external
   returns(address);
 }
