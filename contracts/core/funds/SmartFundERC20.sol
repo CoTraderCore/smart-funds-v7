@@ -12,9 +12,6 @@ contract SmartFundERC20 is SmartFundCore {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
-  // Address of core coin can be set in constructor and for USD coins case can be changed via function
-  address public coinAddress;
-
   // State for recognize if this fund stable asset based
   bool public isStableCoinBasedFund;
 
@@ -29,7 +26,6 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _exchangePortalAddress        Address of initial exchange portal
   * @param _poolPortalAddress            Address of initial pool portal
   * @param _permittedAddresses           Address of permittedAddresses contract
-  * @param _coinAddress                  Address of core ERC20 coin
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
   constructor(
@@ -61,8 +57,6 @@ contract SmartFundERC20 is SmartFundCore {
   public {
     // Initial stable coint permitted interface
     permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
-    // Initial coin address
-    coinAddress = _coinAddress;
     // Push coin in tokens list
     _addToken(_coinAddress);
     // Get address type
@@ -88,7 +82,7 @@ contract SmartFundERC20 is SmartFundCore {
     require(depositAmount > 0, "deposit amount should be more than zero");
 
     // Transfer core ERC20 coin from sender
-    require(IERC20(coinAddress).transferFrom(msg.sender, address(this), depositAmount),
+    require(IERC20(coreFundAsset).transferFrom(msg.sender, address(this), depositAmount),
     "can not transfer from");
 
     totalWeiDeposited += depositAmount;
@@ -122,7 +116,7 @@ contract SmartFundERC20 is SmartFundCore {
     // Convert ETH balance to core ERC20
     uint256 ethBalance = exchangePortal.getValue(
       address(ETH_TOKEN_ADDRESS),
-      coinAddress,
+      coreFundAsset,
       address(this).balance
     );
 
@@ -144,10 +138,10 @@ contract SmartFundERC20 is SmartFundCore {
       index++;
     }
     // Ask the Exchange Portal for the value of all the funds tokens in core coin
-    uint256 tokensValue = exchangePortal.getTotalValue(fromAddresses, amounts, coinAddress);
+    uint256 tokensValue = exchangePortal.getTotalValue(fromAddresses, amounts, coreFundAsset);
 
     // Get curernt core ERC20 token balance
-    uint256 currentERC20 = IERC20(coinAddress).balanceOf(address(this));
+    uint256 currentERC20 = IERC20(coreFundAsset).balanceOf(address(this));
 
     // Sum ETH in ERC20 + Current ERC20 Token + ERC20 in ERC20
     return ethBalance + currentERC20 + tokensValue;
@@ -166,11 +160,11 @@ contract SmartFundERC20 is SmartFundCore {
     if (_token == ETH_TOKEN_ADDRESS){
       return exchangePortal.getValue(
         address(_token),
-        coinAddress,
+        coreFundAsset,
         address(this).balance);
     }
     // get current core ERC20
-    else if(_token == IERC20(coinAddress)){
+    else if(_token == IERC20(coreFundAsset)){
       return _token.balanceOf(address(this));
     }
     // get ERC20 in core ERC20
@@ -178,23 +172,22 @@ contract SmartFundERC20 is SmartFundCore {
       uint256 tokenBalance = _token.balanceOf(address(this));
       return exchangePortal.getValue(
         address(_token),
-        coinAddress,
+        coreFundAsset,
         tokenBalance
       );
     }
   }
 
   /**
-  * @dev sets new stable coinAddress NOTE: this works only for stable coins
+  * @dev sets new coreFundAsset NOTE: this works only for stable coins
   *
   * @param _coinAddress    New stable address
   */
   function changeStableCoinAddress(address _coinAddress) external onlyOwner {
     require(isStableCoinBasedFund, "ERR: not stable based");
     require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedAddresses.permittedAddresses(_coinAddress), "NOT PERMITTED");
-    require(permittedAddresses.isMatchTypes(_coinAddress, "STABLE_COIN"), "WRONG TYPE");
+    require(permittedAddresses.isMatchTypes(_coinAddress, "STABLE_COIN"), "NOT STABLE COIN");
 
-    coinAddress = _coinAddress;
+    coreFundAsset = _coinAddress;
   }
 }
