@@ -276,7 +276,7 @@ contract PoolPortal is Ownable{
     // make sure we recieved pool
     require(poolAmountReceive > 0, "ERR BNT pool received 0");
     // set token type for this asset
-    setTokenType(_poolToken, "BANCOR_ASSET");
+    tokensTypes.addNewTokenType(_poolToken, "BANCOR_ASSET");
   }
 
 
@@ -430,7 +430,7 @@ contract PoolPortal is Ownable{
       deadline
     );
     // Set token type
-    setTokenType(_poolToken, "UNISWAP_POOL");
+    tokensTypes.addNewTokenType(_poolToken, "UNISWAP_POOL");
   }
 
 
@@ -477,7 +477,7 @@ contract PoolPortal is Ownable{
       );
     }
     // Set token type
-    setTokenType(_poolToken, "UNISWAP_POOL_V2");
+    tokensTypes.addNewTokenType(_poolToken, "UNISWAP_POOL_V2");
   }
 
 
@@ -505,7 +505,7 @@ contract PoolPortal is Ownable{
     // check
     require(poolAmountReceive > 0, "ERR BALANCER pool received 0");
     // update type
-    setTokenType(_poolToken, "BALANCER_POOL");
+    tokensTypes.addNewTokenType(_poolToken, "BALANCER_POOL");
   }
 
   /**
@@ -1174,15 +1174,6 @@ contract PoolPortal is Ownable{
     _source.approve(_to, 0);
     // approve
     _source.approve(_to, _sourceAmount);
-  }
-
-  // Pool portal can mark each pool token as UNISWAP or BANCOR
-  function setTokenType(address _token, string memory _type) private {
-    // no need add type, if token alredy registred
-    if(tokensTypes.isRegistred(_token))
-      return;
-
-    tokensTypes.addNewTokenType(_token,  _type);
   }
 
   // fallback payable function to receive ether from other contract addresses

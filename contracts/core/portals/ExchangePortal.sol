@@ -16,7 +16,6 @@ import "../../bancor/interfaces/BancorNetworkInterface.sol";
 
 import "../../oneInch/IOneSplitAudit.sol";
 
-import "../../compound/CEther.sol";
 import "../../compound/CToken.sol";
 
 import "../interfaces/ExchangePortalInterface.sol";
@@ -38,7 +37,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
 
   // COMPOUND
-  CEther public cEther;
+  address public cEther;
 
   // 1INCH
   IOneSplitAudit public oneInch;
@@ -103,7 +102,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
-    cEther = CEther(_cEther);
+    cEther = _cEther;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -274,7 +273,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     }
 
     destinationReceived = tokenBalance(IERC20(destinationToken));
-    setTokenType(destinationToken, "CRYPTOCURRENCY");
+    tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
  }
 
 
@@ -310,7 +309,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       returnAmount = bancorNetwork.claimAndConvert(pathInERC20, sourceAmount, 1);
     }
 
-    setTokenType(destinationToken, "BANCOR_ASSET");
+    tokensTypes.addNewTokenType(destinationToken, "BANCOR_ASSET");
  }
 
 
@@ -330,83 +329,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
 
-  /**
-  * @dev buy Compound cTokens
-  *
-  * @param _amount       amount of ERC20 or ETH
-  * @param _cToken       cToken address
-  */
-  function compoundMint(uint256 _amount, address _cToken)
-   external
-   override
-   payable
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-    if(_cToken == address(cEther)){
-      // mint cETH
-      cEther.mint.value(_amount)();
-      // transfer received cETH back to fund
-      receivedAmount = cEther.balanceOf(address(this));
-      cEther.transfer(msg.sender, receivedAmount);
-    }else{
-      // mint cERC20
-      CToken cToken = CToken(_cToken);
-      address underlyingAddress = cToken.underlying();
-      _transferFromSenderAndApproveTo(IERC20(underlyingAddress), _amount, address(_cToken));
-      cToken.mint(_amount);
-      // transfer received cERC back to fund
-      receivedAmount = cToken.balanceOf(address(this));
-      cToken.transfer(msg.sender, receivedAmount);
-    }
-
-    require(receivedAmount > 0, "received amount can not be zerro");
-
-    setTokenType(_cToken, "COMPOUND");
-    return receivedAmount;
-  }
-
-  /**
-  * @dev sell certain percent of Ctokens to Compound
-  *
-  * @param _percent      percent from 1 to 100
-  * @param _cToken       cToken address
-  */
-  function compoundRedeemByPercent(uint _percent, address _cToken)
-   external
-   override
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-
-    uint256 amount = getPercentFromCTokenBalance(_percent, _cToken, msg.sender);
-
-    // transfer amount from sender
-    IERC20(_cToken).transferFrom(msg.sender, address(this), amount);
-
-    // reedem
-    if(_cToken == address(cEther)){
-      // redeem compound ETH
-      cEther.redeem(amount);
-      // transfer received ETH back to fund
-      receivedAmount = address(this).balance;
-      (msg.sender).transfer(receivedAmount);
-
-    }else{
-      // redeem ERC20
-      CToken cToken = CToken(_cToken);
-      cToken.redeem(amount);
-      // transfer received ERC20 back to fund
-      address underlyingAddress = cToken.underlying();
-      IERC20 underlying = IERC20(underlyingAddress);
-      receivedAmount = underlying.balanceOf(address(this));
-      underlying.transfer(msg.sender, receivedAmount);
-    }
-
-    require(receivedAmount > 0, "received amount can not be zerro");
-
-    return receivedAmount;
-  }
 
   // VIEW Functions
 
@@ -635,7 +557,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     // convert underlying in _to
     if(underlyingAmount > 0){
       // get underlying address
-      address underlyingAddress = (_from == address(cEther))
+      address underlyingAddress = (_from == cEther)
       ? address(ETH_TOKEN_ADDRESS)
       : CToken(_from).underlying();
 
@@ -744,41 +666,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   }
 
   /**
-  * @dev return percent of compound cToken balance
-  *
-  * @param _percent       amount of ERC20 or ETH
-  * @param _cToken        cToken address
-  * @param _holder        address of cToken holder
-  */
-  function getPercentFromCTokenBalance(uint _percent, address _cToken, address _holder)
-   public
-   override
-   view
-   returns(uint256)
-  {
-    if(_percent == 100){
-      return IERC20(_cToken).balanceOf(_holder);
-    }
-    else if(_percent > 0 && _percent < 100){
-      uint256 currectBalance = IERC20(_cToken).balanceOf(_holder);
-      return currectBalance.div(100).mul(_percent);
-    }
-    else{
-      // not correct percent
-      return 0;
-    }
-  }
-
-  // get underlying by cToken
-  function getCTokenUnderlying(address _cToken)
-    external
-    override
-    view returns(address)
-  {
-    return CToken(_cToken).underlying();
-  }
-
-  /**
   * @dev Gets the total value of array of tokens and amounts
   *
   * @param _fromAddresses    Addresses of all the tokens we're converting from
@@ -833,16 +720,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner of portal can change getBancorData helper, for case if Bancor do some major updates
   function setNewGetBancorData(address _bancorData) external onlyOwner {
     bancorData = IGetBancorData(_bancorData);
-  }
-
-
-  // Exchange portal can mark each token
-  function setTokenType(address _token, string memory _type) private {
-    // no need add type, if token alredy registred
-    if(tokensTypes.isRegistred(_token))
-      return;
-
-    tokensTypes.addNewTokenType(_token,  _type);
   }
 
   // fallback payable function to receive ether from other contract addresses

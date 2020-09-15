@@ -1,12 +1,21 @@
 // For support new Defi protocols
 pragma solidity ^0.6.12;
 
+import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+import "../../compound/CToken.sol";
+import "../../compound/CEther.sol";
+
+
 contract DefiPortal {
   // COMPOUND ETH wrapper address
-  address public cEther;
+  CEther public cEther;
+
+  // Enum
+  // NOTE: You can add a new type at the end, but DO NOT CHANGE this order
+  enum DefiActions { CompoundLoan, CompoundReedem }
 
   constructor(address _cEther) public {
-    cEther = _cEther;
+    cEther = CEther(_cEther);
   }
 
   function callPayableProtocol(
@@ -42,70 +51,117 @@ contract DefiPortal {
 
   }
 
+  // get underlying by cToken
+  function getCTokenUnderlying(address _cToken)
+    public
+    view
+    returns(address)
+  {
+    return CToken(_cToken).underlying();
+  }
+
+  // emit Loan(_cToken, receivedAmount, underlying, _amount);
   /**
   * @dev buy Compound cTokens
   *
   * @param _amount       amount of ERC20 or ETH
   * @param _cToken       cToken address
   */
-  function compoundMint(uint256 _amount, address _cToken) private {
-    uint256 receivedAmount;
-    address underlying;
-    // Loan ETH
+  function compoundMint(uint256 _amount, address _cToken)
+   external
+   returns(uint256)
+  {
+    uint256 receivedAmount = 0;
     if(_cToken == address(cEther)){
-      underlying = address(ETH_TOKEN_ADDRESS);
-      receivedAmount = exchangePortal.compoundMint.value(_amount)(
-        _amount,
-        _cToken
-      );
-    }
-    // Loan ERC20
-    else{
-      underlying = exchangePortal.getCTokenUnderlying(_cToken);
-      IERC20(underlying).approve(address(exchangePortal), _amount);
-      receivedAmount = exchangePortal.compoundMint(
-        _amount,
-        _cToken
-      );
+      // mint cETH
+      cEther.mint.value(_amount)();
+      // transfer received cETH back to fund
+      receivedAmount = cEther.balanceOf(address(this));
+      cEther.transfer(msg.sender, receivedAmount);
+    }else{
+      // mint cERC20
+      CToken cToken = CToken(_cToken);
+      address underlyingAddress = cToken.underlying();
+      _transferFromSenderAndApproveTo(IERC20(underlyingAddress), _amount, address(_cToken));
+      cToken.mint(_amount);
+      // transfer received cERC back to fund
+      receivedAmount = cToken.balanceOf(address(this));
+      cToken.transfer(msg.sender, receivedAmount);
     }
 
-    _addToken(_cToken);
+    require(receivedAmount > 0, "received amount can not be zerro");
 
-    // emit Loan(_cToken, receivedAmount, underlying, _amount);
+    tokensTypes.addNewTokenType(_cToken, "COMPOUND");
+    return receivedAmount;
   }
 
+
+  // emit Redeem(_cToken, amount, underlying, receivedAmount);
   /**
   * @dev sell certain percent of Ctokens to Compound
   *
   * @param _percent      percent from 1 to 100
   * @param _cToken       cToken address
   */
-  function compoundRedeemByPercent(uint256 _percent, address _cToken) private {
-    // get cToken amount by percent
-    uint256 amount = exchangePortal.getPercentFromCTokenBalance(
-      _percent,
-      _cToken,
-      address(this)
-    );
+  function compoundRedeemByPercent(uint _percent, address _cToken)
+   external
+   override
+   returns(uint256)
+  {
+    uint256 receivedAmount = 0;
 
-    // get underlying address
-    address underlying = (_cToken == cEther)
-    ? address(ETH_TOKEN_ADDRESS)
-    : exchangePortal.getCTokenUnderlying(_cToken);
+    uint256 amount = getPercentFromCTokenBalance(_percent, _cToken, msg.sender);
 
-    // Approve
-    IERC20(_cToken).approve(address(exchangePortal), amount);
+    // transfer amount from sender
+    IERC20(_cToken).transferFrom(msg.sender, address(this), amount);
 
-    // Redeem
-    uint256 receivedAmount = exchangePortal.compoundRedeemByPercent(
-      _percent,
-      _cToken
-    );
+    // reedem
+    if(_cToken == address(cEther)){
+      // redeem compound ETH
+      cEther.redeem(amount);
+      // transfer received ETH back to fund
+      receivedAmount = address(this).balance;
+      (msg.sender).transfer(receivedAmount);
 
-    // Add token
-    _addToken(underlying);
+    }else{
+      // redeem ERC20
+      CToken cToken = CToken(_cToken);
+      cToken.redeem(amount);
+      // transfer received ERC20 back to fund
+      address underlyingAddress = cToken.underlying();
+      IERC20 underlying = IERC20(underlyingAddress);
+      receivedAmount = underlying.balanceOf(address(this));
+      underlying.transfer(msg.sender, receivedAmount);
+    }
 
-    // emit event
-    // emit Redeem(_cToken, amount, underlying, receivedAmount);
+    require(receivedAmount > 0, "received amount can not be zerro");
+
+    return receivedAmount;
+  }
+
+  /**
+  * @dev return percent of compound cToken balance
+  *
+  * @param _percent       amount of ERC20 or ETH
+  * @param _cToken        cToken address
+  * @param _holder        address of cToken holder
+  */
+  function getPercentFromCTokenBalance(uint _percent, address _cToken, address _holder)
+   public
+   override
+   view
+   returns(uint256)
+  {
+    if(_percent == 100){
+      return IERC20(_cToken).balanceOf(_holder);
+    }
+    else if(_percent > 0 && _percent < 100){
+      uint256 currectBalance = IERC20(_cToken).balanceOf(_holder);
+      return currectBalance.div(100).mul(_percent);
+    }
+    else{
+      // not correct percent
+      return 0;
+    }
   }
 }

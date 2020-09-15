@@ -25,7 +25,7 @@ contract TokensTypeStorage is Ownable {
   bytes32[] public allTypes;
 
   modifier onlyPermitted() {
-    require(isPermittedAddress[msg.sender], "Sender not have permition for edit this contract");
+    require(isPermittedAddress[msg.sender], "Not permition for edit Tokens Type");
     _;
   }
 

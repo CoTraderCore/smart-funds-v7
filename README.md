@@ -68,6 +68,8 @@ for reduce gas cost.
 
 ```
 Test returns events pool data from pool portal in Rinkeby for verifier script
+
+Exchange Portal v7 not has incompatibility with older versions
 ```
 
 
