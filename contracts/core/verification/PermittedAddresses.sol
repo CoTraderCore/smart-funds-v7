@@ -76,4 +76,19 @@ contract PermittedAddresses is Ownable {
 
     emit AddNewPermittedAddress(_newAddress, addressType);
   }
+
+  /**
+  * @dev check if input address has the same type as addressType
+  */
+  function isMatchTypes(address _address, string memory addressType) public view returns(bool){
+    string memory currentType = addressesTypes[_address];
+    return keccak256(bytes(currentType)) == keccak256(bytes(addressType));
+  }
+
+  /**
+  * @dev return address type
+  */
+  function getType(address _address) public view returns(string memory){
+    return addressesTypes[_address];
+  }
 }

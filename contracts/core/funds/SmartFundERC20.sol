@@ -193,9 +193,7 @@ contract SmartFundERC20 is SmartFundCore {
     require(isStableCoinBasedFund, "ERR: not stable based");
     require(totalWeiDeposited == 0, "deposit is already made");
     require(permittedAddresses.permittedAddresses(_coinAddress), "NOT PERMITTED");
-    require(
-      keccak256(bytes(permittedAddresses.addressesTypes(_coinAddress))) == keccak256(bytes("STABLE_COIN")),
-      "WRONG TYPE");
+    require(permittedAddresses.isMatchTypes(_coinAddress, "STABLE_COIN"), "WRONG TYPE");
 
     coinAddress = _coinAddress;
   }
