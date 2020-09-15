@@ -15,13 +15,10 @@ contract SmartFundERC20Factory {
     uint256 _successFee,
     uint256 _platformFee,
     address _exchangePortalAddress,
-    address _permittedExchanges,
-    address _permittedPools,
-    address _permittedStables,
     address _poolPortalAddress,
     address _defiPortal,
-    address _permittedDefiPortalAddress,
-    address _stableCoinAddress,
+    address _permittedAddresses,
+    address _coinAddress,
     bool    _isRequireTradeVerification
   )
   public
@@ -34,13 +31,10 @@ contract SmartFundERC20Factory {
       _platformFee,
        platfromAddress,
       _exchangePortalAddress,
-      _permittedExchanges,
-      _permittedPools,
-      _permittedStables,
       _poolPortalAddress,
       _defiPortal,
-      _permittedDefiPortalAddress,
-      _stableCoinAddress,
+      _permittedAddresses
+      _coinAddress,
       _isRequireTradeVerification
     );
 
