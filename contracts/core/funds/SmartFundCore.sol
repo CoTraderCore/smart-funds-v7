@@ -7,20 +7,16 @@ pragma solidity ^0.6.12;
   The SmartFund gets the value of its token holdings (in Ether) and trades through the ExchangePortal
   contract. This means that as new exchange capabalities are added to new exchange portals, the
   SmartFund will be able to upgrade to a new exchange portal, and trade a wider variety of assets
-  with a wider variety of exchanges. The SmartFund is also connected to a PermittedExchanges contract,
-  which determines which exchange portals the SmartFund is allowed to connect to, restricting
+  with a wider variety of exchanges. The SmartFund is also connected to a permittedAddresses contract,
+  which determines which exchange, pool, defi portals the SmartFund is allowed to connect to, restricting
   the fund owners ability to connect to a potentially malicious contract.
 */
 
 
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
-
-import "../interfaces/PermittedExchangesInterface.sol";
-import "../interfaces/PermittedPoolsInterface.sol";
 import "../interfaces/DefiPortalInterface.sol";
-import "../interfaces/PermittedDefiInterface.sol";
-
+import "../interfaces/PermittedAddressesInterface.sol";
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/access/Ownable.sol";
@@ -30,6 +26,7 @@ import "../../zeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 abstract contract SmartFundCore is Ownable, IERC20 {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
+
   // Total amount of ether or stable deposited by all users
   uint256 public totalWeiDeposited = 0;
 
@@ -46,13 +43,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   DefiPortalInterface public defiPortal;
 
   // The Smart Contract which stores the addresses of all the authorized Exchange Portals
-  PermittedExchangesInterface public permittedExchanges;
-
-  // The Smart Contract which stores the addresses of all the authorized Pools Portals
-  PermittedPoolsInterface public permittedPools;
-
-  // The Smart Contract which stores the addresses of all the authorized Defi Portals
-  PermittedDefiInterface public permittedDefi;
+  PermittedAddressesInterface public permittedAddresses;
 
   // portals recognizes ETH by this address
   IERC20 constant internal ETH_TOKEN_ADDRESS = IERC20(0x00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee);
@@ -149,11 +140,9 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
-    address _permittedExchangesAddress,
-    address _permittedPoolsAddress,
     address _poolPortalAddress,
     address _defiPortal,
-    address _permittedDefiPortalAddress,
+    address _permittedAddresses,
     address _coreFundAsset,
     bool    _isRequireTradeVerification
   )public{
@@ -184,13 +173,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
     // Initial interfaces
     exchangePortal = ExchangePortalInterface(_exchangePortalAddress);
-    permittedExchanges = PermittedExchangesInterface(_permittedExchangesAddress);
-    permittedPools = PermittedPoolsInterface(_permittedPoolsAddress);
     poolPortal = PoolPortalInterface(_poolPortalAddress);
     defiPortal = DefiPortalInterface(_defiPortal);
-    permittedDefi = PermittedDefiInterface(_permittedDefiPortalAddress);
+    permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
 
+    // Initial core assets
     coreFundAsset = _coreFundAsset;
+
+    // Initial check if fund require trade verification or not
     isRequireTradeVerification = _isRequireTradeVerification;
 
     emit SmartFundCreated(owner());
@@ -756,8 +746,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _newPoolPortal   The address of the new permitted pool portal to use
   */
   function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
-    // Require that the new pool portal is permitted by permittedPools
-    require(permittedPools.permittedAddresses(_newPoolPortal));
+    // Require that the new pool portal is permitted by permittedAddresses
+    require(permittedAddresses.permittedAddresses(_newPoolPortal));
 
     poolPortal = PoolPortalInterface(_newPoolPortal);
   }
@@ -768,8 +758,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _newExchangePortalAddress    The address of the new permitted exchange portal to use
   */
   function setNewExchangePortal(address _newExchangePortalAddress) public onlyOwner {
-    // Require that the new exchange portal is permitted by permittedExchanges
-    require(permittedExchanges.permittedAddresses(_newExchangePortalAddress));
+    // Require that the new exchange portal is permitted by permittedAddresses
+    require(permittedAddresses.permittedAddresses(_newExchangePortalAddress));
 
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
   }
@@ -780,8 +770,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
   */
   function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
-    // Require that the new defi portal is permitted by permittedExchanges
-    require(permittedDefi.permittedAddresses(_newDefiPortalAddress));
+    // Require that the new defi portal is permitted by permittedAddresses
+    require(permittedAddresses.permittedAddresses(_newDefiPortalAddress));
 
     defiPortal = DefiPortalInterface(_newDefiPortalAddress);
   }
