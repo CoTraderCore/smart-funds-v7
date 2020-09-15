@@ -28,8 +28,8 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
   * @param _poolPortalAddress            Address of initial pool portal
+  * @param _permittedAddresses           Address of permittedAddresses contract 
   * @param _coinAddress                  Address of core ERC20 coin
-
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
   constructor(
