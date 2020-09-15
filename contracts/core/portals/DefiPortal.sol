@@ -89,6 +89,20 @@ contract DefiPortal {
     }
   }
 
+  // for new DEFI protocols Exchange portal get value here
+  function getValue(
+    address _from,
+    address _to,
+    uint256 _amount
+  )
+   public
+   view
+   returns(uint256)
+  {
+    return 0;
+  }
+
+
   // get underlying by cToken
   function getCTokenUnderlying(address _cToken)
     public

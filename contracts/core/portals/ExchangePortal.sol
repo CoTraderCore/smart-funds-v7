@@ -19,7 +19,7 @@ import "../../oneInch/IOneSplitAudit.sol";
 import "../../compound/CToken.sol";
 
 import "../interfaces/ExchangePortalInterface.sol";
-import "../interfaces/PermittedStablesInterface.sol";
+import "../interfaces/DefiPortalInterface.sol";
 import "../interfaces/PoolPortalInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
 import "../interfaces/IMerkleTreeTokensVerification.sol";
@@ -45,8 +45,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // BANCOR
   IGetBancorData public bancorData;
 
-  // CoTrader additional
+  // CoTrader portals
   PoolPortalInterface public poolPortal;
+  DefiPortalInterface public defiPortal;
 
   // 1 inch flags
   // By default support Bancor + Uniswap + Uniswap v2
@@ -82,6 +83,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   /**
   * @dev contructor
   *
+  * @param _defiPortal             address of defiPortal contract
   * @param _bancorData             address of GetBancorData helper
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
@@ -90,6 +92,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
   constructor(
+    address _defiPortal,
     address _bancorData,
     address _poolPortal,
     address _oneInch,
@@ -99,6 +102,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     )
     public
   {
+    defiPortal = DefiPortalInterface(_defiPortal);
     bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
@@ -397,6 +401,12 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   */
   function findValue(address _from, address _to, uint256 _amount) private view returns (uint256) {
      if(_amount > 0){
+       // Check at first value from defi portal, maybe there are new defi protocols
+       // If defiValue return 0 continue check from another sources
+       uint256 defiValue = defiPortal.getValue(_from, _to, _amount);
+       if(defiValue > 0)
+          return defiValue;
+
        // If 1inch return 0, check from Bancor network for ensure this is not a Bancor pool
        uint256 oneInchResult = getValueViaDEXsAgregators(_from, _to, _amount);
        if(oneInchResult > 0)
@@ -710,6 +720,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner can set new pool portal
   function setNewPoolPortal(address _poolPortal) external onlyOwner {
     poolPortal = PoolPortalInterface(_poolPortal);
+  }
+
+  // owner can set new defi portal
+  function setNewDefiPortal(address _defiPortal) external onlyOwner {
+    defiPortal = DefiPortalInterface(_defiPortal);
   }
 
   // owner of portal can update 1 incg DEXs sources
