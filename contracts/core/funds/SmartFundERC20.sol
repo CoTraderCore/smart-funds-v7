@@ -1,7 +1,7 @@
 pragma solidity ^0.6.12;
 
 import "./SmartFundCore.sol";
-import "../interfaces/PermittedStablesInterface.sol";
+import "../interfaces/PermittedAddressesInterface.sol";
 
 
 /*
@@ -18,9 +18,6 @@ contract SmartFundERC20 is SmartFundCore {
   // State for recognize if this fund stable asset based
   bool public isStableCoinBasedFund;
 
-  // The Smart Contract which stores the addresses of all the authorized stable coins
-  PermittedStablesInterface public permittedStables;
-
   /**
   * @dev constructor
   *
@@ -30,9 +27,6 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _platformFee                  Percentage of the success fee that goes to the platform
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
-  * @param _permittedExchangesAddress    Address of PermittedExchanges contract
-  * @param _permittedPoolsAddress        Address of PermittedPools contract
-  * @param _permittedStables             Address of permittedStables contract
   * @param _poolPortalAddress            Address of initial pool portal
   * @param _coinAddress                  Address of core ERC20 coin
 
@@ -45,12 +39,9 @@ contract SmartFundERC20 is SmartFundCore {
     uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
-    address _permittedExchangesAddress,
-    address _permittedPoolsAddress,
-    address _permittedStables,
     address _poolPortalAddress,
     address _defiPortal,
-    address _permittedDefiPortalAddress,
+    address _permittedAddresses,
     address _coinAddress,
     bool    _isRequireTradeVerification
   )
@@ -61,23 +52,25 @@ contract SmartFundERC20 is SmartFundCore {
     _platformFee,
     _platformAddress,
     _exchangePortalAddress,
-    _permittedExchangesAddress,
-    _permittedPoolsAddress,
     _poolPortalAddress,
     _defiPortal,
-    _permittedDefiPortalAddress,
+    _permittedAddresses,
     _coinAddress,
     _isRequireTradeVerification
   )
   public {
     // Initial stable coint permitted interface
-    permittedStables = PermittedStablesInterface(_permittedStables);
+    permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
     // Initial coin address
     coinAddress = _coinAddress;
     // Push coin in tokens list
     _addToken(_coinAddress);
-    // Check if this is stable coin based fund
-    isStableCoinBasedFund = permittedStables.permittedAddresses(_coinAddress);
+    // Get address type
+    string memory addressType = permittedAddresses.addressesTypes(_coinAddress);
+    // Check if this is stable coin based fund or not
+    isStableCoinBasedFund = keccak256(bytes(addressType)) == keccak256(bytes("STABLE_COIN"))
+    ? true
+    : false;
   }
 
   /**
@@ -199,7 +192,7 @@ contract SmartFundERC20 is SmartFundCore {
   function changeStableCoinAddress(address _coinAddress) external onlyOwner {
     require(isStableCoinBasedFund, "can not update non stable coin based fund");
     require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedStables.permittedAddresses(_coinAddress), "address not permitted");
+    require(permittedAddresses.permittedAddresses(_coinAddress), "address not permitted");
     coinAddress = _coinAddress;
   }
 }

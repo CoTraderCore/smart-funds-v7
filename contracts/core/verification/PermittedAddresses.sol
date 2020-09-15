@@ -28,10 +28,10 @@ contract PermittedAddresses is Ownable {
     address _defiPortal
   ) public
   {
-    _enableAddress(_exchangePortal, "Exchnage portal");
-    _enableAddress(_poolPortal, "Pool portal");
-    _enableAddress(_stableCoin, "Stable coin");
-    _enableAddress(_defiPortal, "Defi portal");
+    _enableAddress(_exchangePortal, "EXCHANGE_PORTAL");
+    _enableAddress(_poolPortal, "POOL_PORTAL");
+    _enableAddress(_stableCoin, "STABLE_COIN");
+    _enableAddress(_defiPortal, "DEFI_PORTAL");
   }
 
 
