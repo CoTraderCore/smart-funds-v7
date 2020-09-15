@@ -33,7 +33,7 @@ contract SmartFundERC20Factory {
       _exchangePortalAddress,
       _poolPortalAddress,
       _defiPortal,
-      _permittedAddresses
+      _permittedAddresses,
       _coinAddress,
       _isRequireTradeVerification
     );

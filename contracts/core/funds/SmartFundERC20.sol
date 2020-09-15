@@ -28,7 +28,7 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
   * @param _poolPortalAddress            Address of initial pool portal
-  * @param _permittedAddresses           Address of permittedAddresses contract 
+  * @param _permittedAddresses           Address of permittedAddresses contract
   * @param _coinAddress                  Address of core ERC20 coin
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
@@ -185,14 +185,18 @@ contract SmartFundERC20 is SmartFundCore {
   }
 
   /**
-  * @dev sets new coinAddress NOTE: this works only for stable coins
+  * @dev sets new stable coinAddress NOTE: this works only for stable coins
   *
   * @param _coinAddress    New stable address
   */
   function changeStableCoinAddress(address _coinAddress) external onlyOwner {
-    require(isStableCoinBasedFund, "can not update non stable coin based fund");
+    require(isStableCoinBasedFund, "ERR: not stable based");
     require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedAddresses.permittedAddresses(_coinAddress), "address not permitted");
+    require(permittedAddresses.permittedAddresses(_coinAddress), "NOT PERMITTED");
+    require(
+      keccak256(bytes(permittedAddresses.addressesTypes(_coinAddress))) == keccak256(bytes("STABLE_COIN")),
+      "WRONG TYPE");
+
     coinAddress = _coinAddress;
   }
 }

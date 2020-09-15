@@ -747,7 +747,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
     // Require that the new pool portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newPoolPortal));
+    require(permittedAddresses.permittedAddresses(_newPoolPortal), "NOT PERMITTED");
+    // Require correct type
+    require(
+      keccak256(bytes(permittedAddresses.addressesTypes(_newPoolPortal))) == keccak256(bytes("POOL_PORTAL")),
+      "WRONG TYPE");
 
     poolPortal = PoolPortalInterface(_newPoolPortal);
   }
@@ -759,7 +763,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewExchangePortal(address _newExchangePortalAddress) public onlyOwner {
     // Require that the new exchange portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newExchangePortalAddress));
+    require(permittedAddresses.permittedAddresses(_newExchangePortalAddress), "NOT PERMITTED");
+    // Require correct type
+    require(
+      keccak256(bytes(permittedAddresses.addressesTypes(_newExchangePortalAddress))) == keccak256(bytes("EXCHANGE_PORTAL")),
+      "WRONG TYPE");
 
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
   }
@@ -771,7 +779,11 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
     // Require that the new defi portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newDefiPortalAddress));
+    require(permittedAddresses.permittedAddresses(_newDefiPortalAddress), "NOT PERMITTED");
+    // Require correct type
+    require(
+      keccak256(bytes(permittedAddresses.addressesTypes(_newDefiPortalAddress))) == keccak256(bytes("DEFI_PORTAL")),
+      "WRONG TYPE");
 
     defiPortal = DefiPortalInterface(_newDefiPortalAddress);
   }
