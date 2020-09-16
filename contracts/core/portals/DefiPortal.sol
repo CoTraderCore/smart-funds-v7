@@ -36,18 +36,12 @@ contract DefiPortal {
     payable
     returns(
       string memory eventType,
-      address[] memory tokensSent,
-      address[] memory tokensReceived,
-      uint256[] memory amountSent,
-      uint256[] memory amountReceived
+      bytes memory eventData,
+      address[] memory tokensReceived
     )
   {
     if(uint(_additionalArgs[0]) == uint(DefiActions.CompoundLoan)){
-      (tokensSent,
-       tokensReceived,
-       amountSent,
-       amountReceived) = compoundMint(_data);
-
+      (eventData, tokensReceived) = compoundMint(_data);
        eventType = "COMPOUND_LOAN";
     }
     else{
@@ -62,27 +56,17 @@ contract DefiPortal {
     external
     returns(
       string memory eventType,
-      address[] memory tokensSent,
-      address[] memory tokensReceived,
-      uint256[] memory amountSent,
-      uint256[] memory amountReceived
+      bytes memory eventData,
+      address[] memory tokensReceived
     )
   {
     if(uint(_additionalArgs[0]) == uint(DefiActions.CompoundLoan)){
-     (tokensSent,
-      tokensReceived,
-      amountSent,
-      amountReceived) = compoundMint(_data);
-
+     (eventData, tokensReceived) = compoundMint(_data);
       eventType = "COMPOUND_LOAN";
     }
     else if(uint(_additionalArgs[1]) == uint(DefiActions.CompoundReedem)){
-      (tokensSent,
-       tokensReceived,
-       amountSent,
-       amountReceived) = compoundRedeemByPercent(_data);
-
-      eventType = "COMPOUND_REDEEM";
+      (eventData, tokensReceived) = compoundRedeemByPercent(_data);
+       eventType = "COMPOUND_REDEEM";
     }
     else{
       revert("Unknown action");
@@ -119,10 +103,8 @@ contract DefiPortal {
   function compoundMint(bytes memory _data)
    private
    returns(
-     address[] memory tokensSent,
-     address[] memory tokensReceived,
-     uint256[] memory amountSent,
-     uint256[] memory amountReceived
+     bytes memory eventData,
+     address[] memory tokensReceived
    )
   {
     uint256 receivedAmount;
@@ -154,14 +136,9 @@ contract DefiPortal {
     tokensTypes.addNewTokenType(_cToken, "COMPOUND");
 
     // return DATA
-    tokensSent = new address[](1);
-    tokensSent[0] = underlyingAddress;
+    eventData = abi.encodePacked(underlyingAddress, _cToken, _amount, receivedAmount);
     tokensReceived = new address[](1);
     tokensReceived[0] = _cToken;
-    amountSent = new uint256[](1);
-    amountSent[0] = _amount;
-    amountReceived = new uint256[](1);
-    amountReceived[0] = receivedAmount;
   }
 
 
@@ -171,10 +148,8 @@ contract DefiPortal {
   function compoundRedeemByPercent(bytes memory _data)
    private
    returns(
-     address[] memory tokensSent,
-     address[] memory tokensReceived,
-     uint256[] memory amountSent,
-     uint256[] memory amountReceived
+     bytes memory eventData,
+     address[] memory tokensReceived
    )
   {
     (uint256 _percent,
@@ -210,14 +185,9 @@ contract DefiPortal {
     require(receivedAmount > 0, "Comp underlying cant be 0");
 
     // return DATA
-    tokensSent = new address[](1);
-    tokensSent[0] = _cToken;
+    eventData = abi.encodePacked(_cToken, underlyingAddress, amount, receivedAmount);
     tokensReceived = new address[](1);
     tokensReceived[0] = underlyingAddress;
-    amountSent = new uint256[](1);
-    amountSent[0] = amount;
-    amountReceived = new uint256[](1);
-    amountReceived[0] = receivedAmount;
   }
 
   /**
