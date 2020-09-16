@@ -41,16 +41,12 @@ const Token = artifacts.require('./tokens/Token')
 const ExchangePortalMock = artifacts.require('./portalsMock/ExchangePortalMock')
 const PoolPortalMock = artifacts.require('./portalsMock/PoolPortalMock')
 const CoTraderDAOWalletMock = artifacts.require('./portalsMock/CoTraderDAOWalletMock')
-const CToken = artifacts.require('./compoundMock/CToken')
-const CEther = artifacts.require('./compoundMock/CEther')
 
 
 let xxxERC,
     DAI,
     exchangePortal,
     smartFundETH,
-    cToken,
-    cEther,
     BNT,
     DAIUNI,
     DAIBNT,
@@ -116,21 +112,6 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       toWei(String(100000000))
     )
 
-    cToken = await CToken.new(
-      "Compound DAI",
-      "CDAI",
-      18,
-      toWei(String(100000000)),
-      DAI.address
-    )
-
-    cEther = await CEther.new(
-      "Compound Ether",
-      "CETH",
-      18,
-      toWei(String(100000000))
-    )
-
     const leaves = [
       xxxERC.address,
       yyyERC.address,
@@ -152,7 +133,6 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       1,
       1,
       DAI.address,
-      cEther.address,
       tokensType.address,
       merkleWhiteList.address
     )
@@ -178,10 +158,9 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       platformFee,                                  // uint256 _platformFee,
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
-      '0x0000000000000000000000000000000000000000', // address _permittedExchangesAddress,
-      '0x0000000000000000000000000000000000000000', // address _permittedPoolsAddress,
+      '0x0000000000000000000000000000000000000000', // defi portal
       poolPortal.address,                           // address _poolPortalAddress,
-      cEther.address,                               // address _cEther
+      '0x0000000000000000000000000000000000000000', // permitted addresses
       true                                          // verification for trade tokens
     )
 

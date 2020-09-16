@@ -16,9 +16,6 @@ require('chai')
 const SmartFundETHFactory = artifacts.require('./core/funds/SmartFundETHFactory.sol')
 const SmartFundERC20Factory = artifacts.require('./core/funds/SmartFundERC20Factory.sol')
 const SmartFundRegistry = artifacts.require('./core/SmartFundRegistry.sol')
-const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
-const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
-const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
 
 // mock
 const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
@@ -31,21 +28,16 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
     this.smartFundETHFactory = await SmartFundETHFactory.new(this.COT_DAO_WALLET.address)
     this.SmartFundERC20Factory = await SmartFundERC20Factory.new(this.COT_DAO_WALLET.address)
 
-    this.permittedStables = await PermittedStables.new('0x0000000000000000000000000000000000000000')
-    this.permittedExchanges = await PermittedExchanges.new('0x0000000000000000000000000000000000000000')
-    this.permittedPools = await PermittedPools.new('0x0000000000000000000000000000000000000000')
 
     this.registry = await SmartFundRegistry.new(
-      this.permittedExchanges.address ,             //   PermittedExchanges.address,
       '0x0000000000000000000000000000000000000000', //   ExchangePortal.address,
-      this.permittedPools.address ,                 //   PermittedPools.address,
       '0x0000000000000000000000000000000000000000', //   PoolPortal.address,
-      this.permittedStables.address ,               //   PermittedStabels.address,
       '0x0000000000000000000000000000000000000000', //   STABLE_COIN_ADDRESS,
       '0x0000000000000000000000000000000000000000', //   COTRADER COIN ADDRESS
       this.smartFundETHFactory.address,             //   SmartFundETHFactory.address,
-      this.SmartFundERC20Factory.address,             //   SmartFundERC20Factory.address,
-      '0x0000000000000000000000000000000000000000'  //   COMPOUND_CETHER
+      this.SmartFundERC20Factory.address,           //   SmartFundERC20Factory.address
+      '0x0000000000000000000000000000000000000000', //   Defi Portal
+      '0x0000000000000000000000000000000000000000', //   PermittedAddresses
     )
   })
 
@@ -68,61 +60,40 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
     })
   })
 
-  describe('Permitted', function() {
+  describe('Permitted TODO', function() {
     const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
 
-    it('Should not be able change non permitted exchange portal address', async function() {
-      await this.registry.setExchangePortalAddress(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted exchange portal address', async function() {
-      await this.permittedExchanges.addNewExchangeAddress(testAddress)
-      await this.registry.setExchangePortalAddress(testAddress).should.be.fulfilled
-    })
-
-    it('Should not be able change non permitted pool portal address', async function() {
-      await this.registry.setPoolPortalAddress(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted pool portal address', async function() {
-      await this.permittedPools.addNewPoolAddress(testAddress)
-      await this.registry.setPoolPortalAddress(testAddress).should.be.fulfilled
-    })
-
-    it('Should not be able change non permitted stable portal address', async function() {
-      await this.registry.setStableCoinAddress(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted stable portal address', async function() {
-      await this.permittedStables.addNewStableAddress(testAddress)
-      await this.registry.setStableCoinAddress(testAddress).should.be.fulfilled
-    })
-
-
-    it('Not owner can not change portals addresses', async function() {
-      await this.permittedExchanges.addNewExchangeAddress(testAddress)
-      await this.permittedPools.addNewPoolAddress(testAddress)
-      await this.permittedStables.addNewStableAddress(testAddress)
-
-      await this.registry.setExchangePortalAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.registry.setPoolPortalAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.registry.setStableCoinAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Not owner can not change permitted addresses', async function() {
-      await this.permittedExchanges.addNewExchangeAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.permittedPools.addNewPoolAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await this.permittedStables.addNewStableAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-    })
+    // it('Should not be able change non permitted exchange portal address', async function() {
+    //
+    // })
+    //
+    // it('Should be able change permitted exchange portal address', async function() {
+    //
+    // })
+    //
+    // it('Should not be able change non permitted pool portal address', async function() {
+    //
+    // })
+    //
+    // it('Should be able change permitted pool portal address', async function() {
+    //
+    // })
+    //
+    // it('Should not be able change non permitted stable portal address', async function() {
+    //
+    // })
+    //
+    // it('Should be able change permitted stable portal address', async function() {
+    //
+    // })
+    //
+    //
+    // it('Not owner can not change portals addresses', async function() {
+    //
+    // })
+    //
+    // it('Not owner can not change permitted addresses', async function() {
+    //
+    // })
   })
 })

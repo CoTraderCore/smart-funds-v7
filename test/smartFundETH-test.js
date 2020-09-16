@@ -170,7 +170,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
     await tokensType.addNewPermittedAddress(poolPortal.address)
 
 
-    permittedAddresses = await PermittedExchanges.new(
+    permittedAddresses = await PermittedAddresses.new(
       exchangePortal.address,
       poolPortal.address,
       defiPortal.address,
@@ -222,9 +222,6 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(nameDU, "DAI Uniswap")
       assert.equal(totalSupplyDU, toWei(String(100000000)))
 
-      const nameCT = await cToken.name()
-      const totalSupplyCT = await cToken.totalSupply()
-      const underlying = await cToken.underlying()
     })
 
     it('Correct init exchange portal', async function() {
@@ -252,13 +249,11 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       const totalShares = await smartFundETH.totalShares()
       const portalEXCHANGE = await smartFundETH.exchangePortal()
       const portalPOOL = await smartFundETH.poolPortal()
-      const cEthAddress = await smartFundETH.cEther()
 
       assert.equal(exchangePortal.address, portalEXCHANGE)
       assert.equal(poolPortal.address, portalPOOL)
       assert.equal('TEST ETH FUND', name)
       assert.equal(0, totalShares)
-      assert.equal(cEthAddress, cEther.address)
     })
 
     it('Correct init commision', async function() {
