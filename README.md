@@ -68,7 +68,7 @@ for reduce gas cost.
 # TODO
 
 ```
-Update Unit tests with DEFI portal and new permittedAddresses
+Update Unit tests with DEFI portal and new permittedAddresses 
 ```
 
 

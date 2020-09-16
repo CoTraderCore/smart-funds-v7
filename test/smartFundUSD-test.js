@@ -261,11 +261,9 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       const name = await smartFundERC20.name()
       const totalShares = await smartFundERC20.totalShares()
       const portalEXCHANGE = await smartFundERC20.exchangePortal()
-      const stableCoinAddress = await smartFundERC20.coinAddress()
       const portalPOOL = await smartFundERC20.poolPortal()
 
       assert.equal(exchangePortal.address, portalEXCHANGE)
-      assert.equal(stableCoinAddress, DAI.address)
       assert.equal(poolPortal.address, portalPOOL)
       assert.equal('TEST USD FUND', name)
       assert.equal(0, totalShares)
@@ -1505,60 +1503,8 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
   })
 
 
-  describe('Permitted', function() {
-    const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
+  describe('Permitted TODO', function() {
 
-    it('Should not be able change non permitted exchange portal address', async function() {
-      await smartFundERC20.setNewExchangePortal(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted exchange portal address', async function() {
-      await permittedExchanges.addNewExchangeAddress(testAddress)
-      await smartFundERC20.setNewExchangePortal(testAddress).should.be.fulfilled
-    })
-
-    it('Should not be able change non permitted pool portal address', async function() {
-      await smartFundERC20.setNewPoolPortal(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted pool portal address', async function() {
-      await permittedPools.addNewPoolAddress(testAddress)
-      await smartFundERC20.setNewPoolPortal(testAddress).should.be.fulfilled
-    })
-
-    it('Should not be able change non permitted stable portal address', async function() {
-      await smartFundERC20.changeStableCoinAddress(testAddress).should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Should be able change permitted stable coin address', async function() {
-      await permittedStables.addNewStableAddress(testAddress)
-      await smartFundERC20.changeStableCoinAddress(testAddress).should.be.fulfilled
-    })
-
-    it('Should not be able change stable coin address if some investor did deposit', async function() {
-      await permittedStables.addNewStableAddress(testAddress)
-
-      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
-
-      await smartFundERC20.changeStableCoinAddress(testAddress)
-      .should.be.rejectedWith(EVMRevert)
-    })
-
-    it('Not owner can not change portals addresses', async function() {
-      await permittedExchanges.addNewExchangeAddress(testAddress)
-      await permittedPools.addNewPoolAddress(testAddress)
-      await permittedStables.addNewStableAddress(testAddress)
-
-      await smartFundERC20.setNewExchangePortal(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await smartFundERC20.setNewPoolPortal(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-
-      await smartFundERC20.changeStableCoinAddress(testAddress, { from:userTwo })
-      .should.be.rejectedWith(EVMRevert)
-    })
   })
   // END
 })
