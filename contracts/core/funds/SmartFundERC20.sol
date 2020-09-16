@@ -59,12 +59,8 @@ contract SmartFundERC20 is SmartFundCore {
     permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
     // Push coin in tokens list
     _addToken(_coinAddress);
-    // Get address type
-    string memory addressType = permittedAddresses.addressesTypes(_coinAddress);
-    // Check if this is stable coin based fund or not
-    isStableCoinBasedFund = keccak256(bytes(addressType)) == keccak256(bytes("STABLE_COIN"))
-    ? true
-    : false;
+    // Define is stable based fund 
+    isStableCoinBasedFund = permittedAddresses.isMatchTypes(_coinAddress, 4);
   }
 
   /**
