@@ -5,15 +5,11 @@ import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 
 import "../interfaces/ITokensTypeStorage.sol";
-import "../../compound/CToken.sol";
-import "../../compound/CEther.sol";
 
 
 contract DefiPortal {
   using SafeMath for uint256;
 
-  // COMPOUND ETH wrapper address
-  CEther public cEther;
   address constant private ETH_TOKEN_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
   // Contract for handle tokens types
@@ -23,8 +19,7 @@ contract DefiPortal {
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order
   enum DefiActions { YearnDeposit, YearnWithdraw }
 
-  constructor(address _cEther, address _tokensTypes) public {
-    cEther = CEther(_cEther);
+  constructor(address _tokensTypes) public {
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
 
