@@ -79,11 +79,11 @@ contract SmartFundERC20 is SmartFundCore {
       require(whitelist[msg.sender]);
 
     // Require that the amount sent is not 0
-    require(depositAmount > 0, "deposit amount should be more than zero");
+    require(depositAmount > 0, "ZERO_DEPOSIT");
 
     // Transfer core ERC20 coin from sender
     require(IERC20(coreFundAsset).transferFrom(msg.sender, address(this), depositAmount),
-    "can not transfer from");
+    "TRANSFER_FROM_ISSUE");
 
     totalWeiDeposited += depositAmount;
 
@@ -91,7 +91,7 @@ contract SmartFundERC20 is SmartFundCore {
     uint256 shares = calculateDepositToShares(depositAmount);
 
     // If user would receive 0 shares, don't continue with deposit
-    require(shares != 0, "shares can not be zero");
+    require(shares != 0, "ZERO_SHARES");
 
     // Add shares to total
     totalShares = totalShares.add(shares);
@@ -184,9 +184,9 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _coinAddress    New stable address
   */
   function changeStableCoinAddress(address _coinAddress) external onlyOwner {
-    require(isStableCoinBasedFund, "ERR: not stable based");
-    require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedAddresses.isMatchTypes(_coinAddress, 4), "WRONG ADDRESS");
+    require(isStableCoinBasedFund, "NOT_USD_FUND");
+    require(totalWeiDeposited == 0, "NOT_EMPTY_DEPOSIT");
+    require(permittedAddresses.isMatchTypes(_coinAddress, 4), "WRONG_ADDRESS");
 
     coreFundAsset = _coinAddress;
   }

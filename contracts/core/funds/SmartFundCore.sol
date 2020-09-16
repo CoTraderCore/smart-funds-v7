@@ -149,6 +149,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     successFee = _successFee;
     platformFee = _platformFee;
 
+    // Init manager
     if(_owner == address(0)){
       transferOwnership(msg.sender);
     }
@@ -156,6 +157,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       transferOwnership(_owner);
     }
 
+    // Init platform address
     if(_platformAddress == address(0)){
       platformAddress = msg.sender;
     }
@@ -236,8 +238,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _percentageWithdraw    The percentage of the users shares to withdraw.
   */
   function withdraw(uint256 _percentageWithdraw) external {
-    require(totalShares != 0, "Empty shares");
-    require(_percentageWithdraw <= TOTAL_PERCENTAGE, "Not correct percent");
+    require(totalShares != 0, "EMPTY_SHARES");
+    require(_percentageWithdraw <= TOTAL_PERCENTAGE, "INCORRECT_PERCENT");
 
     uint256 percentageWithdraw = (_percentageWithdraw == 0) ? TOTAL_PERCENTAGE : _percentageWithdraw;
 
@@ -301,13 +303,13 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     bytes calldata _additionalData,
     uint256 _minReturn
   ) external onlyOwner {
-    require(_minReturn > 0, "min return should be more than 0");
+    require(_minReturn > 0, "MIN_RETURN_0");
 
     uint256 receivedAmount;
 
     if (_source == ETH_TOKEN_ADDRESS) {
       // Make sure fund contains enough ether
-      require(address(this).balance >= _sourceAmount, "Not enough ETH");
+      require(address(this).balance >= _sourceAmount, "NOT_ENOUGH_ETH");
       // Call trade on ExchangePortal along with ether
       receivedAmount = exchangePortal.trade.value(_sourceAmount)(
         _source,
@@ -334,8 +336,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     }
 
     // make sure fund recive destanation
-    require(receivedAmount >= _minReturn,
-      "received amount can not be less than min return");
+    require(receivedAmount >= _minReturn, "RECEIVED_LESS_THAN_MIN_RETURN");
 
     // add token to trader list
     _addToken(address(_destination));
@@ -380,7 +381,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
        // fund can't buy token which not in traded tokens list
        if(isRequireTradeVerification)
-         require(tokensTraded[_connectorsAddress[i]], "Cant buy pool for non traded token");
+         require(tokensTraded[_connectorsAddress[i]], "NON_TRADED_POOL_CONNECTOR");
        // approve
        IERC20(_connectorsAddress[i]).approve(address(poolPortal), _connectorsAmount[i]);
      }
@@ -421,7 +422,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
      );
    }
    // make sure fund receive pool token
-   require(poolAmountReceive > 0, "not received pool");
+   require(poolAmountReceive > 0, "EMPTY_POOL_RETURN");
    // Add pool as ERC20 for withdraw
    _addToken(_poolToken);
    // emit event
@@ -537,7 +538,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 tokenCount = tokenAddresses.length;
 
     // we can't hold more than MAX_TOKENS tokens
-    require(tokenCount <= MAX_TOKENS, "MAX_TOKENS limit");
+    require(tokenCount <= MAX_TOKENS, "MAX_TOKENS");
   }
 
   /**
@@ -730,7 +731,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewExchangePortal(address _newExchangePortalAddress) public onlyOwner {
     // Require correct permitted address type
-    require(permittedAddresses.isMatchTypes(_newExchangePortalAddress, 1), "WRONG ADDRESS");
+    require(permittedAddresses.isMatchTypes(_newExchangePortalAddress, 1), "WRONG_ADDRESS");
     // Set new
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
   }
@@ -742,7 +743,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
     // Require correct permitted address type
-    require(permittedAddresses.isMatchTypes(_newPoolPortal, 2), "WRONG ADDRESS");
+    require(permittedAddresses.isMatchTypes(_newPoolPortal, 2), "WRONG_ADDRESS");
     // Set new
     poolPortal = PoolPortalInterface(_newPoolPortal);
   }
@@ -755,7 +756,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   */
   function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
     // Require correct permitted address type
-    require(permittedAddresses.isMatchTypes(_newDefiPortalAddress, 3), "WRONG ADDRESS");
+    require(permittedAddresses.isMatchTypes(_newDefiPortalAddress, 3), "WRONG_ADDRESS");
     // Set new
     defiPortal = DefiPortalInterface(_newDefiPortalAddress);
   }

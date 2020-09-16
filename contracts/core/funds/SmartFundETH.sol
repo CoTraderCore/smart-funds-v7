@@ -62,7 +62,7 @@ contract SmartFundETH is SmartFundCore {
       require(whitelist[msg.sender]);
 
     // Require that the amount sent is not 0
-    require(msg.value != 0, "deposit amount should be more than zero");
+    require(msg.value != 0, "ZERO_DEPOSIT");
 
     totalWeiDeposited += msg.value;
 
@@ -70,7 +70,7 @@ contract SmartFundETH is SmartFundCore {
     uint256 shares = calculateDepositToShares(msg.value);
 
     // If user would receive 0 shares, don't continue with deposit
-    require(shares != 0, "shares can not be zero");
+    require(shares != 0, "ZERO_SHARES");
 
     // Add shares to total
     totalShares = totalShares.add(shares);
