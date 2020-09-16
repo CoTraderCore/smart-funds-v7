@@ -11,7 +11,9 @@ contract PermittedAddresses is Ownable {
 
   // Mapping to permitted addresses
   mapping (address => bool) public permittedAddresses;
-  mapping (address => string) public addressesTypes;
+  mapping (address => uint256) public addressesTypes;
+
+  enum Types { EMPTY, EXCHANGE_PORTAL, POOL_PORTAL, DEFI_PORTAL, STABLE_COIN }
 
   /**
   * @dev contructor
@@ -28,10 +30,10 @@ contract PermittedAddresses is Ownable {
     address _defiPortal
   ) public
   {
-    _enableAddress(_exchangePortal, "EXCHANGE_PORTAL");
-    _enableAddress(_poolPortal, "POOL_PORTAL");
-    _enableAddress(_stableCoin, "STABLE_COIN");
-    _enableAddress(_defiPortal, "DEFI_PORTAL");
+    _enableAddress(_exchangePortal, Types.EXCHANGE_PORTAL);
+    _enableAddress(_poolPortal, Types.POOL_PORTAL);
+    _enableAddress(_defiPortal, Types.DEFI_PORTAL);
+    _enableAddress(_stableCoin, Types.STABLE_COIN);
   }
 
 
@@ -49,7 +51,7 @@ contract PermittedAddresses is Ownable {
   *
   * @param _newAddress    The new address to permit
   */
-  function updateAddressType(address _newAddress, string memory addressType) public onlyOwner {
+  function updateAddressType(address _newAddress, uint256 addressType) public onlyOwner {
     addressesTypes[_newAddress] = addressType;
   }
 
@@ -70,9 +72,9 @@ contract PermittedAddresses is Ownable {
   * @param _newAddress    The new address to set
   * @param addressType    Address type
   */
-  function _enableAddress(address _newAddress, string memory addressType) private {
+  function _enableAddress(address _newAddress) private {
     permittedAddresses[_newAddress] = true;
-    addressesTypes[_newAddress] = addressType;
+    addressesTypes[_newAddress] = 0;
 
     emit AddNewPermittedAddress(_newAddress, addressType);
   }
@@ -80,9 +82,8 @@ contract PermittedAddresses is Ownable {
   /**
   * @dev check if input address has the same type as addressType
   */
-  function isMatchTypes(address _address, string memory addressType) public view returns(bool){
-    string memory currentType = addressesTypes[_address];
-    return keccak256(bytes(currentType)) == keccak256(bytes(addressType));
+  function isMatchTypes(address _address, uint256 addressType) public view returns(bool){
+    return addressesTypes[_address] == addressType;
   }
 
   /**

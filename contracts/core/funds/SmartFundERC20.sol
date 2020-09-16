@@ -186,7 +186,7 @@ contract SmartFundERC20 is SmartFundCore {
   function changeStableCoinAddress(address _coinAddress) external onlyOwner {
     require(isStableCoinBasedFund, "ERR: not stable based");
     require(totalWeiDeposited == 0, "deposit is already made");
-    require(permittedAddresses.isMatchTypes(_coinAddress, "STABLE_COIN"), "NOT STABLE COIN");
+    require(permittedAddresses.isMatchTypes(_coinAddress, 4), "WRONG ADDRESS");
 
     coreFundAsset = _coinAddress;
   }

@@ -7,10 +7,8 @@ interface DefiPortalInterface {
     payable
     returns(
       string memory eventType,
-      address[] memory tokensSent,
-      address[] memory tokensReceived,
-      uint256[] memory amountSent,
-      uint256[] memory amountReceived
+      bytes memory eventData,
+      address[] memory tokensReceived
     );
 
   function callNonPayableProtocol(
@@ -20,10 +18,8 @@ interface DefiPortalInterface {
     external
     returns(
       string memory eventType,
-      address[] memory tokensSent,
-      address[] memory tokensReceived,
-      uint256[] memory amountSent,
-      uint256[] memory amountReceived
+      bytes memory eventData,
+      address[] memory tokensReceived
     );
 
   function getValue(

@@ -108,12 +108,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   mapping (address => int256) public addressesNetDeposit;
 
   // Events
-  event DefiCall(
-    string eventType,
-    address[] tokensSent,
-    address[] tokensReceived,
-    uint256[] amountSent,
-    uint256[] amountReceived);
+  event DefiCall(string eventType, bytes eventData);
 
   event BuyPool(
     address poolAddress,
@@ -500,38 +495,26 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   {
     // event data
     string memory eventType;
-    address[] memory tokensSent;
+    bytes memory eventData;
     address[] memory tokensReceived;
-    uint256[] memory amountSent;
-    uint256[] memory amountReceived;
 
     // call
     if(_etherAmount > 0){
       (eventType,
-       tokensSent,
-       tokensReceived,
-       amountSent,
-       amountReceived) = defiPortal.callPayableProtocol.value(_etherAmount)(_data, _additionalArgs);
+       eventData,
+       tokensReceived) = defiPortal.callPayableProtocol.value(_etherAmount)(_data, _additionalArgs);
     }else{
       (eventType,
-       tokensSent,
-       tokensReceived,
-       amountSent,
-       amountReceived) = defiPortal.callNonPayableProtocol(_data, _additionalArgs);
+       eventData,
+       tokensReceived) = defiPortal.callNonPayableProtocol(_data, _additionalArgs);
     }
 
    // add new tokens in fund
    for(uint8 i = 0; i<tokensReceived.length; i++){
      _addToken(tokensReceived[i]);
    }
-
    // emit event
-    emit DefiCall(
-      eventType,
-      tokensSent,
-      tokensReceived,
-      amountSent,
-      amountReceived);
+    emit DefiCall(eventType, eventData);
   }
 
 
@@ -741,32 +724,29 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   }
 
   /**
-  * @dev Allows the fund manager to connect to a new permitted poolPortal
-  *
-  * @param _newPoolPortal   The address of the new permitted pool portal to use
-  */
-  function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
-    // Require that the new pool portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newPoolPortal), "NOT PERMITTED");
-    // Require correct type
-    require(permittedAddresses.isMatchTypes(_newPoolPortal, "POOL_PORTAL"), "WRONG TYPE");
-    // Set new
-    poolPortal = PoolPortalInterface(_newPoolPortal);
-  }
-
-  /**
   * @dev Allows the fund manager to connect to a new permitted exchange portal
   *
   * @param _newExchangePortalAddress    The address of the new permitted exchange portal to use
   */
   function setNewExchangePortal(address _newExchangePortalAddress) public onlyOwner {
-    // Require that the new exchange portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newExchangePortalAddress), "NOT PERMITTED");
-    // Require correct type
-    require(permittedAddresses.isMatchTypes(_newExchangePortalAddress, "EXCHANGE_PORTAL"), "WRONG TYPE");
+    // Require correct permitted address type
+    require(permittedAddresses.isMatchTypes(_newExchangePortalAddress, 1), "WRONG ADDRESS");
     // Set new
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
   }
+
+  /**
+  * @dev Allows the fund manager to connect to a new permitted poolPortal
+  *
+  * @param _newPoolPortal   The address of the new permitted pool portal to use
+  */
+  function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
+    // Require correct permitted address type
+    require(permittedAddresses.isMatchTypes(_newPoolPortal, 2), "WRONG ADDRESS");
+    // Set new
+    poolPortal = PoolPortalInterface(_newPoolPortal);
+  }
+
 
   /**
   * @dev Allows the fund manager to connect to a new permitted defi portal
@@ -774,10 +754,8 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
   */
   function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
-    // Require that the new defi portal is permitted by permittedAddresses
-    require(permittedAddresses.permittedAddresses(_newDefiPortalAddress), "NOT PERMITTED");
-    // Require correct type
-    require(permittedAddresses.isMatchTypes(_newDefiPortalAddress, "DEFI_PORTAL"), "WRONG TYPE");
+    // Require correct permitted address type
+    require(permittedAddresses.isMatchTypes(_newDefiPortalAddress, 3), "WRONG ADDRESS");
     // Set new
     defiPortal = DefiPortalInterface(_newDefiPortalAddress);
   }
