@@ -518,7 +518,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
          _additionalArgs
         );
     }
-    // call defi not payable case 
+    // call defi not payable case
     else{
       (eventType,
        tokensToReceive,
@@ -610,22 +610,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     tokenAddresses[_tokenIndex] = tokenAddresses[arrayLength];
     delete tokenAddresses[arrayLength];
     tokenAddresses.pop();
-  }
-
-
-  // get all fund data in one call
-  function getSmartFundData() external view returns (
-    address _owner,
-    string memory _name,
-    uint256 _totalShares,
-    address[] memory _tokenAddresses,
-    uint256 _successFee
-  ) {
-    _owner = owner();
-    _name = name;
-    _totalShares = totalShares;
-    _tokenAddresses = tokenAddresses;
-    _successFee = successFee;
   }
 
   /**
