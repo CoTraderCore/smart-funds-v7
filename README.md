@@ -58,14 +58,17 @@ for reduce gas cost.
 
 19) Add DEFI portal for support new protocols without deploy new version of fund
 
-20) Move Compound from fund to Defi portal
+20) Remove Compound logic from fund to Defi portal
 
 21) Add one Global permitted contract for Exchange, Pool, Defi, Stable coins portal
+
+22) Add Yearn Finance
 ```
 
 # TODO
 
 ```
+Remove COMPOUND from portals
 Update Unit tests with DEFI portal and new permittedAddresses
 ```
 

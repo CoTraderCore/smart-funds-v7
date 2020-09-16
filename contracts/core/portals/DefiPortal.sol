@@ -21,7 +21,7 @@ contract DefiPortal {
 
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order
-  enum DefiActions { CompoundLoan, CompoundReedem }
+  enum DefiActions { YearnDeposit, YearnWithdraw }
 
   constructor(address _cEther, address _tokensTypes) public {
     cEther = CEther(_cEther);
@@ -29,6 +29,8 @@ contract DefiPortal {
   }
 
   function callPayableProtocol(
+    address[] memory tokensToSend,
+    uint256[] memory amountsToSend,
     bytes memory _data,
     bytes32[] memory _additionalArgs
   )
@@ -40,36 +42,33 @@ contract DefiPortal {
       address[] memory tokensReceived
     )
   {
-    if(uint(_additionalArgs[0]) == uint(DefiActions.CompoundLoan)){
-      (eventData, tokensReceived) = compoundMint(_data);
-       eventType = "COMPOUND_LOAN";
-    }
-    else{
-      revert("Unknown action");
-    }
+    // there are no action for current DEFI payable protocol
+    revert("Unknown DEFI action");
   }
 
   function callNonPayableProtocol(
+    address[] memory tokensToSend,
+    uint256[] memory amountsToSend,
     bytes memory _data,
     bytes32[] memory _additionalArgs
   )
     external
     returns(
       string memory eventType,
-      bytes memory eventData,
-      address[] memory tokensReceived
+      address[] memory tokensToReceive,
+      uint256[] memory amountsToReceive
     )
   {
-    if(uint(_additionalArgs[0]) == uint(DefiActions.CompoundLoan)){
-     (eventData, tokensReceived) = compoundMint(_data);
-      eventType = "COMPOUND_LOAN";
+    if(uint(_additionalArgs[0]) == uint(DefiActions.YearnDeposit)){
+
+      eventType = "YEARN_DEPOSIT";
     }
-    else if(uint(_additionalArgs[1]) == uint(DefiActions.CompoundReedem)){
-      (eventData, tokensReceived) = compoundRedeemByPercent(_data);
-       eventType = "COMPOUND_REDEEM";
+    else if(uint(_additionalArgs[1]) == uint(DefiActions.YearnWithdraw)){
+
+       eventType = "YEARN_WITHDRAW";
     }
     else{
-      revert("Unknown action");
+      revert("Unknown DEFI action");
     }
   }
 
@@ -86,134 +85,24 @@ contract DefiPortal {
     return 0;
   }
 
-
-  // get underlying by cToken
-  function getCTokenUnderlying(address _cToken)
-    public
-    view
-    returns(address)
+  function _YearnDeposit()
+    private
+    returns(
+    address[] memory tokensToReceive,
+    uint256[] memory amountsToReceive
+    )
   {
-    return CToken(_cToken).underlying();
+
   }
 
-
-  /**
-  * @dev buy Compound cTokens
-  */
-  function compoundMint(bytes memory _data)
-   private
-   returns(
-     bytes memory eventData,
-     address[] memory tokensReceived
-   )
+  function _YearnWithdraw() private returns(
+    address[] memory tokensToReceive,
+    uint256[] memory amountsToReceive
+    )
   {
-    uint256 receivedAmount;
-    address underlyingAddress;
 
-    (uint256 _amount,
-     address _cToken) = abi.decode(_data, (uint256, address));
-
-    if(_cToken == address(cEther)){
-      underlyingAddress = ETH_TOKEN_ADDRESS;
-      // mint cETH
-      cEther.mint.value(_amount)();
-      // transfer received cETH back to fund
-      receivedAmount = cEther.balanceOf(address(this));
-      cEther.transfer(msg.sender, receivedAmount);
-    }else{
-      // mint cERC20
-      CToken cToken = CToken(_cToken);
-      underlyingAddress = cToken.underlying();
-      _transferFromSenderAndApproveTo(IERC20(underlyingAddress), _amount, address(_cToken));
-      cToken.mint(_amount);
-      // transfer received cERC back to fund
-      receivedAmount = cToken.balanceOf(address(this));
-      cToken.transfer(msg.sender, receivedAmount);
-    }
-    // Additional check
-    require(receivedAmount > 0, "Comp cToken cant be 0");
-    // Update token type
-    tokensTypes.addNewTokenType(_cToken, "COMPOUND");
-
-    // return DATA
-    eventData = abi.encodePacked(underlyingAddress, _cToken, _amount, receivedAmount);
-    tokensReceived = new address[](1);
-    tokensReceived[0] = _cToken;
   }
 
-
-  /**
-  * @dev sell certain percent of Ctokens to Compound
-  */
-  function compoundRedeemByPercent(bytes memory _data)
-   private
-   returns(
-     bytes memory eventData,
-     address[] memory tokensReceived
-   )
-  {
-    (uint256 _percent,
-     address _cToken) = abi.decode(_data, (uint256, address));
-
-    uint256 receivedAmount;
-    address underlyingAddress;
-    uint256 amount = getPercentFromCTokenBalance(_percent, _cToken, msg.sender);
-
-    // transfer amount from sender
-    IERC20(_cToken).transferFrom(msg.sender, address(this), amount);
-
-    // reedem
-    if(_cToken == address(cEther)){
-      underlyingAddress = ETH_TOKEN_ADDRESS;
-      // redeem compound ETH
-      cEther.redeem(amount);
-      // transfer received ETH back to fund
-      receivedAmount = address(this).balance;
-      (msg.sender).transfer(receivedAmount);
-
-    }else{
-      // redeem ERC20
-      CToken cToken = CToken(_cToken);
-      cToken.redeem(amount);
-      // transfer received ERC20 back to fund
-      underlyingAddress = cToken.underlying();
-      IERC20 underlying = IERC20(underlyingAddress);
-      receivedAmount = underlying.balanceOf(address(this));
-      underlying.transfer(msg.sender, receivedAmount);
-    }
-    // Additional check
-    require(receivedAmount > 0, "Comp underlying cant be 0");
-
-    // return DATA
-    eventData = abi.encodePacked(_cToken, underlyingAddress, amount, receivedAmount);
-    tokensReceived = new address[](1);
-    tokensReceived[0] = underlyingAddress;
-  }
-
-  /**
-  * @dev return percent of compound cToken balance
-  *
-  * @param _percent       amount of ERC20 or ETH
-  * @param _cToken        cToken address
-  * @param _holder        address of cToken holder
-  */
-  function getPercentFromCTokenBalance(uint _percent, address _cToken, address _holder)
-   public
-   view
-   returns(uint256)
-  {
-    if(_percent == 100){
-      return IERC20(_cToken).balanceOf(_holder);
-    }
-    else if(_percent > 0 && _percent < 100){
-      uint256 currectBalance = IERC20(_cToken).balanceOf(_holder);
-      return currectBalance.div(100).mul(_percent);
-    }
-    else{
-      // not correct percent
-      return 0;
-    }
-  }
 
   /**
   * @dev Transfers tokens to this contract and approves them to another address
