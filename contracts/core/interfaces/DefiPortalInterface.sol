@@ -2,7 +2,7 @@ interface DefiPortalInterface {
   function callPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
-    bytes calldata _data,
+    bytes calldata _additionalData,
     bytes32[] calldata _additionalArgs
   )
     external
@@ -16,7 +16,7 @@ interface DefiPortalInterface {
   function callNonPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
-    bytes calldata _data,
+    bytes calldata _additionalData,
     bytes32[] calldata _additionalArgs
   )
     external
