@@ -3,9 +3,7 @@ pragma solidity ^0.6.12;
 import "../../../contracts/zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "../../../contracts/core/interfaces/ITokensTypeStorage.sol";
 import "../../../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
-
-import "../compoundMock/CEther.sol";
-import "../compoundMock/CToken.sol";
+import "../../../contracts/zeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract ExchangePortalMock {
 
@@ -24,7 +22,6 @@ contract ExchangePortalMock {
   address public stableCoinAddress;
   bool public stopTransfer;
 
-  CEther public cEther;
 
   // Enum
   enum ExchangeType { Paraswap, Bancor, OneInch }
@@ -35,7 +32,6 @@ contract ExchangePortalMock {
     uint256 _mul,
     uint256 _div,
     address _stableCoinAddress,
-    address _cETH,
     address _tokensTypes,
     address _merkleTreeWhiteList
     )
@@ -44,7 +40,6 @@ contract ExchangePortalMock {
     mul = _mul;
     div = _div;
     stableCoinAddress = _stableCoinAddress;
-    cEther = CEther(_cETH);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -218,106 +213,6 @@ contract ExchangePortalMock {
     }
   }
 
-  // for mock 1 cETH = 1 ETH, 1 cERC20 = 1 ERC20
-  function compoundRedeemByPercent(uint _percent, address _cToken)
-   external
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-
-    uint256 amount = (_percent == 100)
-    // if 100 return all
-    ? IERC20(address(_cToken)).balanceOf(msg.sender)
-    // else calculate percent
-    : getPercentFromCTokenBalance(_percent, address(_cToken), msg.sender);
-
-    // transfer amount from sender
-    IERC20(_cToken).transferFrom(msg.sender, address(this), amount);
-
-    // reedem
-    if(_cToken == address(cEther)){
-      // redeem compound ETH
-      cEther.redeem(amount);
-      // transfer received ETH back to fund
-      receivedAmount = amount;
-      (msg.sender).transfer(amount);
-
-    }else{
-      // redeem IERC20
-      CToken cToken = CToken(_cToken);
-      cToken.redeem(amount);
-      // transfer received IERC20 back to fund
-      address underlyingAddress = cToken.underlying();
-      IERC20 underlying = IERC20(underlyingAddress);
-      receivedAmount = amount;
-      underlying.transfer(msg.sender, amount);
-    }
-
-    return receivedAmount;
-  }
-
-  /**
-  * @dev buy Compound cTokens
-  *
-  * @param _amount       amount of ERC20 or ETH
-  * @param _cToken       cToken address
-  */
-  function compoundMint(uint256 _amount, address _cToken)
-   external
-   payable
-   returns(uint256)
-  {
-    uint256 receivedAmount = 0;
-    if(_cToken == address(cEther)){
-      // mint cETH
-      cEther.mint.value(_amount)();
-      // transfer received cETH back to fund
-      receivedAmount = _amount;
-      cEther.transfer(msg.sender, receivedAmount);
-    }else{
-      // mint cERC20
-      CToken cToken = CToken(_cToken);
-      address underlyingAddress = cToken.underlying();
-      _transferFromSenderAndApproveTo(IERC20(underlyingAddress), _amount, address(_cToken));
-      cToken.mint(_amount);
-
-      // transfer received cERC back to fund
-      receivedAmount = cToken.balanceOf(address(this));
-      cToken.transfer(msg.sender, receivedAmount);
-    }
-
-    setTokenType(_cToken, "COMPOUND");
-
-    return receivedAmount;
-  }
-
-
-  /**
-  * @dev return percent of compound cToken balance
-  *
-  * @param _percent       amount of ERC20 or ETH
-  * @param _cToken        cToken address
-  * @param _holder        address of cToken holder
-  */
-  function getPercentFromCTokenBalance(uint _percent, address _cToken, address _holder)
-  public
-  view
-  returns(uint256)
-  {
-    if(_percent > 0 && _percent <= 100){
-      uint256 currectBalance = IERC20(_cToken).balanceOf(_holder);
-      return currectBalance.div(100).mul(_percent);
-    }
-    else{
-      // not correct percent
-      return 0;
-    }
-  }
-
-  function getCTokenUnderlying(address _cToken) public view returns(address){
-    return CToken(_cToken).underlying();
-  }
-
   // get the total value of multiple tokens and amounts in one go
   function getTotalValue(address[] memory _fromAddresses, uint256[] memory _amounts, address _to) public view returns (uint256) {
     uint256 sum = 0;
@@ -339,7 +234,7 @@ contract ExchangePortalMock {
     require(_source.transferFrom(msg.sender, address(this), _sourceAmount));
     // reset previos approve because some tokens require allowance 0
     _source.approve(_to, 0);
-    // approve 
+    // approve
     _source.approve(_to, _sourceAmount);
   }
 

@@ -6,7 +6,7 @@ import "../../zeppelin-solidity/contracts/access/Ownable.sol";
   The contract determines which addresses are permitted
 */
 contract PermittedAddresses is Ownable {
-  event AddNewPermittedAddress(address newAddress, string addressType);
+  event AddNewPermittedAddress(address newAddress, uint256 addressType);
   event RemovePermittedAddress(address Address);
 
   // Mapping to permitted addresses
@@ -30,10 +30,10 @@ contract PermittedAddresses is Ownable {
     address _defiPortal
   ) public
   {
-    _enableAddress(_exchangePortal, Types.EXCHANGE_PORTAL);
-    _enableAddress(_poolPortal, Types.POOL_PORTAL);
-    _enableAddress(_defiPortal, Types.DEFI_PORTAL);
-    _enableAddress(_stableCoin, Types.STABLE_COIN);
+    _enableAddress(_exchangePortal, uint256(Types.EXCHANGE_PORTAL));
+    _enableAddress(_poolPortal, uint256(Types.POOL_PORTAL));
+    _enableAddress(_defiPortal, uint256(Types.DEFI_PORTAL));
+    _enableAddress(_stableCoin, uint256(Types.STABLE_COIN));
   }
 
 
@@ -42,7 +42,7 @@ contract PermittedAddresses is Ownable {
   *
   * @param _newAddress    The new address to permit
   */
-  function addNewAddress(address _newAddress, string memory addressType) public onlyOwner {
+  function addNewAddress(address _newAddress, uint256 addressType) public onlyOwner {
     _enableAddress(_newAddress, addressType);
   }
 
@@ -72,9 +72,9 @@ contract PermittedAddresses is Ownable {
   * @param _newAddress    The new address to set
   * @param addressType    Address type
   */
-  function _enableAddress(address _newAddress) private {
+  function _enableAddress(address _newAddress, uint256 addressType) private {
     permittedAddresses[_newAddress] = true;
-    addressesTypes[_newAddress] = 0;
+    addressesTypes[_newAddress] = addressType;
 
     emit AddNewPermittedAddress(_newAddress, addressType);
   }
@@ -89,7 +89,7 @@ contract PermittedAddresses is Ownable {
   /**
   * @dev return address type
   */
-  function getType(address _address) public view returns(string memory){
+  function getType(address _address) public view returns(uint256){
     return addressesTypes[_address];
   }
 }

@@ -507,15 +507,27 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       address(defiPortal)
     );
 
-    // call defi
+    // call defi payable case
     if(etherAmount > 0){
       (eventType,
        tokensToReceive,
-       amountsToReceive) = defiPortal.callPayableProtocol.value(etherAmount)(_additionalData, _additionalArgs);
-    }else{
+       amountsToReceive) = defiPortal.callPayableProtocol.value(etherAmount)(
+         tokensToSend,
+         amountsToSend,
+         _additionalData,
+         _additionalArgs
+        );
+    }
+    // call defi not payable case 
+    else{
       (eventType,
        tokensToReceive,
-       amountsToReceive) = defiPortal.callNonPayableProtocol(_additionalData, _additionalArgs);
+       amountsToReceive) = defiPortal.callNonPayableProtocol(
+         tokensToSend,
+         amountsToSend,
+         _additionalData,
+         _additionalArgs
+        );
     }
 
    // add new tokens in fund
