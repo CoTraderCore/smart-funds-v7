@@ -485,11 +485,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * @param _etherAmount         amount of ETH to send
   * @param _data                params data packed in bytes
   * @param _additionalArgs      additional params array for quick unpack
+  * @param _tokenToApprove      if some DEFI protocol require transferFrom tokens, then you can approve tokens,
+  *                             by pass in this array. Can be empty array if not need approve.
   */
   function callDefiPortal(
     uint256 _etherAmount,
     bytes calldata _data,
-    bytes32[] calldata _additionalArgs
+    bytes32[] calldata _additionalArgs,
+    IERC20[] calldata _tokenToApprove
   )
     external
     onlyOwner
@@ -499,7 +502,17 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     bytes memory eventData;
     address[] memory tokensReceived;
 
-    // call
+    // approve if need
+    if(_tokenToApprove.length > 0){
+      for(uint8 i = 0; i < _tokenToApprove.length; i++){
+        _tokenToApprove[i].approve(
+          address(defiPortal),
+          _tokenToApprove[i].balanceOf(address(this))
+        );
+      }
+    }
+
+    // call defi
     if(_etherAmount > 0){
       (eventType,
        eventData,
@@ -514,6 +527,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
    for(uint8 i = 0; i<tokensReceived.length; i++){
      _addToken(tokensReceived[i]);
    }
+
    // emit event
     emit DefiCall(eventType, eventData);
   }

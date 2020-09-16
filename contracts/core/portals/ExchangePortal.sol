@@ -20,7 +20,7 @@ import "../../compound/CToken.sol";
 
 import "../interfaces/ExchangePortalInterface.sol";
 import "../interfaces/DefiPortalInterface.sol";
-import "../interfaces/PoolPortalInterface.sol";
+import "../interfaces/PoolPortalViewInterface.sol";
 import "../interfaces/ITokensTypeStorage.sol";
 import "../interfaces/IMerkleTreeTokensVerification.sol";
 
@@ -46,7 +46,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IGetBancorData public bancorData;
 
   // CoTrader portals
-  PoolPortalInterface public poolPortal;
+  PoolPortalViewInterface public poolPortal;
   DefiPortalInterface public defiPortal;
 
   // 1 inch flags
@@ -104,7 +104,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   {
     defiPortal = DefiPortalInterface(_defiPortal);
     bancorData = IGetBancorData(_bancorData);
-    poolPortal = PoolPortalInterface(_poolPortal);
+    poolPortal = PoolPortalViewInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
     cEther = _cEther;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
@@ -719,7 +719,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // owner can set new pool portal
   function setNewPoolPortal(address _poolPortal) external onlyOwner {
-    poolPortal = PoolPortalInterface(_poolPortal);
+    poolPortal = PoolPortalViewInterface(_poolPortal);
   }
 
   // owner can set new defi portal

@@ -1,9 +1,6 @@
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 
 interface ExchangePortalInterface {
-
-  event Trade(address src, uint256 srcAmount, address dest, uint256 destReceived);
-
   function trade(
     IERC20 _source,
     uint256 _sourceAmount,
