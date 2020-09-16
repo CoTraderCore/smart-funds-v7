@@ -41,24 +41,20 @@ const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
 // real contracts
 const SmartFundERC20 = artifacts.require('./core/funds/SmartFundERC20.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
-const PermittedStables = artifacts.require('./core/verification/PermittedStables.sol')
-const PermittedExchanges = artifacts.require('./core/verification/PermittedExchanges.sol')
-const PermittedPools = artifacts.require('./core/verification/PermittedPools.sol')
+const PermittedAddresses = artifacts.require('./core/verification/PermittedAddresses.sol')
 const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')
+const DefiPortal = artifacts.require('./core/portals/DefiPortal.sol')
 
 // mock contracts
 const Token = artifacts.require('./tokens/Token')
 const ExchangePortalMock = artifacts.require('./portalsMock/ExchangePortalMock')
 const PoolPortalMock = artifacts.require('./portalsMock/PoolPortalMock')
 const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
-const CToken = artifacts.require('./compoundMock/CToken')
-const CEther = artifacts.require('./compoundMock/CEther')
 const OneInch = artifacts.require('./OneInchMock')
 
 
 // Tokens keys converted in bytes32
 const TOKEN_KEY_CRYPTOCURRENCY = "0x43525950544f43555252454e4359000000000000000000000000000000000000"
-const TOKEN_KEY_COMPOUND = "0x434f4d504f554e44000000000000000000000000000000000000000000000000"
 const TOKEN_KEY_BANCOR_POOL = "0x42414e434f525f41535345540000000000000000000000000000000000000000"
 const TOKEN_KEY_UNISWAP_POOL = "0x554e49535741505f504f4f4c0000000000000000000000000000000000000000"
 
@@ -67,8 +63,6 @@ let xxxERC,
     DAI,
     exchangePortal,
     smartFundERC20,
-    cToken,
-    cEther,
     BNT,
     DAIUNI,
     DAIBNT,
@@ -78,12 +72,11 @@ let xxxERC,
     sETH,
     sUSD,
     tokensType,
-    permittedExchanges,
-    permittedPools,
-    permittedStables,
+    permittedAddresses,
     oneInch,
     merkleWhiteList,
-    MerkleTREE
+    MerkleTREE,
+    defiPortal
 
 
 contract('smartFundERC20', function([userOne, userTwo, userThree]) {
@@ -140,21 +133,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       "1000000000000000000000000"
     )
 
-    cToken = await CToken.new(
-      "Compound DAI",
-      "CDAI",
-      18,
-      toWei(String(100000000)),
-      DAI.address
-    )
-
-    cEther = await CEther.new(
-      "Compound Ether",
-      "CETH",
-      18,
-      toWei(String(100000000))
-    )
-
     // Create MerkleTREE instance
     const leaves = [
       xxxERC.address,
@@ -176,12 +154,13 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
     // without trade, but via deposit
     await tokensType.setTokenTypeAsOwner(DAI.address, "CRYPTOCURRENCY")
 
+    defiPortal = await DefiPortal.new(tokensType.address)
+
     // Deploy exchangePortal
     exchangePortal = await ExchangePortalMock.new(
       1,
       1,
       DAI.address,
-      cEther.address,
       tokensType.address,
       merkleWhiteList.address
     )
@@ -200,11 +179,12 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
     await tokensType.addNewPermittedAddress(exchangePortal.address)
     await tokensType.addNewPermittedAddress(poolPortal.address)
 
-    // permited
-    permittedExchanges = await PermittedExchanges.new(exchangePortal.address)
-    permittedPools = await PermittedPools.new(poolPortal.address)
-    permittedStables = await PermittedStables.new(DAI.address)
-
+    permittedAddresses = await PermittedAddresses.new(
+      exchangePortal.address,
+      poolPortal.address,
+      defiPortal.address,
+      DAI.address
+    )
 
     // Deploy USD fund
     smartFundERC20 = await SmartFundERC20.new(
@@ -214,12 +194,10 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       successFee,                                   // uint256 _platformFee
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
-      permittedExchanges.address,                   // address _permittedExchangesAddress,
-      permittedPools.address,                       // address _permittedPoolsAddress,
-      permittedStables.address,                     // address _permittedStabels
       poolPortal.address,                           // address _poolPortalAddress,
+      defiPortal.address,
+      permittedAddresses.address,
       DAI.address,                                  // address_stableCoinAddress
-      cEther.address,                               // address _cEther
       true                                          // verification for trade tokens
     )
 
@@ -258,21 +236,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       const totalSupplyD = await DAI.totalSupply()
       assert.equal(nameD, "DAI Stable Coin")
       assert.equal(totalSupplyD, "1000000000000000000000000")
-
-
-      const nameCT = await cToken.name()
-      const totalSupplyCT = await cToken.totalSupply()
-      const underlying = await cToken.underlying()
-
-      assert.equal(underlying, DAI.address)
-      assert.equal(nameCT, "Compound DAI")
-      assert.equal(totalSupplyCT, toWei(String(100000000)))
-
-
-      const nameCE = await cEther.name()
-      const totalSupplyCE = await cEther.totalSupply()
-      assert.equal(nameCE, "Compound Ether")
-      assert.equal(totalSupplyCE, toWei(String(100000000)))
     })
 
     it('Correct init exchange portal', async function() {
@@ -299,7 +262,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       const totalShares = await smartFundERC20.totalShares()
       const portalEXCHANGE = await smartFundERC20.exchangePortal()
       const stableCoinAddress = await smartFundERC20.coinAddress()
-      const cEthAddress = await smartFundERC20.cEther()
       const portalPOOL = await smartFundERC20.poolPortal()
 
       assert.equal(exchangePortal.address, portalEXCHANGE)
@@ -307,7 +269,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       assert.equal(poolPortal.address, portalPOOL)
       assert.equal('TEST USD FUND', name)
       assert.equal(0, totalShares)
-      assert.equal(cEthAddress, cEther.address)
     })
 
     it('Correct init commision', async function() {
@@ -1035,249 +996,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
           from: userOne,
         }
       ).should.be.rejectedWith(EVMRevert)
-    })
-  })
-
-  describe('COMPOUND', function() {
-    it('Fund Manager can mint and reedem CEther', async function() {
-      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
-
-      // send some ETH to exchnage portal
-      await exchangePortal.pay({ from: userOne, value: toWei(String(1))})
-
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
-
-      // get proof and position for dest token
-      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
-      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
-
-      // change DAI to ETH
-      await smartFundERC20.trade(
-        DAI.address,
-        toWei(String(1)),
-        ETH_TOKEN_ADDRESS,
-        2,
-        proofETH,
-        positionETH,
-        ONEINCH_MOCK_ADDITIONAL_PARAMS,
-        1,
-        {
-          from: userOne,
-        }
-      )
-      // mint
-      await smartFundERC20.compoundMint(toWei(String(1)), cEther.address)
-      // check key after trade
-      assert.equal(await tokensType.getType(cEther.address), TOKEN_KEY_COMPOUND)
-
-      // Check key Compound mint
-      assert.equal(await tokensType.getType(cEther.address), TOKEN_KEY_COMPOUND)
-
-      // check balance
-      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
-      assert.equal(await cEther.balanceOf(smartFundERC20.address), toWei(String(1)))
-
-      // reedem
-      await smartFundERC20.compoundRedeemByPercent(100, cEther.address)
-
-      // check balance
-      assert.equal(await web3.eth.getBalance(smartFundERC20.address), toWei(String(1)))
-      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
-    })
-
-    it('Fund Manager can mint and reedem cToken', async function() {
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
-
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
-
-      // mint DAI Ctoken
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
-
-      // reedem
-      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
-
-      // check balance
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
-    })
-
-
-    it('Compound assets works correct with ERC20 assests', async function() {
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
-      // give exchange portal contract some money
-      await xxxERC.transfer(exchangePortal.address, toWei(String(10)))
-
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(3)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(3)), { from: userOne })
-
-      // mint
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
-
-      // get proof and position for dest token
-      const proofXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => buf2hex(x.data))
-      const positionXXX = MerkleTREE.getProof(keccak256(xxxERC.address)).map(x => x.position === 'right' ? 1 : 0)
-
-      await smartFundERC20.trade(
-        DAI.address,
-        toWei(String(1)),
-        xxxERC.address,
-        0,
-        proofXXX,
-        positionXXX,
-        PARASWAP_MOCK_ADDITIONAL_PARAMS,
-        1,
-        {
-          from: userOne,
-        }
-      )
-      assert.equal(await xxxERC.balanceOf(smartFundERC20.address), toWei(String(1)))
-
-      // Total should be the same
-      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
-
-      // reedem
-      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
-
-      // remove cToken from fund
-      await smartFundERC20.removeToken(cToken.address, 2)
-
-      // Total should be the same
-      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
-
-      // mint
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
-
-      // Total should be the same
-      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(3)))
-
-      await smartFundERC20.withdraw(0)
-
-      // check balance
-      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
-      assert.equal(await smartFundERC20.calculateFundValue(), 0)
-      // investor get cToken
-      assert.equal(await cToken.balanceOf(userOne), toWei(String(1)))
-    })
-
-
-    it('Calculate fund value and withdraw with Compound assests', async function() {
-      // send some ETH to exchnage portal
-      await exchangePortal.pay({ from: userOne, value: toWei(String(2))})
-
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(4)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(4)), { from: userOne })
-
-      // get proof and position for dest token
-      const proofETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => buf2hex(x.data))
-      const positionETH = MerkleTREE.getProof(keccak256(ETH_TOKEN_ADDRESS)).map(x => x.position === 'right' ? 1 : 0)
-
-      // get 1 DAI from exchange portal
-      await smartFundERC20.trade(
-        DAI.address,
-        toWei(String(2)),
-        ETH_TOKEN_ADDRESS,
-        2,
-        proofETH,
-        positionETH,
-        ONEINCH_MOCK_ADDITIONAL_PARAMS,
-        1,
-        {
-          from: userOne,
-        }
-      )
-      // mint 1 cEth
-      await smartFundERC20.compoundMint(toWei(String(1)), cEther.address)
-
-      // mint 1 DAI Ctoken
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-
-      // check asset allocation in fund
-      assert.equal(await cEther.balanceOf(smartFundERC20.address), toWei(String(1)))
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(1)))
-      assert.equal(await web3.eth.getBalance(smartFundERC20.address), toWei(String(1)))
-
-      // Assume all assets have a 1 to 1 ratio
-      // so in total should be still 4 ETH
-      assert.equal(await smartFundERC20.calculateFundValue(), toWei(String(4)))
-
-      const ownerETHBalanceBefore = await web3.eth.getBalance(userOne)
-      const ownerDAIBalanceBefore = await DAI.balanceOf(userOne)
-
-      // withdarw
-      await smartFundERC20.withdraw(0)
-
-      // check asset allocation in fund after withdraw
-      assert.equal(await cEther.balanceOf(smartFundERC20.address), 0)
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), 0)
-      assert.equal(await web3.eth.getBalance(smartFundERC20.address), 0)
-
-      // check fund value
-      assert.equal(await smartFundERC20.calculateFundValue(), 0)
-
-      // owner should get CTokens and DAI
-      assert.equal(await cEther.balanceOf(userOne), toWei(String(1)))
-      assert.equal(await cToken.balanceOf(userOne), toWei(String(1)))
-
-      // owner get DAI and ETH
-      assert.isTrue(await DAI.balanceOf(userOne) > ownerDAIBalanceBefore)
-      assert.isTrue(await web3.eth.getBalance(userOne) > ownerETHBalanceBefore)
-    })
-
-    it('manager can not redeemUnderlying not correct percent', async function() {
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
-      // mint
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-
-      // reedem with 101%
-      await smartFundERC20.compoundRedeemByPercent(101, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
-
-      // reedem with 0%
-      await smartFundERC20.compoundRedeemByPercent(0, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), 0)
-
-      // reedem with 100%
-      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
-      assert.equal(await DAI.balanceOf(smartFundERC20.address), toWei(String(1)))
-    })
-
-
-    it('manager can redeemUnderlying different percent', async function() {
-      // deposit in fund
-      await DAI.approve(smartFundERC20.address, toWei(String(1)), { from: userOne })
-      await smartFundERC20.deposit(toWei(String(1)), { from: userOne })
-
-      // mint
-      await smartFundERC20.compoundMint(toWei(String(1)), cToken.address)
-
-      // reedem with 50%
-      await smartFundERC20.compoundRedeemByPercent(50, cToken.address)
-      .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0.5)))
-
-      // reedem with 25%
-      await smartFundERC20.compoundRedeemByPercent(25, cToken.address)
-      .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0.375)))
-
-      // reedem with all remains
-      await smartFundERC20.compoundRedeemByPercent(100, cToken.address)
-      .should.be.fulfilled
-      assert.equal(await cToken.balanceOf(smartFundERC20.address), toWei(String(0)))
     })
   })
 
