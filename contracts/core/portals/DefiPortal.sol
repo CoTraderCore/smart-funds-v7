@@ -63,7 +63,10 @@ contract DefiPortal {
       eventType = "YEARN_DEPOSIT";
     }
     else if(uint(_additionalArgs[1]) == uint(DefiActions.YearnWithdraw)){
-
+       (tokensToReceive, amountsToReceive) = _YearnWithdraw(
+         tokensToSend[0],
+         amountsToSend[0]
+        );
        eventType = "YEARN_WITHDRAW";
     }
     else{
@@ -100,42 +103,64 @@ contract DefiPortal {
     (address yTokenAddress) = abi.decode(_additionalData, (address));
     IYearnToken yToken = IYearnToken(yTokenAddress);
     // transfer underlying from sender
-    _transferFromSenderAndApproveTo(tokenAddress, tokenAmount, yTokenAddress);
+    _transferFromSenderAndApproveTo(IERC20(tokenAddress), tokenAmount, yTokenAddress);
     // mint yToken
     yToken.deposit(tokenAmount);
     // get received tokens
     uint256 receivedYToken = IERC20(yTokenAddress).balanceOf(address(this));
     // send yToken to sender
     IERC20(yTokenAddress).transfer(msg.sender, receivedYToken);
-    // send remains
+    // send remains if there is some remains
     _sendRemains(IERC20(tokenAddress), msg.sender);
     // return data
     tokensToReceive = new address[](1);
     tokensToReceive[0] = tokenAddress;
     amountsToReceive = new uint256[](1);
-    amountsToReceive = receivedYToken;
+    amountsToReceive[0] = receivedYToken;
   }
 
 
-  function _YearnWithdraw() private returns(
+  function _YearnWithdraw(
+    address yTokenAddress,
+    uint256 tokenAmount
+  )
+    private
+    returns(
     address[] memory tokensToReceive,
     uint256[] memory amountsToReceive
     )
   {
-
+    IYearnToken yToken = IYearnToken(yTokenAddress);
+    // transfer underlying from sender
+    _transferFromSenderAndApproveTo(IERC20(yTokenAddress), tokenAmount, yTokenAddress);
+    // mint yToken
+    yToken.withdraw(tokenAmount);
+    // get underlying address
+    address underlyingToken = yToken.token();
+    // get received tokens
+    uint256 received = IERC20(underlyingToken).balanceOf(address(this));
+    // send underlying to sender
+    IERC20(underlyingToken).transfer(msg.sender, received);
+    // send remains if there is some remains
+    _sendRemains(IERC20(yTokenAddress), msg.sender);
+    // return data
+    tokensToReceive = new address[](1);
+    tokensToReceive[0] = underlyingToken;
+    amountsToReceive = new uint256[](1);
+    amountsToReceive[0] = received;
   }
 
 
   // Facilitates for send source remains
   function _sendRemains(IERC20 _source, address _receiver) private {
     // After the trade, any _source that exchangePortal holds will be sent back to msg.sender
-    uint256 endAmount = (_source == ETH_TOKEN_ADDRESS)
+    uint256 endAmount = (_source == IERC20(ETH_TOKEN_ADDRESS))
     ? address(this).balance
     : _source.balanceOf(address(this));
 
     // Check if we hold a positive amount of _source
     if (endAmount > 0) {
-      if (_source == ETH_TOKEN_ADDRESS) {
+      if (_source == IERC20(ETH_TOKEN_ADDRESS)) {
         payable(_receiver).transfer(endAmount);
       } else {
         _source.transfer(_receiver, endAmount);
