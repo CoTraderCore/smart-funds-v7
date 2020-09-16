@@ -108,7 +108,13 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   mapping (address => int256) public addressesNetDeposit;
 
   // Events
-  event DefiCall(string eventType, bytes eventData);
+  event DefiCall(
+    string eventType,
+    address[] tokensToSend,
+    uint256[] amountsToSend,
+    address[] tokensToReceive,
+    uint256[] amountsToReceive
+    );
 
   event BuyPool(
     address poolAddress,
@@ -373,22 +379,14 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   external onlyOwner {
    // for determine the exact number of received pool
    uint256 poolAmountReceive;
-   // for detect ETH case
-   uint256 etherAmount = 0;
 
    // approve connectors
-   for(uint8 i = 0; i < _connectorsAddress.length; i++){
-     if(_connectorsAddress[i] != address(ETH_TOKEN_ADDRESS)){
-       // fund can't buy token which not in traded tokens list
-       if(isRequireTradeVerification)
-         require(tokensTraded[_connectorsAddress[i]], "NON_TRADED_POOL_CONNECTOR");
-       // approve
-       IERC20(_connectorsAddress[i]).approve(address(poolPortal), _connectorsAmount[i]);
-     }
-     else{
-       etherAmount = _connectorsAmount[i];
-     }
-   }
+   // etherAmount for detect ETH case
+   uint256 etherAmount = approveArrayOfTokensToSpender(
+     _connectorsAddress,
+     _connectorsAmount,
+     address(poolPortal)
+   );
 
    // buy pool with ETH (payable case)
    if(etherAmount > 0){
@@ -482,54 +480,79 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   * NOTE: all logic in DEFI portal hardcoded, and also fund manager can't update
   * non permitted DEFI portal, so this is safe call
   *
-  * @param _etherAmount         amount of ETH to send
-  * @param _data                params data packed in bytes
+
+  * @param _additionalData               params data packed in bytes
   * @param _additionalArgs      additional params array for quick unpack
-  * @param _tokenToApprove      if some DEFI protocol require transferFrom tokens, then you can approve tokens,
-  *                             by pass in this array. Can be empty array if not need approve.
+
   */
   function callDefiPortal(
-    uint256 _etherAmount,
-    bytes calldata _data,
+    address[] memory tokensToSend,
+    uint256[] memory amountsToSend,
     bytes32[] calldata _additionalArgs,
-    IERC20[] calldata _tokenToApprove
+    bytes calldata _additionalData
   )
     external
     onlyOwner
   {
     // event data
     string memory eventType;
-    bytes memory eventData;
-    address[] memory tokensReceived;
+    address[] memory tokensToReceive;
+    uint256[] memory amountsToReceive;
 
-    // approve if need
-    if(_tokenToApprove.length > 0){
-      for(uint8 i = 0; i < _tokenToApprove.length; i++){
-        _tokenToApprove[i].approve(
-          address(defiPortal),
-          _tokenToApprove[i].balanceOf(address(this))
-        );
-      }
-    }
+    // approve connectors
+    // etherAmount for detect ETH case
+    uint256 etherAmount = approveArrayOfTokensToSpender(
+      tokensToSend,
+      amountsToSend,
+      address(defiPortal)
+    );
 
     // call defi
-    if(_etherAmount > 0){
+    if(etherAmount > 0){
       (eventType,
-       eventData,
-       tokensReceived) = defiPortal.callPayableProtocol.value(_etherAmount)(_data, _additionalArgs);
+       tokensToReceive,
+       amountsToReceive) = defiPortal.callPayableProtocol.value(etherAmount)(_additionalData, _additionalArgs);
     }else{
       (eventType,
-       eventData,
-       tokensReceived) = defiPortal.callNonPayableProtocol(_data, _additionalArgs);
+       tokensToReceive,
+       amountsToReceive) = defiPortal.callNonPayableProtocol(_additionalData, _additionalArgs);
     }
 
    // add new tokens in fund
-   for(uint8 i = 0; i<tokensReceived.length; i++){
-     _addToken(tokensReceived[i]);
+   for(uint8 i = 0; i < tokensToReceive.length; i++){
+     _addToken(tokensToReceive[i]);
    }
 
    // emit event
-    emit DefiCall(eventType, eventData);
+    emit DefiCall(
+      eventType,
+      tokensToSend,
+      amountsToSend,
+      tokensToReceive,
+      amountsToReceive
+    );
+  }
+
+
+  // pivate helper for approve arary of tokens
+  // spender can be Pool or Defi portals
+  function approveArrayOfTokensToSpender(
+    address[] memory addresses,
+    uint256[] memory amounts,
+    address spender
+  )
+    private
+    returns (uint256 etherAmount)
+  {
+    for(uint8 i = 0; i < addresses.length; i++){
+      if(addresses[i] != address(ETH_TOKEN_ADDRESS)){
+        // approve
+        IERC20(addresses[i]).approve(spender, amounts[i]);
+      }
+      else{
+        etherAmount = amounts[i];
+      }
+    }
   }
 
 

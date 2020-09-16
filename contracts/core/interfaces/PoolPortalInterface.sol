@@ -1,3 +1,5 @@
+import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
+
 interface PoolPortalInterface {
   function buyPool
   (
@@ -17,7 +19,7 @@ interface PoolPortalInterface {
   (
     uint256 _amount,
     uint _type,
-    address _poolToken,
+    IERC20 _poolToken,
     bytes32[] calldata _additionalArgs,
     bytes calldata _additionData
   )
