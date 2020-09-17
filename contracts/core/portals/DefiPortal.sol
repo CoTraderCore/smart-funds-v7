@@ -44,7 +44,7 @@ contract DefiPortal {
   }
 
 
-  // param _additionalArgs[0] require DefiActions type 
+  // param _additionalArgs[0] require DefiActions type
   function callNonPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
