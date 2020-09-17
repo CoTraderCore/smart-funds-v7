@@ -115,6 +115,8 @@ contract DefiPortal {
     IERC20(yTokenAddress).transfer(msg.sender, receivedYToken);
     // send remains if there is some remains
     _sendRemains(IERC20(tokenAddress), msg.sender);
+    // Update type
+    tokensTypes.addNewTokenType(yTokenAddress, "YEARN_ASSET");
     // return data
     tokensToReceive = new address[](1);
     tokensToReceive[0] = tokenAddress;
