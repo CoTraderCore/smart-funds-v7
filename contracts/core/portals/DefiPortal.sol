@@ -116,7 +116,9 @@ contract DefiPortal {
     // send remains if there is some remains
     _sendRemains(IERC20(tokenAddress), msg.sender);
     // Update type
-    tokensTypes.addNewTokenType(yTokenAddress, "YEARN_ASSET");
+    // DEV NOTE don't need mark this tokens as YEARN assets, we can use 1inch ratio
+    // for this token as for CRYPTOCURRENCY
+    tokensTypes.addNewTokenType(yTokenAddress, "CRYPTOCURRENCY");
     // return data
     tokensToReceive = new address[](1);
     tokensToReceive[0] = tokenAddress;
