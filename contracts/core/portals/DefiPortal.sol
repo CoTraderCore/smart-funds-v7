@@ -23,6 +23,8 @@ contract DefiPortal {
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
 
+
+  // param _additionalArgs[0] require DefiActions type
   function callPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
@@ -41,6 +43,8 @@ contract DefiPortal {
     revert("Unknown DEFI action");
   }
 
+
+  // param _additionalArgs[0] require DefiActions type 
   function callNonPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
@@ -62,7 +66,7 @@ contract DefiPortal {
       );
       eventType = "YEARN_DEPOSIT";
     }
-    else if(uint(_additionalArgs[1]) == uint(DefiActions.YearnWithdraw)){
+    else if(uint(_additionalArgs[0]) == uint(DefiActions.YearnWithdraw)){
        (tokensToReceive, amountsToReceive) = _YearnWithdraw(
          tokensToSend[0],
          amountsToSend[0],
