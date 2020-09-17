@@ -10,6 +10,7 @@ import "../interfaces/ITokensTypeStorage.sol";
 contract DefiPortal {
   using SafeMath for uint256;
 
+  uint public version = 4;
   address constant private ETH_TOKEN_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
   // Contract for handle tokens types
@@ -126,7 +127,7 @@ contract DefiPortal {
     tokensTypes.addNewTokenType(yTokenAddress, "CRYPTOCURRENCY");
     // return data
     tokensToReceive = new address[](1);
-    tokensToReceive[0] = tokenAddress;
+    tokensToReceive[0] = yTokenAddress;
     amountsToReceive = new uint256[](1);
     amountsToReceive[0] = receivedYToken;
   }

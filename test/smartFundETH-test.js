@@ -43,6 +43,7 @@ const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensV
 const DefiPortal = artifacts.require('./core/portals/DefiPortal.sol')
 
 // mock
+const YVault = artifacts.require('./tokens/YVaultMock.sol')
 const Token = artifacts.require('./tokens/Token')
 const ExchangePortalMock = artifacts.require('./portalsMock/ExchangePortalMock')
 const PoolPortalMock = artifacts.require('./portalsMock/PoolPortalMock')
@@ -71,7 +72,8 @@ let xxxERC,
     oneInch,
     merkleWhiteList,
     MerkleTREE,
-    defiPortal
+    defiPortal,
+    yDAI
 
 
 
@@ -124,6 +126,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       toWei(String(100000000))
     )
 
+    // Yearn token
+    yDAI = await YVault.new(
+      "Y Vault Yeran Token",
+      "yVault",
+      18,
+      DAI.address
+    )
+
     // Create MerkleTREE instance
     const leaves = [
       xxxERC.address,
@@ -168,7 +178,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
     // allow exchange portal and pool portal write to token type storage
     await tokensType.addNewPermittedAddress(exchangePortal.address)
     await tokensType.addNewPermittedAddress(poolPortal.address)
-
+    await tokensType.addNewPermittedAddress(defiPortal.address)
 
     permittedAddresses = await PermittedAddresses.new(
       exchangePortal.address,
@@ -224,10 +234,25 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     })
 
-    it('Correct init exchange portal', async function() {
+    it('Correct exchange portal in fund', async function() {
+      assert.equal(await smartFundETH.exchangePortal(), exchangePortal.address)
+    })
+
+    it('Correct defi portal in fund', async function() {
+      assert.equal(await smartFundETH.defiPortal(), defiPortal.address)
+    })
+
+    it('Correct pool portal in fund', async function() {
+      assert.equal(await smartFundETH.poolPortal(), poolPortal.address)
+    })
+
+    it('Correct init exchange portal stable coin', async function() {
       assert.equal(await exchangePortal.stableCoinAddress(), DAI.address)
     })
 
+    it('Correct init defi portal version', async function() {
+      assert.equal(await defiPortal.version(), 4)
+    })
 
     it('Correct init pool portal', async function() {
       const DAIUNIBNTAddress = await poolPortal.DAIUNIPoolToken()
@@ -933,6 +958,75 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await smartFundETH.calculateAddressProfit(userThree), toWei(String(1)))
     })
   })
+
+  describe('BUY/SELL YEARN Finance', function() {
+    it('should be able buy/sell Yearn yDAI token', async function() {
+      // send some assets to pool portal
+      await DAI.transfer(exchangePortal.address, toWei(String(1)))
+      await smartFundETH.deposit({ from: userOne, value: toWei(String(1)) })
+
+      // get proof and position for dest token
+      const proofDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => buf2hex(x.data))
+      const positionDAI = MerkleTREE.getProof(keccak256(DAI.address)).map(x => x.position === 'right' ? 1 : 0)
+
+      // get 1 DAI from exchange portal
+      await smartFundETH.trade(
+        ETH_TOKEN_ADDRESS,
+        toWei(String(1)),
+        DAI.address,
+        0,
+        proofDAI,
+        positionDAI,
+        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        1,
+        {
+          from: userOne,
+        }
+      )
+
+      // Check balance before buy yDAI
+      assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
+      assert.equal(await yDAI.balanceOf(smartFundETH.address), 0)
+
+      const tokenAddressBefore = await smartFundETH.getAllTokenAddresses()
+
+      // BUY yDAI
+      await smartFundETH.callDefiPortal(
+        [DAI.address],
+        [toWei(String(1))],
+        ["0x0000000000000000000000000000000000000000000000000000000000000000"],
+        web3.eth.abi.encodeParameters(
+         ['address', 'uint256'],
+         [yDAI.address, toWei(String(1))]
+        )
+      ).should.be.fulfilled
+
+      const tokenAddressAfter = await smartFundETH.getAllTokenAddresses()
+
+      // yDAI shoul be added in fund
+      assert.isTrue(tokenAddressAfter.length > tokenAddressBefore.length)
+
+      // Check balance after buy yDAI
+      assert.equal(fromWei(await DAI.balanceOf(smartFundETH.address)), 0)
+      assert.equal(await yDAI.balanceOf(smartFundETH.address), toWei(String(1)))
+
+      // SELL yDAI
+      await smartFundETH.callDefiPortal(
+        [yDAI.address],
+        [toWei(String(1))],
+        ["0x0000000000000000000000000000000000000000000000000000000000000001"],
+        web3.eth.abi.encodeParameters(
+         ['uint256'],
+         [toWei(String(1))]
+        )
+      ).should.be.fulfilled
+
+      // Check balance after sell yDAI
+      assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
+      assert.equal(await yDAI.balanceOf(smartFundETH.address), 0)
+    })
+  })
+
 
   describe('UNISWAP and BANCOR pools', function() {
     it('should be able buy/sell Bancor pool', async function() {
