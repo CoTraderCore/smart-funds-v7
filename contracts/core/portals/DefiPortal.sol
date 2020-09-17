@@ -88,6 +88,7 @@ contract DefiPortal {
   }
 
 
+  // param _additionalData require address yTokenAddress, uint256 minReturn
   function _YearnDeposit(
     address tokenAddress,
     uint256 tokenAmount,
@@ -100,7 +101,7 @@ contract DefiPortal {
   )
   {
     // get yToken instance
-    (address yTokenAddress) = abi.decode(_additionalData, (address));
+    (address yTokenAddress, uint256 minReturn) = abi.decode(_additionalData, (address, uint256));
     IYearnToken yToken = IYearnToken(yTokenAddress);
     // transfer underlying from sender
     _transferFromSenderAndApproveTo(IERC20(tokenAddress), tokenAmount, yTokenAddress);
@@ -108,6 +109,8 @@ contract DefiPortal {
     yToken.deposit(tokenAmount);
     // get received tokens
     uint256 receivedYToken = IERC20(yTokenAddress).balanceOf(address(this));
+    // min return check
+    require(receivedYToken >= minReturn, "MIN_RETURN_FAIL");
     // send yToken to sender
     IERC20(yTokenAddress).transfer(msg.sender, receivedYToken);
     // send remains if there is some remains
@@ -120,9 +123,11 @@ contract DefiPortal {
   }
 
 
+  // param _additionalData require  uint256 minReturn
   function _YearnWithdraw(
     address yTokenAddress,
-    uint256 tokenAmount
+    uint256 tokenAmount,
+    bytes memory _additionalData
   )
     private
     returns(
@@ -130,6 +135,7 @@ contract DefiPortal {
     uint256[] memory amountsToReceive
     )
   {
+    (uint256 minReturn) = abi.decode(_additionalData, (uint256));
     IYearnToken yToken = IYearnToken(yTokenAddress);
     // transfer underlying from sender
     _transferFromSenderAndApproveTo(IERC20(yTokenAddress), tokenAmount, yTokenAddress);
@@ -139,6 +145,8 @@ contract DefiPortal {
     address underlyingToken = yToken.token();
     // get received tokens
     uint256 received = IERC20(underlyingToken).balanceOf(address(this));
+    // min return check
+    require(received >= minReturn, "MIN_RETURN_FAIL");
     // send underlying to sender
     IERC20(underlyingToken).transfer(msg.sender, received);
     // send remains if there is some remains
