@@ -131,7 +131,7 @@ contract DefiPortal {
   // param _additionalData require  uint256 minReturn
   function _YearnWithdraw(
     address yTokenAddress,
-    uint256 tokenAmount,
+    uint256 sharesAmount,
     bytes memory _additionalData
   )
     private
@@ -143,9 +143,9 @@ contract DefiPortal {
     (uint256 minReturn) = abi.decode(_additionalData, (uint256));
     IYearnToken yToken = IYearnToken(yTokenAddress);
     // transfer underlying from sender
-    _transferFromSenderAndApproveTo(IERC20(yTokenAddress), tokenAmount, yTokenAddress);
+    _transferFromSenderAndApproveTo(IERC20(yTokenAddress), sharesAmount, yTokenAddress);
     // mint yToken
-    yToken.withdraw(tokenAmount);
+    yToken.withdraw(sharesAmount);
     // get underlying address
     address underlyingToken = yToken.token();
     // get received tokens
