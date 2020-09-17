@@ -65,7 +65,8 @@ contract DefiPortal {
     else if(uint(_additionalArgs[1]) == uint(DefiActions.YearnWithdraw)){
        (tokensToReceive, amountsToReceive) = _YearnWithdraw(
          tokensToSend[0],
-         amountsToSend[0]
+         amountsToSend[0],
+         _additionalData
         );
        eventType = "YEARN_WITHDRAW";
     }
