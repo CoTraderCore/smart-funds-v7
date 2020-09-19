@@ -21,7 +21,6 @@ contract SmartFundERC20 is SmartFundCore {
   * @param _owner                        Address of the fund manager
   * @param _name                         Name of the fund, required for DetailedERC20 compliance
   * @param _successFee                   Percentage of profit that the fund manager receives
-  * @param _platformFee                  Percentage of the success fee that goes to the platform
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
   * @param _poolPortalAddress            Address of initial pool portal
@@ -32,7 +31,6 @@ contract SmartFundERC20 is SmartFundCore {
     address _owner,
     string memory _name,
     uint256 _successFee,
-    uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
     address _poolPortalAddress,
@@ -45,7 +43,6 @@ contract SmartFundERC20 is SmartFundCore {
     _owner,
     _name,
     _successFee,
-    _platformFee,
     _platformAddress,
     _exchangePortalAddress,
     _poolPortalAddress,
@@ -59,7 +56,7 @@ contract SmartFundERC20 is SmartFundCore {
     permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
     // Push coin in tokens list
     _addToken(_coinAddress);
-    // Define is stable based fund 
+    // Define is stable based fund
     isStableCoinBasedFund = permittedAddresses.isMatchTypes(_coinAddress, 4);
   }
 

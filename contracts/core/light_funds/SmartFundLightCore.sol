@@ -123,7 +123,7 @@ abstract contract SmartFundLightCore is Ownable, IERC20 {
 
     name = _name;
     successFee = _successFee;
-    platformFee = _successFee;
+    platformFee = _successFee; // platform fee the same as manager fee 
 
     // Init manager
     if(_owner == address(0)){
