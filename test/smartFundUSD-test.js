@@ -202,7 +202,6 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       '0x0000000000000000000000000000000000000000', // address _owner,
       'TEST USD FUND',                              // string _name,
       successFee,                                   // uint256 _successFee,
-      successFee,                                   // uint256 _platformFee
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
       poolPortal.address,                           // address _poolPortalAddress,
