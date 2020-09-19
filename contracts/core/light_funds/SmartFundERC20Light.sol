@@ -24,7 +24,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
   * @param _platformFee                  Percentage of the success fee that goes to the platform
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
-  * @param _poolPortalAddress            Address of initial pool portal
   * @param _permittedAddresses           Address of permittedAddresses contract
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
@@ -35,8 +34,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
     uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
-    address _poolPortalAddress,
-    address _defiPortal,
     address _permittedAddresses,
     address _coinAddress,
     bool    _isRequireTradeVerification
@@ -48,8 +45,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
     _platformFee,
     _platformAddress,
     _exchangePortalAddress,
-    _poolPortalAddress,
-    _defiPortal,
     _permittedAddresses,
     _coinAddress,
     _isRequireTradeVerification

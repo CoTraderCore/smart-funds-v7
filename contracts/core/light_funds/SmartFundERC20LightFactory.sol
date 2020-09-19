@@ -15,8 +15,6 @@ contract SmartFundERC20LightFactory {
     uint256 _successFee,
     uint256 _platformFee,
     address _exchangePortalAddress,
-    address _poolPortalAddress,
-    address _defiPortal,
     address _permittedAddresses,
     address _coinAddress,
     bool    _isRequireTradeVerification
@@ -31,8 +29,6 @@ contract SmartFundERC20LightFactory {
       _platformFee,
        platfromAddress,
       _exchangePortalAddress,
-      _poolPortalAddress,
-      _defiPortal,
       _permittedAddresses,
       _coinAddress,
       _isRequireTradeVerification
