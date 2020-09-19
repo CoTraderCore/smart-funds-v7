@@ -68,7 +68,8 @@ for reduce gas cost.
 # TODO
 
 ```
-Update Unit tests with DEFI portal and new permittedAddresses 
+1) Make full and light funds factories
+2) Update Unit tests with DEFI portal and new permittedAddresses, full and light funds
 ```
 
 
