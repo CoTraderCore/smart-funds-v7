@@ -10,14 +10,10 @@ pragma solidity ^0.6.12;
   with a wider variety of exchanges. The SmartFund is also connected to a permittedAddresses contract,
   which determines which exchange, pool, defi portals the SmartFund is allowed to connect to, restricting
   the fund owners ability to connect to a potentially malicious contract.
-
-  In additional this contract can use pools and defi protocols voa pool and defi portals.
 */
 
 
 import "../interfaces/ExchangePortalInterface.sol";
-import "../interfaces/PoolPortalInterface.sol";
-import "../interfaces/DefiPortalInterface.sol";
 import "../interfaces/PermittedAddressesInterface.sol";
 
 import "../../zeppelin-solidity/contracts/token/ERC20/IERC20.sol";
@@ -25,12 +21,12 @@ import "../../zeppelin-solidity/contracts/access/Ownable.sol";
 import "../../zeppelin-solidity/contracts/math/SafeMath.sol";
 import "../../zeppelin-solidity/contracts/token/ERC20/SafeERC20.sol";
 
-abstract contract SmartFundCore is Ownable, IERC20 {
+abstract contract SmartFundLightCore is Ownable, IERC20 {
   using SafeMath for uint256;
   using SafeERC20 for IERC20;
 
   // Fund type
-  bool public isLightFund = false;
+  bool public isLightFund = true;
 
   // Total amount of ether or stable deposited by all users
   uint256 public totalWeiDeposited = 0;
@@ -40,12 +36,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
   // The Interface of the Exchange Portal
   ExchangePortalInterface public exchangePortal;
-
-  // The Interface of pool portall
-  PoolPortalInterface public poolPortal;
-
-  // The interface of DefiPortal
-  DefiPortalInterface public defiPortal;
 
   // The Smart Contract which stores the addresses of all the authorized Exchange Portals
   PermittedAddressesInterface public permittedAddresses;
@@ -95,7 +85,7 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // The earnings the fund manager has already cashed out
   uint256 public fundManagerCashedOut = 0;
 
-  // for ETH and USD fund this asset different
+  // for ETH and ERC20 fund this asset different
   address public coreFundAsset;
 
   // If true the contract will require each new asset to buy to be on a special Merkle tree list
@@ -112,27 +102,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
   // total `depositToken` deposited - total `depositToken` withdrawn
   mapping (address => int256) public addressesNetDeposit;
 
-  // Events
-  event DefiCall(
-    string eventType,
-    address[] tokensToSend,
-    uint256[] amountsToSend,
-    address[] tokensToReceive,
-    uint256[] amountsToReceive
-    );
-
-  event BuyPool(
-    address poolAddress,
-    uint256 poolAmount,
-    address[] connectorsAddress,
-    uint256[] connectorsAmount);
-
-  event SellPool(
-    address poolAddress,
-    uint256 poolAmount,
-    address[] connectorsAddress,
-    uint256[] connectorsAmount);
-
   event Deposit(address indexed user, uint256 amount, uint256 sharesReceived, uint256 totalShares);
   event Withdraw(address indexed user, uint256 sharesRemoved, uint256 totalShares);
   event Trade(address src, uint256 srcAmount, address dest, uint256 destReceived);
@@ -146,8 +115,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
-    address _poolPortalAddress,
-    address _defiPortal,
     address _permittedAddresses,
     address _coreFundAsset,
     bool    _isRequireTradeVerification
@@ -181,8 +148,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
 
     // Initial interfaces
     exchangePortal = ExchangePortalInterface(_exchangePortalAddress);
-    poolPortal = PoolPortalInterface(_poolPortalAddress);
-    defiPortal = DefiPortalInterface(_defiPortal);
     permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
 
     // Initial core assets
@@ -358,218 +323,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
       _sourceAmount,
       address(_destination),
       receivedAmount);
-  }
-
-
-  /**
-  * @dev buy pool via pool portal
-  *
-  * @param _amount             For Bancor amount it's relay, for Uniswap amount it's ETH, for Bancor and Uniswap v2 can be 0
-  * @param _type               type of pool (0 - Bancor, 1 - Uniswap)
-  * @param _poolToken          address of relay for Bancor and exchange for Uniswap
-  * @param _connectorsAddress  address of pool connectors
-  * @param _connectorsAmount   amount of pool connectors
-  * @param _additionalArgs     bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionData       for provide any additional data, if not used just set "0x"
-  */
-  function buyPool(
-   uint256            _amount,
-   uint               _type,
-   address            _poolToken,
-   address[] calldata _connectorsAddress,
-   uint256[] memory   _connectorsAmount,  // WARNING: this array rewrite from buyPool return (details below)
-   bytes32[] calldata _additionalArgs,
-   bytes calldata     _additionData
-  )
-  external onlyOwner {
-   // for determine the exact number of received pool
-   uint256 poolAmountReceive;
-
-   // approve connectors
-   // etherAmount for detect ETH case
-   uint256 etherAmount = approveArrayOfTokensToSpender(
-     _connectorsAddress,
-     _connectorsAmount,
-     address(poolPortal)
-   );
-
-   // buy pool with ETH (payable case)
-   if(etherAmount > 0){
-     // WARNING: rewrire _connectorsAmount from return
-     // some pools can return some remains for connectors, and for get correct result,
-     // for connectors amount to spend for emit event
-     // poolPortal calculates and return exactly how many tokens were spent (total - remains),
-     // unfortunate due stack too deep issue, we can't declarate new variable
-     // so we rewrire _connectorsAmount
-    (poolAmountReceive, _connectorsAmount) = poolPortal.buyPool.value(etherAmount)(
-      _amount,
-      _type,
-     _poolToken,
-     _connectorsAddress,
-     _connectorsAmount,
-     _additionalArgs,
-     _additionData
-     );
-   }
-   // buy pool only with ERC20 (non payable case)
-   else{
-     // WARNING: rewrire _connectorsAmount from return
-     (poolAmountReceive, _connectorsAmount) = poolPortal.buyPool(
-      _amount,
-      _type,
-     _poolToken,
-     _connectorsAddress,
-     _connectorsAmount,
-     _additionalArgs,
-     _additionData
-     );
-   }
-   // make sure fund receive pool token
-   require(poolAmountReceive > 0, "EMPTY_POOL_RETURN");
-   // Add pool as ERC20 for withdraw
-   _addToken(_poolToken);
-   // emit event
-   emit BuyPool(
-     _poolToken,
-     poolAmountReceive,
-     _connectorsAddress,
-     _connectorsAmount);
-  }
-
-
-  /**
-  * @dev sell pool via pool portal
-  *
-  * @param _amount          amount of Bancor relay or Uniswap exchange to sell
-  * @param _type            type of pool (0 - Bancor, 1 - Uniswap)
-  * @param _poolToken       address of Bancor relay or Uniswap exchange
-  * @param _additionalArgs  bytes32 array for case if need pass some extra params, can be empty
-  * @param _additionData    for provide any additional data, if not used just set "0x"
-  */
-  function sellPool(
-    uint256 _amount,
-    uint _type,
-    IERC20 _poolToken,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionData
-  )
-  external onlyOwner {
-    // approve pool
-    _poolToken.approve(address(poolPortal), _amount);
-
-    // sell pool
-    (address[] memory connectorsAddress,
-     uint256[] memory connectorsAmount) = poolPortal.sellPool(
-      _amount,
-      _type,
-     _poolToken,
-     _additionalArgs,
-     _additionData
-    );
-
-    // Add connectors to fund
-    for(uint8 i = 0; i < connectorsAddress.length; i++){
-      _addToken(connectorsAddress[i]);
-    }
-
-    // event
-    emit SellPool(
-      address(_poolToken),
-      _amount,
-      connectorsAddress,
-      connectorsAmount);
-  }
-
-  /**
-  * @dev allow manager use newest DEFI protocols
-  * NOTE: all logic in DEFI portal hardcoded, and also fund manager can't update
-  * non permitted DEFI portal, so this is safe call
-  *
-
-  * @param _additionalData               params data packed in bytes
-  * @param _additionalArgs      additional params array for quick unpack
-
-  */
-  function callDefiPortal(
-    address[] memory tokensToSend,
-    uint256[] memory amountsToSend,
-    bytes32[] calldata _additionalArgs,
-    bytes calldata _additionalData
-  )
-    external
-    onlyOwner
-  {
-    // event data
-    string memory eventType;
-    address[] memory tokensToReceive;
-    uint256[] memory amountsToReceive;
-
-    // approve connectors
-    // etherAmount for detect ETH case
-    uint256 etherAmount = approveArrayOfTokensToSpender(
-      tokensToSend,
-      amountsToSend,
-      address(defiPortal)
-    );
-
-    // call defi payable case
-    if(etherAmount > 0){
-      (eventType,
-       tokensToReceive,
-       amountsToReceive) = defiPortal.callPayableProtocol.value(etherAmount)(
-         tokensToSend,
-         amountsToSend,
-         _additionalData,
-         _additionalArgs
-        );
-    }
-    // call defi not payable case
-    else{
-      (eventType,
-       tokensToReceive,
-       amountsToReceive) = defiPortal.callNonPayableProtocol(
-         tokensToSend,
-         amountsToSend,
-         _additionalData,
-         _additionalArgs
-        );
-    }
-
-   // add new tokens in fund
-   for(uint8 i = 0; i < tokensToReceive.length; i++){
-     _addToken(tokensToReceive[i]);
-   }
-
-   // emit event
-    emit DefiCall(
-      eventType,
-      tokensToSend,
-      amountsToSend,
-      tokensToReceive,
-      amountsToReceive
-    );
-  }
-
-
-  // pivate helper for approve arary of tokens
-  // spender can be Pool or Defi portals
-  function approveArrayOfTokensToSpender(
-    address[] memory addresses,
-    uint256[] memory amounts,
-    address spender
-  )
-    private
-    returns (uint256 etherAmount)
-  {
-    for(uint8 i = 0; i < addresses.length; i++){
-      if(addresses[i] != address(ETH_TOKEN_ADDRESS)){
-        // approve
-        IERC20(addresses[i]).approve(spender, amounts[i]);
-      }
-      else{
-        etherAmount = amounts[i];
-      }
-    }
   }
 
 
@@ -774,30 +527,6 @@ abstract contract SmartFundCore is Ownable, IERC20 {
     exchangePortal = ExchangePortalInterface(_newExchangePortalAddress);
   }
 
-  /**
-  * @dev Allows the fund manager to connect to a new permitted poolPortal
-  *
-  * @param _newPoolPortal   The address of the new permitted pool portal to use
-  */
-  function setNewPoolPortal(address _newPoolPortal) public onlyOwner {
-    // Require correct permitted address type
-    require(permittedAddresses.isMatchTypes(_newPoolPortal, 2), "WRONG_ADDRESS");
-    // Set new
-    poolPortal = PoolPortalInterface(_newPoolPortal);
-  }
-
-
-  /**
-  * @dev Allows the fund manager to connect to a new permitted defi portal
-  *
-  * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
-  */
-  function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
-    // Require correct permitted address type
-    require(permittedAddresses.isMatchTypes(_newDefiPortalAddress, 3), "WRONG_ADDRESS");
-    // Set new
-    defiPortal = DefiPortalInterface(_newDefiPortalAddress);
-  }
 
   /**
   * @dev This method is present in the alpha testing phase in case for some reason there are funds
