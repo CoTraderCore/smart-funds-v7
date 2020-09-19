@@ -39,7 +39,7 @@ const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
   ])
 
 // real contracts
-const SmartFundERC20 = artifacts.require('./core/funds/SmartFundERC20.sol')
+const SmartFundERC20 = artifacts.require('./core/full_funds/SmartFundERC20.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
 const PermittedAddresses = artifacts.require('./core/verification/PermittedAddresses.sol')
 const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')

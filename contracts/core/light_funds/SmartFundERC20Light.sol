@@ -1,11 +1,11 @@
 pragma solidity ^0.6.12;
 
-import "./SmartFundCore.sol";
+import "./SmartFundLightCore.sol";
 import "../interfaces/PermittedAddressesInterface.sol";
 
 
 /*
-  Note: this smart fund smart fund inherits SmartFundCore and make core operations like deposit,
+  Note: this smart fund smart fund inherits SmartFundLightCore and make core operations like deposit,
   calculate fund value etc in ERC20
 */
 contract SmartFundERC20Light is SmartFundLightCore {
@@ -38,7 +38,7 @@ contract SmartFundERC20Light is SmartFundLightCore {
     address _coinAddress,
     bool    _isRequireTradeVerification
   )
-  SmartFundCore(
+  SmartFundLightCore(
     _owner,
     _name,
     _successFee,

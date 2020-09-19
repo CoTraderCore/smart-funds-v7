@@ -1,6 +1,6 @@
 pragma solidity ^0.6.12;
 
-import "../../contracts/core/funds/SmartFundETH.sol";
+import "../../contracts/core/full_funds/SmartFundETH.sol";
 
 
 contract ReEntrancyFundAtack {

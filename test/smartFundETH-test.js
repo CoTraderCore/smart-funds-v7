@@ -36,7 +36,7 @@ const ONEINCH_MOCK_ADDITIONAL_PARAMS = web3.eth.abi.encodeParameters(
   ])
 
 // real contracts
-const SmartFundETH = artifacts.require('./core/funds/SmartFundETH.sol')
+const SmartFundETH = artifacts.require('./core/full_funds/SmartFundETH.sol')
 const TokensTypeStorage = artifacts.require('./core/storage/TokensTypeStorage.sol')
 const PermittedAddresses = artifacts.require('./core/verification/PermittedAddresses.sol')
 const MerkleWhiteList = artifacts.require('./core/verification/MerkleTreeTokensVerification.sol')

@@ -1,9 +1,9 @@
 pragma solidity ^0.6.12;
 
-import "./SmartFundCore.sol";
+import "./SmartFundLightCore.sol";
 
 /*
-  Note: this smart fund inherits SmartFundCore and make core operations like deposit,
+  Note: this smart fund inherits SmartFundLightCore and make core operations like deposit,
   calculate fund value etc in ETH
 */
 contract SmartFundETHLight is SmartFundLightCore {
@@ -32,7 +32,7 @@ contract SmartFundETHLight is SmartFundLightCore {
     address _permittedAddresses,
     bool    _isRequireTradeVerification
   )
-  SmartFundCore(
+  SmartFundLightCore(
     _owner,
     _name,
     _successFee,

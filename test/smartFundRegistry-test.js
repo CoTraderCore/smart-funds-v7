@@ -13,8 +13,8 @@ require('chai')
   .should()
 
 // real
-const SmartFundETHFactory = artifacts.require('./core/funds/SmartFundETHFactory.sol')
-const SmartFundERC20Factory = artifacts.require('./core/funds/SmartFundERC20Factory.sol')
+const SmartFundETHFactory = artifacts.require('./core/full_funds/SmartFundETHFactory.sol')
+const SmartFundERC20Factory = artifacts.require('./core/full_funds/SmartFundERC20Factory.sol')
 const SmartFundRegistry = artifacts.require('./core/SmartFundRegistry.sol')
 
 // mock

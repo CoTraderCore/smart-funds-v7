@@ -9,7 +9,7 @@ contract SmartFundETHLightFactory {
     platfromAddress = _platfromAddress;
   }
 
-  function createSmartFund(
+  function createSmartFundLight(
     address _owner,
     string  memory _name,
     uint256 _successFee,
@@ -21,7 +21,7 @@ contract SmartFundETHLightFactory {
   public
   returns(address)
   {
-    SmartFundETH smartFundETH = new SmartFundETH(
+    SmartFundETHLight smartFundETHLight = new SmartFundETHLight(
       _owner,
       _name,
       _successFee,
@@ -32,6 +32,6 @@ contract SmartFundETHLightFactory {
       _isRequireTradeVerification
     );
 
-    return address(smartFundETH);
+    return address(smartFundETHLight);
   }
 }

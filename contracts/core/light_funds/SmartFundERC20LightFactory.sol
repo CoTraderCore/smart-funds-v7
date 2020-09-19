@@ -9,7 +9,7 @@ contract SmartFundERC20LightFactory {
     platfromAddress = _platfromAddress;
   }
 
-  function createSmartFund(
+  function createSmartFundLight(
     address _owner,
     string memory _name,
     uint256 _successFee,
@@ -22,7 +22,7 @@ contract SmartFundERC20LightFactory {
   public
   returns(address)
   {
-    SmartFundERC20 smartFundERC20 = new SmartFundERC20(
+    SmartFundERC20Light smartFundERC20Light = new SmartFundERC20Light(
       _owner,
       _name,
       _successFee,
@@ -34,6 +34,6 @@ contract SmartFundERC20LightFactory {
       _isRequireTradeVerification
     );
 
-    return address(smartFundERC20);
+    return address(smartFundERC20Light);
   }
 }
