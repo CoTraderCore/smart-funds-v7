@@ -21,7 +21,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
   * @param _owner                        Address of the fund manager
   * @param _name                         Name of the fund, required for DetailedERC20 compliance
   * @param _successFee                   Percentage of profit that the fund manager receives
-  * @param _platformFee                  Percentage of the success fee that goes to the platform
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
   * @param _permittedAddresses           Address of permittedAddresses contract
@@ -31,7 +30,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
     address _owner,
     string memory _name,
     uint256 _successFee,
-    uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
     address _permittedAddresses,
@@ -42,7 +40,6 @@ contract SmartFundERC20Light is SmartFundLightCore {
     _owner,
     _name,
     _successFee,
-    _platformFee,
     _platformAddress,
     _exchangePortalAddress,
     _permittedAddresses,

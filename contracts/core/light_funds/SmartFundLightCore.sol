@@ -112,7 +112,6 @@ abstract contract SmartFundLightCore is Ownable, IERC20 {
     address _owner,
     string memory _name,
     uint256 _successFee,
-    uint256 _platformFee,
     address _platformAddress,
     address _exchangePortalAddress,
     address _permittedAddresses,
@@ -121,11 +120,10 @@ abstract contract SmartFundLightCore is Ownable, IERC20 {
   )public{
     // never allow a 100% fee
     require(_successFee < TOTAL_PERCENTAGE);
-    require(_platformFee < TOTAL_PERCENTAGE);
 
     name = _name;
     successFee = _successFee;
-    platformFee = _platformFee;
+    platformFee = _successFee;
 
     // Init manager
     if(_owner == address(0)){

@@ -110,8 +110,7 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundETHFactory.createSmartFund(
         msg.sender,
         _name,
-        _successFee, // manager fee
-        _successFee, // platform fee the same as a manager fee
+        _successFee, // manager and platform fee
         exchangePortalAddress,
         poolPortalAddress,
         defiPortal,
@@ -127,8 +126,7 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundERC20Factory.createSmartFund(
         msg.sender,
         _name,
-        _successFee, // manager fee
-        _successFee, // platform fee the same as a manager fee
+        _successFee, // manager and platform fee
         exchangePortalAddress,
         poolPortalAddress,
         defiPortal,
@@ -168,8 +166,7 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundETHLightFactory.createSmartFundLight(
         msg.sender,
         _name,
-        _successFee, // manager fee
-        _successFee, // platform fee the same as a manager fee
+        _successFee, // manager and platform fee
         exchangePortalAddress,
         address(permittedAddresses),
         _isRequireTradeVerification
@@ -183,8 +180,7 @@ contract SmartFundRegistry is Ownable {
       smartFund = smartFundERC20LightFactory.createSmartFundLight(
         msg.sender,
         _name,
-        _successFee, // manager fee
-        _successFee, // platform fee the same as a manager fee
+        _successFee, // manager and platform fee
         exchangePortalAddress,
         address(permittedAddresses),
         coinAddress,

@@ -3,7 +3,6 @@ interface SmartFundERC20FactoryInterface {
     address _owner,
     string memory _name,
     uint256 _successFee,
-    uint256 _platformFee,
     address _exchangePortalAddress,
     address _poolPortalAddress,
     address _defiPortal,
