@@ -2,6 +2,9 @@ pragma solidity ^0.6.12;
 
 import "./interfaces/SmartFundETHFactoryInterface.sol";
 import "./interfaces/SmartFundERC20FactoryInterface.sol";
+import "./interfaces/SmartFundETHLightFactoryInterface.sol";
+import "./interfaces/SmartFundERC20LightFactoryInterface.sol";
+
 import "./interfaces/PermittedAddressesInterface.sol";
 
 import "../zeppelin-solidity/contracts/access/Ownable.sol";
@@ -34,6 +37,8 @@ contract SmartFundRegistry is Ownable {
   // Factories
   SmartFundETHFactoryInterface public smartFundETHFactory;
   SmartFundERC20FactoryInterface public smartFundERC20Factory;
+  SmartFundETHLightFactoryInterface public smartFundETHLightFactory;
+  SmartFundERC20LightFactoryInterface public smartFundERC20LightFactory;
 
   // Enum for detect fund type in create fund function
   // NOTE: You can add a new type at the end, but do not change this order
@@ -50,6 +55,8 @@ contract SmartFundRegistry is Ownable {
   * @param _COTCoinAddress               Address of Cotrader coin
   * @param _smartFundETHFactory          Address of smartFund ETH factory
   * @param _smartFundERC20Factory        Address of smartFund USD factory
+  * @param _smartFundETHLightFactory     Address of smartFund ETH factory
+  * @param _smartFundERC20LightFactory   Address of smartFund USD factory
   * @param _defiPortal                   Address of defiPortal contract
   * @param _permittedAddresses           Address of permittedAddresses contract
   */
@@ -60,6 +67,8 @@ contract SmartFundRegistry is Ownable {
     address _COTCoinAddress,
     address _smartFundETHFactory,
     address _smartFundERC20Factory,
+    address _smartFundETHLightFactory,
+    address _smartFundERC20LightFactory,
     address _defiPortal,
     address _permittedAddresses
   ) public {
@@ -69,12 +78,14 @@ contract SmartFundRegistry is Ownable {
     COTCoinAddress = _COTCoinAddress;
     smartFundETHFactory = SmartFundETHFactoryInterface(_smartFundETHFactory);
     smartFundERC20Factory = SmartFundERC20FactoryInterface(_smartFundERC20Factory);
+    smartFundETHLightFactory = SmartFundETHLightFactoryInterface(_smartFundETHLightFactory);
+    smartFundERC20LightFactory = SmartFundERC20LightFactoryInterface(_smartFundERC20LightFactory);
     defiPortal = _defiPortal;
     permittedAddresses = PermittedAddressesInterface(_permittedAddresses);
   }
 
   /**
-  * @dev Creates a new SmartFund
+  * @dev Creates a new Full SmartFund
   *
   * @param _name                        The name of the new fund
   * @param _successFee                  The fund managers success fee
@@ -93,13 +104,25 @@ contract SmartFundRegistry is Ownable {
 
     address smartFund;
 
-    // ERC20 case
-    if(_fundType == uint256(FundType.USD) || _fundType == uint256(FundType.COT)){
-      // Define coin address dependse of fund type
-      address coinAddress = _fundType == uint256(FundType.USD)
-      ? stableCoinAddress
-      : COTCoinAddress;
+    // ETH case
+    if(_fundType == uint256(FundType.ETH)){
+      // Create ETH Fund
+      smartFund = smartFundETHFactory.createSmartFund(
+        msg.sender,
+        _name,
+        _successFee, // manager fee
+        _successFee, // platform fee the same as a manager fee
+        exchangePortalAddress,
+        poolPortalAddress,
+        defiPortal,
+        address(permittedAddresses),
+        _isRequireTradeVerification
+      );
 
+    }
+    // ERC20 case
+    else{
+      address coinAddress = getERC20AddressByFundType(_fundType);
       // Create ERC20 based fund
       smartFund = smartFundERC20Factory.createSmartFund(
         msg.sender,
@@ -114,26 +137,71 @@ contract SmartFundRegistry is Ownable {
         _isRequireTradeVerification
       );
     }
-    else if (_fundType == uint256(FundType.ETH)){
+
+    smartFunds.push(smartFund);
+    emit SmartFundAdded(smartFund, msg.sender);
+  }
+
+  /**
+  * @dev Creates a new Light SmartFund
+  *
+  * @param _name                        The name of the new fund
+  * @param _successFee                  The fund managers success fee
+  * @param _fundType                    Fund type enum number
+  * @param _isRequireTradeVerification  If true fund can buy only tokens,
+  *                                     which include in Merkle Three white list
+  */
+  function createSmartFundLight(
+    string memory _name,
+    uint256       _successFee,
+    uint256       _fundType,
+    bool          _isRequireTradeVerification
+  ) public {
+    // Require that the funds success fee be less than the maximum allowed amount
+    require(_successFee <= maximumSuccessFee);
+
+    address smartFund;
+
+    // ETH case
+    if(_fundType == uint256(FundType.ETH)){
       // Create ETH Fund
-      smartFund = smartFundETHFactory.createSmartFund(
+      smartFund = smartFundETHLightFactory.createSmartFundLight(
         msg.sender,
         _name,
         _successFee, // manager fee
         _successFee, // platform fee the same as a manager fee
         exchangePortalAddress,
-        poolPortalAddress,
-        defiPortal,
         address(permittedAddresses),
         _isRequireTradeVerification
       );
+
     }
+    // ERC20 case
     else{
-      revert("Unknown fund type");
+      address coinAddress = getERC20AddressByFundType(_fundType);
+      // Create ERC20 based fund
+      smartFund = smartFundERC20LightFactory.createSmartFundLight(
+        msg.sender,
+        _name,
+        _successFee, // manager fee
+        _successFee, // platform fee the same as a manager fee
+        exchangePortalAddress,
+        address(permittedAddresses),
+        coinAddress,
+        _isRequireTradeVerification
+      );
     }
 
     smartFunds.push(smartFund);
     emit SmartFundAdded(smartFund, msg.sender);
+  }
+
+
+  function getERC20AddressByFundType(uint256 _fundType) private view returns(address coinAddress){
+    // Define coin address dependse of fund type
+    coinAddress = _fundType == uint256(FundType.USD)
+    ? stableCoinAddress
+    : COTCoinAddress;
   }
 
   function totalSmartFunds() public view returns (uint256) {
