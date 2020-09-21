@@ -12,7 +12,6 @@ import "../contracts/bancor/interfaces/BancorNetworkInterface.sol";
 
 import "../contracts/oneInch/IOneSplitAudit.sol";
 
-import "../contracts/compound/CToken.sol";
 import "../contracts/core/interfaces/ExchangePortalInterface.sol";
 import "../contracts/core/interfaces/DefiPortalInterface.sol";
 import "../contracts/core/interfaces/PoolPortalInterface.sol";
@@ -30,9 +29,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // Contract for merkle tree white list verification
   IMerkleTreeTokensVerification public merkleTreeWhiteList;
-
-  // COMPOUND
-  address public cEther;
 
   // 1INCH
   IOneSplitAudit public oneInch;
@@ -82,7 +78,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _bancorData             address of GetBancorData helper
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
-  * @param _cEther                 address of the COMPOUND cEther
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
@@ -91,7 +86,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _bancorData,
     address _poolPortal,
     address _oneInch,
-    address _cEther,
     address _tokensTypes,
     address _merkleTreeWhiteList
     )
@@ -101,7 +95,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
-    cEther = _cEther;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -349,9 +342,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       else if (assetType == bytes32("BALANCER_POOL")){
         return getValueForBalancerPool(_from, _to, _amount);
       }
-      else if (assetType == bytes32("COMPOUND")){
-        return getValueViaCompound(_from, _to, _amount);
-      }
       else{
         // Unmarked type, try find value
         return findValue(_from, _to, _amount);
@@ -384,15 +374,10 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
        if(oneInchResult > 0)
          return oneInchResult;
 
-       // If Bancor return 0, check from Compound network for ensure this is not Compound asset
+       // If Bancor return 0, check from Balancer network for ensure this is not Balancer asset
        uint256 bancorResult = getValueViaBancor(_from, _to, _amount);
        if(bancorResult > 0)
           return bancorResult;
-
-       // If Compound return 0, check from Balancer pools for ensure this is not Balancer  pool
-       uint256 compoundResult = getValueViaCompound(_from, _to, _amount);
-       if(compoundResult > 0)
-          return compoundResult;
 
        // If Balancer return 0, check from Uniswap pools for ensure this is not Uniswap pool
        uint256 balancerResult = getValueForBalancerPool(_from, _to, _amount);
@@ -490,63 +475,6 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       value = 0;
     }
   }
-
-
-  // helper for get value between Compound assets and ETH/ERC20
-  // NOTE: _from should be COMPOUND cTokens,
-  // amount should be 1e8 because cTokens support 8 decimals
-  function getValueViaCompound(
-    address _from,
-    address _to,
-    uint256 _amount
-  ) public view returns (uint256 value) {
-
-    // get underlying amount by cToken amount
-    uint256 underlyingAmount = getCompoundUnderlyingRatio(
-      _from,
-      _amount
-    );
-    // convert underlying in _to
-    if(underlyingAmount > 0){
-      // get underlying address
-      address underlyingAddress = (_from == cEther)
-      ? address(ETH_TOKEN_ADDRESS)
-      : CToken(_from).underlying();
-
-      // get rate for underlying address via DEX aggregators
-      return getValueViaDEXsAgregators(underlyingAddress, _to, underlyingAmount);
-    }
-    else{
-      return 0;
-    }
-  }
-
-
-  // helper for get underlying amount by cToken amount
-  // NOTE: _from should be Compound token, amount = input * 1e8 (not 1e18)
-  function getCompoundUnderlyingRatio(
-    address _from,
-    uint256 _amount
-  )
-    public
-    view
-    returns (uint256)
-  {
-    // return 0 for attempt get underlying for ETH
-    if(_from == address(ETH_TOKEN_ADDRESS))
-       return 0;
-
-    // try get underlying ratio
-    try CToken(_from).exchangeRateStored() returns(uint256 rate)
-    {
-      uint256 underlyingAmount = _amount.mul(rate).div(1e18);
-      return underlyingAmount;
-    }
-    catch{
-      return 0;
-    }
-  }
-
 
   // helper for get ratio between pools in Uniswap network
   // _from - should be uniswap pool address
