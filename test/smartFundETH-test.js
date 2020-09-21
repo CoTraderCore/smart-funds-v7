@@ -194,8 +194,8 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       successFee,                                   // uint256 _successFee,
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
-      defiPortal.address,
       poolPortal.address,                           // address _poolPortalAddress,
+      defiPortal.address,
       permittedAddresses.address,
       true                                          // verification for trade tokens
     )
