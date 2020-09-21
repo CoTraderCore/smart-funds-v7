@@ -30,13 +30,17 @@ const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
 contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
   beforeEach(async function() {
 
+    this.COT = '0x0000000000000000000000000000000000000000'
+    this.ExchangePortal = '0x0000000000000000000000000000000000000001'
+    this.PoolPortal = '0x0000000000000000000000000000000000000002'
+    this.defiPortal = '0x0000000000000000000000000000000000000003'
     this.DAI = '0x0000000000000000000000000000000000000004'
 
     this.permittedAddresses = await PermittedAddresses.new(
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004'
+      this.ExchangePortal,
+      this.PoolPortal,
+      this.defiPortal,
+      this.DAI
     )
 
     this.COT_DAO_WALLET = await CoTraderDAOWalletMock.new()
@@ -50,23 +54,43 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
 
 
     this.registry = await SmartFundRegistry.new(
-      '0x0000000000000000000000000000000000000001', //   ExchangePortal.address,
-      '0x0000000000000000000000000000000000000002', //   PoolPortal.address,
+      this.ExchangePortal,                          //   ExchangePortal.address,
+      this.PoolPortal,                              //   PoolPortal.address,
       this.DAI,                                     //   STABLE_COIN_ADDRESS,
-      '0x0000000000000000000000000000000000000000', //   COTRADER COIN ADDRESS
+      this.COT,                                     //   COTRADER COIN ADDRESS
       this.smartFundETHFactory.address,             //   SmartFundETHFactory.address,
       this.SmartFundERC20Factory.address,           //   SmartFundERC20Factory.address
       this.SmartFundETHLightFactory.address,        //   SmartFundETHLightFactory
       this.SmartFundERC20LightFactory.address,      //   SmartFundERC20LightFactory
-      '0x0000000000000000000000000000000000000003', //   Defi Portal
+      this.defiPortal,                              //   Defi Portal
       this.permittedAddresses.address,              //   PermittedAddresses
     )
   })
 
   describe('INIT registry', function() {
-    it('Correct initial registry', async function() {
+    it('Correct initial totalFunds', async function() {
       const totalFunds = await this.registry.totalSmartFunds()
       assert.equal(0, totalFunds)
+    })
+
+    it('Correct initial ExchangePortal', async function() {
+      assert.equal(this.ExchangePortal, await this.registry.exchangePortalAddress())
+    })
+
+    it('Correct initial PoolPortal', async function() {
+      assert.equal(this.PoolPortal, await this.registry.poolPortalAddress())
+    })
+
+    it('Correct initial DefiPortal', async function() {
+      assert.equal(this.defiPortal, await this.registry.defiPortalAddress())
+    })
+
+    it('Correct initial DAI', async function() {
+      assert.equal(this.DAI, await this.registry.stableCoinAddress())
+    })
+
+    it('Correct initial COT', async function() {
+      assert.equal(this.COT, await this.registry.COTCoinAddress())
     })
   })
 
