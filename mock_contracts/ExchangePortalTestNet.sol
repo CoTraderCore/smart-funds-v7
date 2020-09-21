@@ -14,7 +14,7 @@ import "../contracts/oneInch/IOneSplitAudit.sol";
 
 import "../contracts/core/interfaces/ExchangePortalInterface.sol";
 import "../contracts/core/interfaces/DefiPortalInterface.sol";
-import "../contracts/core/interfaces/PoolPortalInterface.sol";
+import "../contracts/core/interfaces/PoolPortalViewInterface.sol";
 import "../contracts/core/interfaces/ITokensTypeStorage.sol";
 import "../contracts/core/interfaces/IMerkleTreeTokensVerification.sol";
 
@@ -37,7 +37,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   IGetBancorData public bancorData;
 
   // CoTrader portals
-  PoolPortalInterface public poolPortal;
+  PoolPortalViewInterface public poolPortal;
   DefiPortalInterface public defiPortal;
 
   // 1 inch flags
@@ -93,7 +93,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   {
     defiPortal = DefiPortalInterface(_defiPortal);
     bancorData = IGetBancorData(_bancorData);
-    poolPortal = PoolPortalInterface(_poolPortal);
+    poolPortal = PoolPortalViewInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
@@ -589,7 +589,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // owner can set new pool portal
   function setNewPoolPortal(address _poolPortal) external onlyOwner {
-    poolPortal = PoolPortalInterface(_poolPortal);
+    poolPortal = PoolPortalViewInterface(_poolPortal);
   }
 
   // owner can set new defi portal
