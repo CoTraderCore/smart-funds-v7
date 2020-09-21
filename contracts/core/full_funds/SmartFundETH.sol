@@ -18,8 +18,9 @@ contract SmartFundETH is SmartFundCore {
   * @param _successFee                   Percentage of profit that the fund manager receives
   * @param _platformAddress              Address of platform to send fees to
   * @param _exchangePortalAddress        Address of initial exchange portal
-  * @param _permittedAddresses           Address of permittedAddresses contract
   * @param _poolPortalAddress            Address of initial pool portal
+  * @param _defiPortal                   Address of defi portal
+  * @param _permittedAddresses           Address of permittedAddresses contract
   * @param _isRequireTradeVerification   If true fund will require verification from Merkle White list for each new asset
   */
   constructor(
@@ -28,8 +29,8 @@ contract SmartFundETH is SmartFundCore {
     uint256 _successFee,
     address _platformAddress,
     address _exchangePortalAddress,
-    address _defiPortal,
     address _poolPortalAddress,
+    address _defiPortal,
     address _permittedAddresses,
     bool    _isRequireTradeVerification
   )
