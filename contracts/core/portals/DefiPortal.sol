@@ -24,25 +24,23 @@ contract DefiPortal {
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
 
-
-  // param _additionalArgs[0] require DefiActions type
-  function callPayableProtocol(
+  /**
+  *
+  * if need paybale protocol, in new version of this portal can be added such function
+  *
+  function callNonPayableProtocol(
     address[] memory tokensToSend,
     uint256[] memory amountsToSend,
     bytes memory _additionalData,
     bytes32[] memory _additionalArgs
   )
-    external
-    payable
-    returns(
-      string memory eventType,
-      bytes memory eventData,
-      address[] memory tokensReceived
-    )
-  {
-    // there are no action for current DEFI payable protocol
-    revert("Unknown DEFI action");
-  }
+   external
+   returns(
+     string memory eventType,
+     address[] memory tokensToReceive,
+     uint256[] memory amountsToReceive
+  );
+  */
 
 
   // param _additionalArgs[0] require DefiActions type
