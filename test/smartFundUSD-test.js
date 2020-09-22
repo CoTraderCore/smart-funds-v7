@@ -76,7 +76,8 @@ let xxxERC,
     merkleWhiteList,
     MerkleTREE,
     defiPortal,
-    yDAI
+    yDAI,
+    ETHBNT
 
 
 contract('smartFundERC20', function([userOne, userTwo, userThree]) {
@@ -141,6 +142,13 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       DAI.address
     )
 
+    ETHBNT = await Token.new(
+      "ETH Bancor",
+      "ETHBNT",
+      18,
+      toWei(String(100000000))
+    )
+
     // Create MerkleTREE instance
     const leaves = [
       xxxERC.address,
@@ -179,6 +187,7 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       DAI.address,
       DAIBNT.address,
       DAIUNI.address,
+      ETHBNT.address,
       tokensType.address
     )
 
@@ -212,6 +221,7 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
     // send all BNT and UNI pools to portal
     DAIBNT.transfer(poolPortal.address, toWei(String(100000000)))
     DAIUNI.transfer(poolPortal.address, toWei(String(100000000)))
+    ETHBNT.transfer(poolPortal.address, toWei(String(100000000)))
   }
 
   beforeEach(async function() {

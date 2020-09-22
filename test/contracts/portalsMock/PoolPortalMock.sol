@@ -16,6 +16,7 @@ contract PoolPortalMock {
   address public BNT;
   address public DAIBNTPoolToken;
   address public DAIUNIPoolToken;
+  address public ETHBNT;
 
   enum PortalType { Bancor, Uniswap }
 
@@ -28,6 +29,7 @@ contract PoolPortalMock {
     address _DAI,
     address _DAIBNTPoolToken,
     address _DAIUNIPoolToken,
+    address _ETHBNT,
     address _tokensTypes
   )
     public
@@ -36,6 +38,7 @@ contract PoolPortalMock {
     BNT = _BNT;
     DAIBNTPoolToken = _DAIBNTPoolToken;
     DAIUNIPoolToken = _DAIUNIPoolToken;
+    ETHBNT = _ETHBNT;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
   }
 
@@ -49,6 +52,18 @@ contract PoolPortalMock {
      require(IERC20(DAI).transferFrom(msg.sender, address(this), relayAmount), "Can not transfer from");
 
      IERC20(DAIBNTPoolToken).transfer(msg.sender, _amount);
+
+     setTokenType(address(_poolToken), "BANCOR_ASSET");
+  }
+
+  // for mock 1 Relay BNT = 0.5 BNT and 0.5 ETH
+  // Note: calculate by pool amount
+  function buyBancorPoolETH(IERC20 _poolToken, uint256 _amount) private {
+     uint256 relayAmount = _amount.div(2);
+     require(msg.value == relayAmount, "CANT NOT TRANSFER ETH");
+     require(IERC20(BNT).transferFrom(msg.sender, address(this), relayAmount), "Can not transfer from");
+
+     IERC20(ETHBNT).transfer(msg.sender, _amount);
 
      setTokenType(address(_poolToken), "BANCOR_ASSET");
   }
@@ -79,9 +94,15 @@ contract PoolPortalMock {
   {
 
     if(_type == uint(PortalType.Bancor)){
-      buyBancorPool(_poolToken, _amount);
-      poolReceivedAmount = _amount;
-      connectorsSpended = _connectorsAmount;
+      if(_connectorsAddress[0] == address(ETH_TOKEN_ADDRESS)){
+        buyBancorPoolETH(_poolToken, _amount);
+        poolReceivedAmount = _amount;
+        connectorsSpended = _connectorsAmount;
+      }else{
+        buyBancorPool(_poolToken, _amount);
+        poolReceivedAmount = _amount;
+        connectorsSpended = _connectorsAmount;
+      }
     }
     else if (_type == uint(PortalType.Uniswap)){
       require(_amount == msg.value, "Not enough ETH");
@@ -146,9 +167,15 @@ contract PoolPortalMock {
     connectorsAmount = new uint256[](2);
 
     if(_type == uint(PortalType.Bancor)){
-      connectorsAddress[0] = BNT;
-      connectorsAddress[1] = DAI;
-      sellPoolViaBancor(_poolToken, _amount);
+      if(address(_poolToken) == ETHBNT){
+        connectorsAddress[0] = BNT;
+        connectorsAddress[1] = address(ETH_TOKEN_ADDRESS);
+        sellETHPoolViaBancor(_poolToken, _amount);
+      }else{
+        connectorsAddress[0] = BNT;
+        connectorsAddress[1] = DAI;
+        sellPoolViaBancor(_poolToken, _amount);
+      }
     }
     else if (_type == uint(PortalType.Uniswap)){
       connectorsAddress[0] = address(ETH_TOKEN_ADDRESS);
@@ -205,6 +232,15 @@ contract PoolPortalMock {
 
     // send back connectors
     require(IERC20(DAI).transfer(msg.sender, _amount.div(2)));
+    require(IERC20(BNT).transfer(msg.sender, _amount.div(2)));
+  }
+
+  function sellETHPoolViaBancor(IERC20 _poolToken, uint256 _amount) private {
+    // get BNT pool relay back
+    require(IERC20(ETHBNT).transferFrom(msg.sender, address(this), _amount));
+
+    // send back connectors
+    payable(msg.sender).transfer(_amount.div(2));
     require(IERC20(BNT).transfer(msg.sender, _amount.div(2)));
   }
 

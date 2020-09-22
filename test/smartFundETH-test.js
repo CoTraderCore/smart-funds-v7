@@ -73,7 +73,8 @@ let xxxERC,
     merkleWhiteList,
     MerkleTREE,
     defiPortal,
-    yDAI
+    yDAI,
+    ETHBNT
 
 
 
@@ -134,6 +135,13 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       DAI.address
     )
 
+    ETHBNT = await Token.new(
+      "ETH Bancor",
+      "ETHBNT",
+      18,
+      toWei(String(100000000))
+    )
+
     // Create MerkleTREE instance
     const leaves = [
       xxxERC.address,
@@ -172,6 +180,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       DAI.address,
       DAIBNT.address,
       DAIUNI.address,
+      ETHBNT.address,
       tokensType.address
     )
 
@@ -203,6 +212,7 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
     // send all BNT and UNI pools to portal
     DAIBNT.transfer(poolPortal.address, toWei(String(100000000)))
     DAIUNI.transfer(poolPortal.address, toWei(String(100000000)))
+    ETHBNT.transfer(poolPortal.address, toWei(String(100000000)))
   }
 
   beforeEach(async function() {
@@ -1101,6 +1111,57 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(await DAI.balanceOf(smartFundETH.address), toWei(String(1)))
       assert.equal(await DAIBNT.balanceOf(smartFundETH.address), 0)
 
+    })
+
+    it('should be able buy/sell Bancor pool with ETH Connector', async function() {
+      // send some assets to pool portal
+      await BNT.transfer(exchangePortal.address, toWei(String(1)))
+
+      await smartFundETH.deposit({ from: userOne, value: toWei(String(2)) })
+
+      // get proof and position for dest token
+      const proofBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => buf2hex(x.data))
+      const positionBNT = MerkleTREE.getProof(keccak256(BNT.address)).map(x => x.position === 'right' ? 1 : 0)
+
+      // get 1 BNT from exchange portal
+      await smartFundETH.trade(
+        ETH_TOKEN_ADDRESS,
+        toWei(String(1)),
+        BNT.address,
+        0,
+        proofBNT,
+        positionBNT,
+        PARASWAP_MOCK_ADDITIONAL_PARAMS,
+        1,
+        {
+          from: userOne,
+        }
+      )
+
+      // Check balance before buy pool
+      assert.equal(await BNT.balanceOf(smartFundETH.address), toWei(String(1)))
+      assert.equal(await ETHBNT.balanceOf(smartFundETH.address), 0)
+
+      const connectorsAddress = ["0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE", BNT.address]
+      const connectorsAmount = [toWei(String(1)), toWei(String(1))]
+
+      // buy BNT pool
+      await smartFundETH.buyPool(toWei(String(2)), 0, ETHBNT.address, connectorsAddress, connectorsAmount, [], "0x")
+      // after buy BNT pool recieved asset should be marked as BANCOR POOL
+      assert.equal(await tokensType.getType(ETHBNT.address), TOKEN_KEY_BANCOR_POOL)
+
+      // Check balance after buy pool
+      assert.equal(await BNT.balanceOf(smartFundETH.address), 0)
+      assert.equal(await web3.eth.getBalance(smartFundETH.address), 0)
+      assert.equal(await ETHBNT.balanceOf(smartFundETH.address), toWei(String(2)))
+
+      // sell pool
+      await smartFundETH.sellPool(toWei(String(2)), 0, ETHBNT.address, [], "0x")
+
+      // Check balance after sell pool
+      assert.equal(await BNT.balanceOf(smartFundETH.address), toWei(String(1)))
+      assert.equal(await web3.eth.getBalance(smartFundETH.address), toWei(String(1)))
+      assert.equal(await ETHBNT.balanceOf(smartFundETH.address), 0)
     })
 
     it('should be able buy/sell Uniswap pool', async function() {
