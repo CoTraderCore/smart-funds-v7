@@ -48,9 +48,6 @@ let xxxERC,
     exchangePortal,
     smartFundETH,
     BNT,
-    DAIUNI,
-    DAIBNT,
-    poolPortal,
     COT_DAO_WALLET,
     yyyERC,
     atackContract,
@@ -88,22 +85,6 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       toWei(String(100000000))
     )
 
-    // Deploy DAIBNT Token
-    DAIBNT = await Token.new(
-      "DAI Bancor",
-      "DAIBNT",
-      18,
-      toWei(String(100000000))
-    )
-
-    // Deploy DAIUNI Token
-    DAIUNI = await Token.new(
-      "DAI Uniswap",
-      "DAIUNI",
-      18,
-      toWei(String(100000000))
-    )
-
     // Deploy DAI Token
     DAI = await Token.new(
       "DAI Stable Coin",
@@ -137,18 +118,8 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       merkleWhiteList.address
     )
 
-    // Depoy poolPortal
-    poolPortal = await PoolPortalMock.new(
-      BNT.address,
-      DAI.address,
-      DAIBNT.address,
-      DAIUNI.address,
-      tokensType.address
-    )
-
     // allow exchange portal and pool portal write to token type storage
     await tokensType.addNewPermittedAddress(exchangePortal.address)
-    await tokensType.addNewPermittedAddress(poolPortal.address)
 
     // Deploy ETH fund
     smartFundETH = await SmartFundETH.new(
@@ -158,7 +129,7 @@ contract('ReEntrancy Atack', function([userOne, userTwo, userThree]) {
       COT_DAO_WALLET.address,                       // address _platformAddress,
       exchangePortal.address,                       // address _exchangePortalAddress,
       '0x0000000000000000000000000000000000000000', // defi portal
-      poolPortal.address,                           // address _poolPortalAddress,
+      '0x0000000000000000000000000000000000000000', // poolPortalAddress,
       '0x0000000000000000000000000000000000000000', // permitted addresses
       true                                          // verification for trade tokens
     )
