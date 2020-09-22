@@ -126,45 +126,106 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
     })
   })
 
-  describe('Permitted TODO', function() {
-    const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
-    this.COT = '0x0000000000000000000000000000000000000000'
-    this.ExchangePortal = '0x0000000000000000000000000000000000000001'
-    this.PoolPortal = '0x0000000000000000000000000000000000000002'
-    this.defiPortal = '0x0000000000000000000000000000000000000003'
-    this.DAI = '0x0000000000000000000000000000000000000004'
+  describe('Update addresses', function() {
+    const testAddress = '0x0000000000000000000000000000000000000777'
 
-    it('Should not be able change non permitted exchange portal address', async function() {
 
+    it('Owner should be able change exchange portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 1)
+      await this.registry.setExchangePortalAddress(testAddress)
+      assert.equal(testAddress, await this.registry.exchangePortalAddress())
     })
 
-    it('Should be able change permitted exchange portal address', async function() {
-
+    it('Owner should be able change pool portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 2)
+      await this.registry.setPoolPortalAddress(testAddress)
+      assert.equal(testAddress, await this.registry.poolPortalAddress())
     })
 
-    it('Should not be able change non permitted pool portal address', async function() {
-
+    it('Owner should be able change defi portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 3)
+      await this.registry.setDefiPortal(testAddress)
+      assert.equal(testAddress, await this.registry.defiPortalAddress())
     })
 
-    it('Should be able change permitted pool portal address', async function() {
-
+    it('Owner should be able change stable coin address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 4)
+      await this.registry.setStableCoinAddress(testAddress)
+      assert.equal(testAddress, await this.registry.stableCoinAddress())
     })
 
-    it('Should not be able change non permitted stable portal address', async function() {
-
+    it('Owner should be able change maximumSuccessFee', async function() {
+      await this.registry.setMaximumSuccessFee(4000)
+      assert.equal(4000, await this.registry.maximumSuccessFee())
     })
 
-    it('Should be able change permitted stable portal address', async function() {
-
+    it('Owner should be able change ETH Factory', async function() {
+      await this.registry.setNewSmartFundETHFactory(testAddress)
+      assert.equal(testAddress, await this.registry.smartFundETHFactory())
     })
 
-
-    it('Not owner can not change portals addresses', async function() {
-
+    it('Owner should be able change ERC20 Factory', async function() {
+      await this.registry.setNewSmartFundERC20Factory(testAddress)
+      assert.equal(testAddress, await this.registry.smartFundERC20Factory())
     })
 
-    it('Not owner can not change permitted addresses', async function() {
+    it('Owner should be able change ETH Factory Light', async function() {
+      await this.registry.setNewSmartFundETHLightFactory(testAddress)
+      assert.equal(testAddress, await this.registry.smartFundETHLightFactory())
+    })
 
+    it('Owner should be able change ERC20 Factory Light', async function() {
+      await this.registry.setNewSmartFundERC20LightFactory(testAddress)
+      assert.equal(testAddress, await this.registry.smartFundERC20LightFactory())
+    })
+
+    it('NOT Owner should NOT be able change exchange portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 1)
+      await this.registry.setExchangePortalAddress(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change pool portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 2)
+      await this.registry.setPoolPortalAddress(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change defi portal address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 3)
+      await this.registry.setDefiPortal(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change stable coin address', async function() {
+      await this.permittedAddresses.addNewAddress(testAddress, 4)
+      await this.registry.setStableCoinAddress(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change maximumSuccessFee', async function() {
+      await this.registry.setMaximumSuccessFee(4000, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change ETH Factory', async function() {
+      await this.registry.setNewSmartFundETHFactory(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change ERC20 Factory', async function() {
+      await this.registry.setNewSmartFundERC20Factory(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change ETH Factory Light', async function() {
+      await this.registry.setNewSmartFundETHLightFactory(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    it('NOT Owner should NOT be able change ERC20 Factory Light', async function() {
+      await this.registry.setNewSmartFundERC20LightFactory(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
     })
   })
 })

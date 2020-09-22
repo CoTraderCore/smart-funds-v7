@@ -231,7 +231,7 @@ contract SmartFundRegistry is Ownable {
   *
   * @param _poolPortalAddress    Address of the new pool portal to be set
   */
-  function setPoolPortalAddress (address _poolPortalAddress) external onlyOwner {
+  function setPoolPortalAddress(address _poolPortalAddress) external onlyOwner {
     // Require that the new pool portal is permitted by permittedAddresses
     require(permittedAddresses.permittedAddresses(_poolPortalAddress));
 
@@ -243,7 +243,7 @@ contract SmartFundRegistry is Ownable {
   *
   * @param _newDefiPortalAddress    The address of the new permitted defi portal to use
   */
-  function setNewDefiPortal(address _newDefiPortalAddress) public onlyOwner {
+  function setDefiPortal(address _newDefiPortalAddress) public onlyOwner {
     // Require that the new defi portal is permitted by permittedAddresses
     require(permittedAddresses.permittedAddresses(_newDefiPortalAddress));
 
