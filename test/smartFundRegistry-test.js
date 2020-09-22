@@ -128,38 +128,43 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
 
   describe('Permitted TODO', function() {
     const testAddress = '0x3710f313d52a52353181311a3584693942d30e8e'
+    this.COT = '0x0000000000000000000000000000000000000000'
+    this.ExchangePortal = '0x0000000000000000000000000000000000000001'
+    this.PoolPortal = '0x0000000000000000000000000000000000000002'
+    this.defiPortal = '0x0000000000000000000000000000000000000003'
+    this.DAI = '0x0000000000000000000000000000000000000004'
 
-    // it('Should not be able change non permitted exchange portal address', async function() {
-    //
-    // })
-    //
-    // it('Should be able change permitted exchange portal address', async function() {
-    //
-    // })
-    //
-    // it('Should not be able change non permitted pool portal address', async function() {
-    //
-    // })
-    //
-    // it('Should be able change permitted pool portal address', async function() {
-    //
-    // })
-    //
-    // it('Should not be able change non permitted stable portal address', async function() {
-    //
-    // })
-    //
-    // it('Should be able change permitted stable portal address', async function() {
-    //
-    // })
-    //
-    //
-    // it('Not owner can not change portals addresses', async function() {
-    //
-    // })
-    //
-    // it('Not owner can not change permitted addresses', async function() {
-    //
-    // })
+    it('Should not be able change non permitted exchange portal address', async function() {
+
+    })
+
+    it('Should be able change permitted exchange portal address', async function() {
+
+    })
+
+    it('Should not be able change non permitted pool portal address', async function() {
+
+    })
+
+    it('Should be able change permitted pool portal address', async function() {
+
+    })
+
+    it('Should not be able change non permitted stable portal address', async function() {
+
+    })
+
+    it('Should be able change permitted stable portal address', async function() {
+
+    })
+
+
+    it('Not owner can not change portals addresses', async function() {
+
+    })
+
+    it('Not owner can not change permitted addresses', async function() {
+
+    })
   })
 })

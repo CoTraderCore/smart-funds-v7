@@ -291,18 +291,35 @@ contract SmartFundRegistry is Ownable {
 
 
   /**
-  * @dev Allows platform to withdraw tokens received as part of the platform fee
+  * @dev Owner can set new smartFundETHLightFactory
+  *
+  * @param _smartFundETHLightFactory    address of ETH factory contract
+  */
+  function setNewSmartFundETHLightFactory(address _smartFundETHLightFactory) external onlyOwner {
+      smartFundETHLightFactory = SmartFundETHLightFactoryInterface(_smartFundETHLightFactory);
+  }
+
+  /**
+  * @dev Owner can set new smartFundERC20LightFactory
+  *
+  * @param _smartFundERC20LightFactory    address of ERC20 factory contract
+  */
+  function setNewSmartFundERC20LightFactory(address _smartFundERC20LightFactory) external onlyOwner {
+    smartFundERC20LightFactory = SmartFundERC20LightFactoryInterface(_smartFundERC20LightFactory);
+  }
+
+  /**
+  * @dev Allows withdarw tokens from this contract if someone will accidentally send tokens here
   *
   * @param _tokenAddress    Address of the token to be withdrawn
   */
   function withdrawTokens(address _tokenAddress) external onlyOwner {
     IERC20 token = IERC20(_tokenAddress);
-
     token.transfer(owner(), token.balanceOf(address(this)));
   }
 
   /**
-  * @dev Allows platform to withdraw ether received as part of the platform fee
+  * @dev Allows withdarw ETH from this contract if someone will accidentally send tokens here
   */
   function withdrawEther() external onlyOwner {
     payable(owner()).transfer(address(this).balance);
