@@ -62,14 +62,9 @@ for reduce gas cost.
 
 21) Add one Global permitted contract for Exchange, Pool, Defi, Stable coins portal
 
-22) Add Yearn Finance
-```
+22) Add Yearn Finance support
 
-# TODO
-
-```
-1) Make full and light funds factories
-2) Update Unit tests with DEFI portal and new permittedAddresses, full and light funds
+23) Add full and light funds factories
 ```
 
 
