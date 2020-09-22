@@ -1,9 +1,3 @@
-# smart-funds-v7
-
-```
-Status: not finished
-```
-
 # Run tests
 
 ```
@@ -14,7 +8,7 @@ NOTE: in separate console
 2) truffle test
 ```
 
-# Done
+# Updates 
 
 ```
 1) Made more flexible pools with the ability to add another dapp pool in future,
