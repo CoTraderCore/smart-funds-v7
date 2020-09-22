@@ -1560,8 +1560,59 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
   })
 
 
-  describe('Permitted TODO', function() {
+  describe('Update addresses', function() {
+    const testAddress = '0x0000000000000000000000000000000000000777'
 
+    // exchange portal
+    it('Owner should not be able change NON permitted exchane portal', async function() {
+      await smartFundERC20.setNewExchangePortal(testAddress).should.be.rejectedWith(EVMRevert)
+    })
+
+    it('Owner should be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 1)
+      await smartFundERC20.setNewExchangePortal(testAddress)
+      assert.equal(testAddress, await smartFundERC20.exchangePortal())
+    })
+
+    it('NOT Owner should NOT be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 1)
+      await smartFundERC20.setNewExchangePortal(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    // pool portal
+    it('Owner should not be able change NON permitted exchane portal', async function() {
+      await smartFundERC20.setNewPoolPortal(testAddress).should.be.rejectedWith(EVMRevert)
+    })
+
+    it('Owner should be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 2)
+      await smartFundERC20.setNewPoolPortal(testAddress)
+      assert.equal(testAddress, await smartFundERC20.poolPortal())
+    })
+
+    it('NOT Owner should NOT be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 2)
+      await smartFundERC20.setNewPoolPortal(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
+
+    // defi portal
+    it('Owner should not be able change NON permitted exchane portal', async function() {
+      await smartFundERC20.setNewDefiPortal(testAddress).should.be.rejectedWith(EVMRevert)
+    })
+
+    it('Owner should be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 3)
+      await smartFundERC20.setNewDefiPortal(testAddress)
+      assert.equal(testAddress, await smartFundERC20.defiPortal())
+    })
+
+    it('NOT Owner should NOT be able change permitted exchane portal', async function() {
+      await permittedAddresses.addNewAddress(testAddress, 3)
+      await smartFundERC20.setNewDefiPortal(testAddress, { from:userTwo })
+      .should.be.rejectedWith(EVMRevert)
+    })
   })
   // END
 })
