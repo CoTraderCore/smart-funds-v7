@@ -8,7 +8,7 @@ NOTE: in separate console
 2) truffle test
 ```
 
-# Updates 
+# Updates
 
 ```
 1) Made more flexible pools with the ability to add another dapp pool in future,

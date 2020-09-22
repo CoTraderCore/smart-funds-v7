@@ -15,13 +15,69 @@ require('chai')
 // real
 const PermittedAddresses = artifacts.require('./core/verification/PermittedAddresses.sol')
 
+// Factories
 const SmartFundETHFactory = artifacts.require('./core/full_funds/SmartFundETHFactory.sol')
 const SmartFundERC20Factory = artifacts.require('./core/full_funds/SmartFundERC20Factory.sol')
-
 const SmartFundETHLightFactory = artifacts.require('./core/light_funds/SmartFundETHLightFactory.sol')
 const SmartFundERC20LightFactory = artifacts.require('./core/light_funds/SmartFundERC20LightFactory.sol')
-
+// Registry
 const SmartFundRegistry = artifacts.require('./core/SmartFundRegistry.sol')
+
+// Fund abi (View portals address)
+const FundABI = [
+	{
+		"inputs": [],
+		"name": "coreFundAsset",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "defiPortal",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "exchangePortal",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "poolPortal",
+		"outputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+]
 
 // mock
 const CoTraderDAOWalletMock = artifacts.require('./CoTraderDAOWalletMock')
@@ -95,35 +151,75 @@ contract('SmartFundRegistry', function([userOne, userTwo, userThree]) {
   })
 
   describe('Create full funds', function() {
-    it('should be able create new ETH, USD and COT funds', async function() {
+    it('should be able create new ETH fund and address in fund correct', async function() {
       await this.registry.createSmartFund("ETH Fund", 20, 0, true)
-      let totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(1, totalFunds)
 
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal(this.PoolPortal, await fund.methods.poolPortal().call())
+      assert.equal(this.defiPortal, await fund.methods.defiPortal().call())
+      assert.equal('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', await fund.methods.coreFundAsset().call())
+    })
+
+    it('should be able create new USD fund and address in fund correct', async function() {
       await this.registry.createSmartFund("USD Fund", 20, 1, true)
-      totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(2, totalFunds)
 
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal(this.PoolPortal, await fund.methods.poolPortal().call())
+      assert.equal(this.defiPortal, await fund.methods.defiPortal().call())
+      assert.equal(this.DAI, await fund.methods.coreFundAsset().call())
+    })
+
+    it('should be able create new COT fund and address in fund correct', async function() {
       await this.registry.createSmartFund("COT Fund", 20, 2, true)
-      totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(3, totalFunds)
+
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal(this.PoolPortal, await fund.methods.poolPortal().call())
+      assert.equal(this.defiPortal, await fund.methods.defiPortal().call())
+      assert.equal(this.COT, await fund.methods.coreFundAsset().call())
     })
   })
 
   describe('Create ligth funds', function() {
-    it('should be able create new ETH, USD and COT funds', async function() {
+    it('should be able create new ETH fund and address in fund correct', async function() {
       await this.registry.createSmartFundLight("ETH Fund", 20, 0, true)
-      let totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(1, totalFunds)
 
-      await this.registry.createSmartFundLight("USD Fund", 20, 1, true)
-      totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(2, totalFunds)
-
-      await this.registry.createSmartFundLight("COT Fund", 20, 2, true)
-      totalFunds = await this.registry.totalSmartFunds()
-      assert.equal(3, totalFunds)
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal('0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', await fund.methods.coreFundAsset().call())
     })
+
+    it('should be able create new USD fund and address in fund correct', async function() {
+      await this.registry.createSmartFundLight("USD Fund", 20, 1, true)
+
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal(this.DAI, await fund.methods.coreFundAsset().call())
+    })
+
+    it('should be able create new COT fund and address in fund correct', async function() {
+      await this.registry.createSmartFundLight("COT Fund", 20, 2, true)
+
+      const fund = new web3.eth.Contract(FundABI, await this.registry.smartFunds(0))
+      assert.equal(this.ExchangePortal, await fund.methods.exchangePortal().call())
+      assert.equal(this.COT, await fund.methods.coreFundAsset().call())
+    })
+  })
+
+  describe('Should increase totalFunds after create new fund', function() {
+    it('should be able create new ETH fund and address in fund correct', async function() {
+      await this.registry.createSmartFund("ETH Fund", 20, 0, true)
+      assert.equal(1, await this.registry.totalSmartFunds())
+
+      await this.registry.createSmartFund("ETH Fund 2", 20, 0, true)
+      assert.equal(2, await this.registry.totalSmartFunds())
+
+      await this.registry.createSmartFund("ETH Fund 3", 20, 0, true)
+      assert.equal(3, await this.registry.totalSmartFunds())
+    })
+
   })
 
   describe('Update addresses', function() {
