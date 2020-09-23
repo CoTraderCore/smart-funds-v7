@@ -275,6 +275,14 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       assert.equal(await DAIBNT.balanceOf(poolPortal.address), toWei(String(100000000)))
     })
 
+    it('Correct version 7', async function() {
+      assert.equal(await smartFundERC20.version(), 7)
+    })
+
+    it('Correct size type', async function() {
+      assert.equal(await smartFundERC20.isLightFund(), false)
+    })
+
     it('Correct init usd smart fund', async function() {
       const name = await smartFundERC20.name()
       const totalShares = await smartFundERC20.totalShares()

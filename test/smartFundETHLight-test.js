@@ -171,6 +171,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
       assert.equal(totalSupplyY, toWei(String(100000000)))
     })
 
+    it('Correct version 7', async function() {
+      assert.equal(await smartFundETH.version(), 7)
+    })
+
+    it('Correct size type', async function() {
+      assert.equal(await smartFundETH.isLightFund(), true)
+    })
+
     it('Correct exchange portal in fund', async function() {
       assert.equal(await smartFundETH.exchangePortal(), exchangePortal.address)
     })

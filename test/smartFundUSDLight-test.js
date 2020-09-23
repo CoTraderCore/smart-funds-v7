@@ -181,6 +181,14 @@ contract('smartFundERC20', function([userOne, userTwo, userThree]) {
       assert.equal(totalSupplyD, "1000000000000000000000000")
     })
 
+    it('Correct version 7', async function() {
+      assert.equal(await smartFundERC20.version(), 7)
+    })
+
+    it('Correct size type', async function() {
+      assert.equal(await smartFundERC20.isLightFund(), true)
+    })
+
     it('Correct init exchange portal', async function() {
       assert.equal(await exchangePortal.stableCoinAddress(), DAI.address)
     })

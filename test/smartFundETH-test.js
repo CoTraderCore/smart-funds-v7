@@ -243,6 +243,14 @@ contract('SmartFundETH', function([userOne, userTwo, userThree]) {
 
     })
 
+    it('Correct version 7', async function() {
+      assert.equal(await smartFundETH.version(), 7)
+    })
+
+    it('Correct size type', async function() {
+      assert.equal(await smartFundETH.isLightFund(), false)
+    })
+
     it('Correct exchange portal in fund', async function() {
       assert.equal(await smartFundETH.exchangePortal(), exchangePortal.address)
     })
