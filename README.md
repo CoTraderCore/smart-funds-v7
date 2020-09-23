@@ -65,9 +65,8 @@ for reduce gas cost.
 # Possible issue
 
 ```
-Test returns events pool data from pool portal in Rinkeby for verifier script
-
-Exchange Portal v7 not has incompatibility with older versions
+Exchange and Pool Portals v7 not has incompatibility with older versions,
+so frontend should support different version of portals 
 ```
 
 
