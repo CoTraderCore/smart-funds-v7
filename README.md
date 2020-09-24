@@ -84,6 +84,8 @@ Don't forget set latest 1incg contract
 ```
 Smart Fund registry
 
+0xEEce063BB21E231B2b9981Ca254B19b651aDb021
+
 https://etherscan.io/tx/0x91894a37a9e123ccf619c77f46da8b290207521fe230756aa83d8b01d9871f26
 
 
