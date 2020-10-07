@@ -287,31 +287,38 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
  }
 
- // Facilitates trade with 1inch ETH
- // this protocol require calldata from api
- function _tradeViaOneInchETH(
-   address sourceToken,
-   address destinationToken,
-   uint256 sourceAmount,
-   bytes memory _additionalData
-   )
-   private
-   returns(uint256 destinationReceived)
- {
-    bool success;
-    if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
-      (success, ) = oneInchETH.call.value(sourceAmount)(
-        _additionalData
-      );
-    } else {
-      (success, ) = oneInchETH.call(
-        _additionalData
-      );
-    }
-    require(success, "Fail 1inch call");
-    destinationReceived = tokenBalance(IERC20(destinationToken));
-    tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
- }
+  // Facilitates trade with 1inch ETH
+  // this protocol require calldata from 1inch api
+  function _tradeViaOneInchETH(
+    address sourceToken,
+    address destinationToken,
+    uint256 sourceAmount,
+    bytes memory _additionalData
+    )
+    private
+    returns(uint256 destinationReceived)
+  {
+     bool success;
+     // from ETH
+     if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
+       (success, ) = oneInchETH.call.value(sourceAmount)(
+         _additionalData
+       );
+     }
+     // from ERC20
+     else {
+       _transferFromSenderAndApproveTo(IERC20(sourceToken), sourceAmount, address(oneInchETH));
+       (success, ) = oneInchETH.call(
+         _additionalData
+       );
+     }
+     // check trade status
+     require(success, "Fail 1inch call");
+     // get received amount
+     destinationReceived = tokenBalance(IERC20(destinationToken));
+     // set token type
+     tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
+  }
 
 
  // Facilitates trade with Bancor
