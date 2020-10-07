@@ -25,7 +25,7 @@ import "../interfaces/IMerkleTreeTokensVerification.sol";
 contract ExchangePortal is ExchangePortalInterface, Ownable {
   using SafeMath for uint256;
 
-  uint public version = 4;
+  uint public version = 5;
 
   // Contract for handle tokens types
   ITokensTypeStorage public tokensTypes;
@@ -35,6 +35,9 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
 
   // 1INCH
   IOneSplitAudit public oneInch;
+
+  // 1 inch protocol for calldata
+  address public oneInchETH;
 
   // BANCOR
   IGetBancorData public bancorData;
@@ -50,7 +53,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // Enum
   // NOTE: You can add a new type at the end, but DO NOT CHANGE this order,
   // because order has dependency in other contracts like ConvertPortal
-  enum ExchangeType { Paraswap, Bancor, OneInch }
+  enum ExchangeType { Paraswap, Bancor, OneInch, OneInchETH }
 
   // This contract recognizes ETH by this address
   IERC20 constant private ETH_TOKEN_ADDRESS = IERC20(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
@@ -170,6 +173,16 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
       );
     }
 
+    // SHOULD TRADE 1INCH ETH HERE
+    else if (_type == uint(ExchangeType.OneInchETH)){
+      receivedAmount = _tradeViaOneInchETH(
+          address(_source),
+          address(_destination),
+          _sourceAmount,
+          _additionalData
+      );
+    }
+
     else {
       // unknown exchange type
       revert();
@@ -267,6 +280,32 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
         );
     }
 
+    destinationReceived = tokenBalance(IERC20(destinationToken));
+    tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
+ }
+
+ // Facilitates trade with 1inch ETH
+ // this protocol require calldata from api
+ function _tradeViaOneInchETH(
+   address sourceToken,
+   address destinationToken,
+   uint256 sourceAmount,
+   bytes memory _additionalData
+   )
+   private
+   returns(uint256 destinationReceived)
+ {
+    bool success;
+    if(IERC20(sourceToken) == ETH_TOKEN_ADDRESS) {
+      (success, ) = oneInchETH.call.value(sourceAmount)(
+        _additionalData
+      );
+    } else {
+      (success, ) = oneInchETH.call(
+        _additionalData
+      );
+    }
+    require(success, "Fail 1inch call");
     destinationReceived = tokenBalance(IERC20(destinationToken));
     tokensTypes.addNewTokenType(destinationToken, "CRYPTOCURRENCY");
  }
