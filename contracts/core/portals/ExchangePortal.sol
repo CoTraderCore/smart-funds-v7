@@ -84,6 +84,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   * @param _bancorData             address of GetBancorData helper
   * @param _poolPortal             address of pool portal
   * @param _oneInch                address of 1inch OneSplitAudit contract
+  * @param _oneInchETH             address of oneInch ETH contract
   * @param _tokensTypes            address of the ITokensTypeStorage
   * @param _merkleTreeWhiteList    address of the IMerkleTreeWhiteList
   */
@@ -92,6 +93,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     address _bancorData,
     address _poolPortal,
     address _oneInch,
+    address _oneInchETH,
     address _tokensTypes,
     address _merkleTreeWhiteList
     )
@@ -101,6 +103,7 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
     bancorData = IGetBancorData(_bancorData);
     poolPortal = PoolPortalViewInterface(_poolPortal);
     oneInch = IOneSplitAudit(_oneInch);
+    oneInchETH = _oneInchETH;
     tokensTypes = ITokensTypeStorage(_tokensTypes);
     merkleTreeWhiteList = IMerkleTreeTokensVerification(_merkleTreeWhiteList);
   }
@@ -681,6 +684,11 @@ contract ExchangePortal is ExchangePortalInterface, Ownable {
   // owner can change oneInch
   function setNewOneInch(address _oneInch) external onlyOwner {
     oneInch = IOneSplitAudit(_oneInch);
+  }
+
+  // owner can change oneInch
+  function setNewOneInchETH(address _oneInchETH) external onlyOwner {
+    oneInchETH = _oneInchETH;
   }
 
   // owner can set new pool portal
