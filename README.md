@@ -140,14 +140,14 @@ Stable Coin DAI
 
 
 
-Exchange Portal v4
+Exchange Portal v4 (with 1inch.PROTO)
 
 0x3e3C06d526b38F67D7a897Bba20906f36D2793A3
 
 https://etherscan.io/tx/0x9085e8f79ece1c1c565c47b7987d3c7b7331fdaec575ca83c4d4388e9f118c27
 
 
-Exchange Portal v5
+Exchange Portal v5 (with 1inch.ETH)
 
 0xD3B6933A448fF602711390f96E15c0B9cab5fF11
 
