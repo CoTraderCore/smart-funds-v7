@@ -60,6 +60,17 @@ interface BancorNetworkInterface {
     ) external view returns (uint256);
 }
 
+interface IBancorConverter {
+  function connectorTokens(uint index) external view returns(IERC20);
+  function getConnectorBalance(IERC20 _connectorToken) external view returns (uint256);
+  function connectorTokenCount() external view returns (uint16);
+}
+
+interface ISmartToken {
+  function owner() external view returns(address);
+  function totalSupply() external view returns(uint256);
+}
+
 
 /**
  * @title Ownable
@@ -161,6 +172,32 @@ contract GetBancorData is Ownable{
     else{
       result = 0;
     }
+  }
+
+  // parse total value of pool conenctors
+  function parseConnectorsByPool(ERC20 _from, ERC20 _to, uint256 poolAmount)
+    public
+    view
+    returns(uint256 totalValue)
+  {
+     address converter = ISmartToken(address(_from)).owner();
+     uint16 connectorTokenCount = IBancorConverter(converter).connectorTokenCount();
+     uint256 poolTotalSupply = ISmartToken(address(_from)).totalSupply()
+
+     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
+       getBancorContractAddresByName("BancorNetwork")
+     );
+
+     for(uint16 i = 0; i < connectorTokenCount; i++){
+       address connectorToken = IBancorConverter(converter).connectorTokens(i);
+       uint256 connectorBalance = IBancorConverter(converter).getConnectorBalance(IERC20(connectorToken))
+
+       uint256 amountByShare = poolAmount.mul(connectorBalance.div(poolTotalSupply));
+
+       address[] memory path = bancorNetwork.conversionPath(IERC20(connectorToken), _to);
+
+       totalValue = totalValue.add(bancorNetwork.rateByPath(path, _amount));
+     }
   }
 
   // get addresses array of token path
