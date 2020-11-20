@@ -203,11 +203,26 @@ DAOWallet
 
 
 
-GetBancorData
+GetBancorData OLD
 
 0x3aE392A4c6a99FcB991E208f9D74618fff513834
 
 https://etherscan.io/tx/0xe7d6ed39c113a9e97968cfe5af5c7d7839442e52ae33847229f7cd7264e58571
+
+
+GetBancorData NEW
+
+
+0x9C81d0b71eC9a0161e1B4563Da73750e84889439
+
+https://etherscan.io/tx/0x45b7a7fd48da3dd4176dd847e5a3b10af6ffea0940baac9606f1f92d161b8abf
+
+
+Bancor pool parser
+
+0x759563F3A0f51A202e504BE5Ea3DeF0D3b4e6933
+
+https://etherscan.io/tx/0x22c30ea4721444143a4c03823c878c2d749e87762da576c5721a16772f331adb
 
 
 
