@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.6.12;
 
 library stringToBytes32 {
   function convert(string memory source) internal pure returns (bytes32 result) {
@@ -13,6 +13,14 @@ library stringToBytes32 {
    }
 }
 
+interface IBancorPoolParser {
+  function parseConnectorsByPool(address _from, address _to, uint256 poolAmount)
+    external
+    view
+    returns(uint256 totalValue);
+}
+
+
 interface IContractRegistry {
     function addressOf(bytes32 _contractName) external view returns (address);
     // deprecated, backward compatibility
@@ -20,55 +28,23 @@ interface IContractRegistry {
 }
 
 
-interface ERC20 {
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address account) external view returns (uint256);
-
-    function transfer(address recipient, uint256 amount) external returns (bool);
-
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    function approve(address spender, uint256 amount) external returns (bool);
-
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-
-/*
-    Bancor Network interface
-*/
 interface BancorNetworkInterface {
    function getReturnByPath(
-     address[] _path,
+     address[] calldata _path,
      uint256 _amount)
      external
      view
      returns (uint256, uint256);
 
     function conversionPath(
-      ERC20 _sourceToken,
-      ERC20 _targetToken
-    ) external view returns (address[]);
+      address _sourceToken,
+      address _targetToken
+    ) external view returns (address[] memory);
 
     function rateByPath(
-        address[] _path,
+        address[] memory _path,
         uint256 _amount
     ) external view returns (uint256);
-}
-
-interface IBancorConverter {
-  function connectorTokens(uint index) external view returns(IERC20);
-  function getConnectorBalance(IERC20 _connectorToken) external view returns (uint256);
-  function connectorTokenCount() external view returns (uint16);
-}
-
-interface ISmartToken {
-  function owner() external view returns(address);
-  function totalSupply() external view returns(uint256);
 }
 
 
@@ -137,7 +113,7 @@ contract Ownable {
 
 contract GetBancorData is Ownable{
   using stringToBytes32 for string;
-
+  IBancorPoolParser public BancorPoolParser;
   IContractRegistry public bancorRegistry;
 
   constructor(address _bancorRegistry)public{
@@ -145,7 +121,7 @@ contract GetBancorData is Ownable{
   }
 
   // return contract address from Bancor registry by name
-  function getBancorContractAddresByName(string _name) public view returns (address result){
+  function getBancorContractAddresByName(string memory _name) public view returns (address result){
      bytes32 name = stringToBytes32.convert(_name);
      result = bancorRegistry.addressOf(name);
   }
@@ -153,55 +129,42 @@ contract GetBancorData is Ownable{
   /**
   * @dev get ratio between Bancor assets
   *
-  * @param _from  ERC20 or Relay
-  * @param _to  ERC20 or Relay
+  * @param _from  address or Relay
+  * @param _to  address or Relay
   * @param _amount  amount for _from
   */
-  function getBancorRatioForAssets(ERC20 _from, ERC20 _to, uint256 _amount) public view returns(uint256 result){
+  function getBancorRatioForAssets(address _from, address _to, uint256 _amount) public view returns(uint256 result){
     if(_amount > 0){
-      BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
-        getBancorContractAddresByName("BancorNetwork")
-      );
-
-      // get Bancor path array
-      address[] memory path = bancorNetwork.conversionPath(_from, _to);
-
-      // get Ratio
-      return bancorNetwork.rateByPath(path, _amount);
+      try BancorPoolParser.parseConnectorsByPool(_from, _to, _amount)
+        returns(uint256 totalValue)
+       {
+         result = totalValue;
+       }
+       catch{
+         result = getRatioByPath(_from, _to, _amount);
+       }
     }
     else{
       result = 0;
     }
   }
 
-  // parse total value of pool conenctors
-  function parseConnectorsByPool(ERC20 _from, ERC20 _to, uint256 poolAmount)
-    public
-    view
-    returns(uint256 totalValue)
-  {
-     address converter = ISmartToken(address(_from)).owner();
-     uint16 connectorTokenCount = IBancorConverter(converter).connectorTokenCount();
-     uint256 poolTotalSupply = ISmartToken(address(_from)).totalSupply()
 
-     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
-       getBancorContractAddresByName("BancorNetwork")
-     );
-
-     for(uint16 i = 0; i < connectorTokenCount; i++){
-       address connectorToken = IBancorConverter(converter).connectorTokens(i);
-       uint256 connectorBalance = IBancorConverter(converter).getConnectorBalance(IERC20(connectorToken))
-
-       uint256 amountByShare = poolAmount.mul(connectorBalance.div(poolTotalSupply));
-
-       address[] memory path = bancorNetwork.conversionPath(IERC20(connectorToken), _to);
-
-       totalValue = totalValue.add(bancorNetwork.rateByPath(path, _amount));
-     }
+  // Works for Bancor assets and old bancor pools
+  function getRatioByPath(address _from, address _to, uint256 _amount) public view returns(uint256) {
+    BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
+      getBancorContractAddresByName("BancorNetwork")
+    );
+    // get Bancor path array
+    address[] memory path = bancorNetwork.conversionPath(_from, _to);
+    // get Ratio
+    return bancorNetwork.rateByPath(path, _amount);
   }
 
+
+
   // get addresses array of token path
-  function getBancorPathForAssets(ERC20 _from, ERC20 _to) public view returns(address[] memory){
+  function getBancorPathForAssets(address _from, address _to) public view returns(address[] memory){
     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
       getBancorContractAddresByName("BancorNetwork")
     );
@@ -214,5 +177,10 @@ contract GetBancorData is Ownable{
   // update bancor registry
   function changeRegistryAddress(address _bancorRegistry) public onlyOwner{
     bancorRegistry = IContractRegistry(_bancorRegistry);
+  }
+
+  // update BancorPoolParser
+  function changeBancorPoolParser(address _BancorPoolParser) public onlyOwner{
+    BancorPoolParser = IBancorPoolParser(_BancorPoolParser);
   }
 }
