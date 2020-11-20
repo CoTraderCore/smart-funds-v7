@@ -185,7 +185,7 @@ contract BancorPoolParser {
   // Works for new Bancor pools
   // parse total value of pool conenctors
   function parseConnectorsByPool(address _from, address _to, uint256 poolAmount)
-    public
+    external
     view
     returns(uint256)
   {
@@ -216,7 +216,7 @@ contract BancorPoolParser {
   }
 
 
-  // internal helper 
+  // internal helper
   function calculateTotalSum(
     address converter,
     uint256 poolTotalSupply,
