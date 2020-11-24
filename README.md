@@ -218,11 +218,18 @@ GetBancorData NEW
 https://etherscan.io/tx/0x45b7a7fd48da3dd4176dd847e5a3b10af6ffea0940baac9606f1f92d161b8abf
 
 
-Bancor pool parser
+Bancor pool parser OLD
 
 0x759563F3A0f51A202e504BE5Ea3DeF0D3b4e6933
 
 https://etherscan.io/tx/0x22c30ea4721444143a4c03823c878c2d749e87762da576c5721a16772f331adb
+
+
+Bancor pool parser NEW
+
+0x7ea4F5F89811F6d7BdAC24c458b5Ee1f11c90936
+
+https://etherscan.io/tx/0x879e7e3dc265bf4e27120ddeeb0dee635785489bbf87c07f49e950dd9188d981
 
 
 
