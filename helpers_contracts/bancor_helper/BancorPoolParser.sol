@@ -162,24 +162,18 @@ interface ISmartToken {
   function totalSupply() external view returns(uint256);
 }
 
-interface BancorNetworkInterface {
-    function conversionPath(
-      address _sourceToken,
-      address _targetToken
-    ) external view returns (address[] memory);
-
-    function rateByPath(
-        address[] memory _path,
-        uint256 _amount
-    ) external view returns (uint256);
+interface IExchangePortal {
+  function getValue(address _from, address _to, uint256 _amount) external view returns (uint256);
 }
 
 contract BancorPoolParser {
   using SafeMath for uint256;
   IGetBancorData public GetBancorData;
+  IExchangePortal public ExchangePortal;
 
-  constructor(address _GetBancorData) public {
+  constructor(address _GetBancorData, address _ExchangePortal) public {
     GetBancorData = IGetBancorData(_GetBancorData);
+    ExchangePortal = IExchangePortal(_ExchangePortal);
   }
 
   // Works for new Bancor pools
@@ -195,10 +189,6 @@ contract BancorPoolParser {
      uint256 poolTotalSupply = ISmartToken(address(_from)).totalSupply();
      uint32 reserveRatio =  IBancorConverter(converter).reserveRatio();
 
-     // get contracts insnance
-     BancorNetworkInterface bancorNetwork = BancorNetworkInterface(
-       GetBancorData.getBancorContractAddresByName("BancorNetwork")
-     );
      IBancorFormula bancorFormula = IBancorFormula(
        GetBancorData.getBancorContractAddresByName("BancorFormula")
      );
@@ -208,7 +198,6 @@ contract BancorPoolParser {
        poolTotalSupply,
        reserveRatio,
        connectorTokenCount,
-       bancorNetwork,
        bancorFormula,
        _to,
        poolAmount
@@ -222,7 +211,6 @@ contract BancorPoolParser {
     uint256 poolTotalSupply,
     uint32 reserveRatio,
     uint16 connectorTokenCount,
-    BancorNetworkInterface bancorNetwork,
     IBancorFormula bancorFormula,
     address _to,
     uint256 poolAmount
@@ -238,8 +226,7 @@ contract BancorPoolParser {
       uint256 amountByShare = bancorFormula.fundCost(poolTotalSupply, connectorBalance, reserveRatio, poolAmount);
 
       // get ratio of pool token
-      address[] memory path = bancorNetwork.conversionPath(address(connectorToken), _to);
-      totalValue = totalValue.add(bancorNetwork.rateByPath(path, amountByShare));
+      totalValue = totalValue.add(ExchangePortal.getValue(connectorToken, _to, amountByShare));
     }
   }
 }
