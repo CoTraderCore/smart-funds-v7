@@ -163,7 +163,7 @@ interface ISmartToken {
 }
 
 interface IExchangePortal {
-  function getValue(address _from, address _to, uint256 _amount) external view returns (uint256);
+  function getValueViaDEXsAgregators(address _from, address _to, uint256 _amount) external view returns (uint256);
 }
 
 contract BancorPoolParser {
@@ -226,7 +226,7 @@ contract BancorPoolParser {
       uint256 amountByShare = bancorFormula.fundCost(poolTotalSupply, connectorBalance, reserveRatio, poolAmount);
 
       // get ratio of pool token
-      totalValue = totalValue.add(ExchangePortal.getValue(connectorToken, _to, amountByShare));
+      totalValue = totalValue.add(ExchangePortal.getValueViaDEXsAgregators(connectorToken, _to, amountByShare));
     }
   }
 }
